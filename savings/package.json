@@ -1,0 +1,10 @@
+{
+  "name": "savings-planner",
+  "version": "1.0.0",
+  "description": "储蓄与财富规划模块：纯函数计算逻辑 + React 组件",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

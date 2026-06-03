@@ -36,8 +36,15 @@
 g-lab/
 ├── README.md                 # 项目说明
 ├── index.html                # 完整应用（HTML + CSS + JS 内联）
+├── savings/                  # 💰 储蓄与财富规划模块（React 组件 + 纯函数计算）
 └── .github/workflows/        # GitHub Pages 自动部署
 ```
+
+## 💰 储蓄与财富规划模块（`savings/`）
+
+一个更进阶的独立组件：面向一线城市家庭的交互式储蓄规划器，含**税前→税后换算（个税/五险一金）**、
+投资配置加权年化、复利预测，以及手写 SVG 的资产增长曲线。计算逻辑抽成纯函数、可单测，
+React 组件可单独运行也方便集成进主应用。详见 [`savings/README.md`](savings/README.md)。
 
 ## 🚀 快速开始
 
