@@ -76,19 +76,41 @@ export async function finnhubQuote(symbol, apiKey) {
   };
 }
 
+/* ----------------------------- 行情代理（Cloudflare Worker 等） ----------------------------- */
+// 自建无状态代理转发 Yahoo Finance（覆盖美股 / A股 .SS·.SZ / 港股 .HK，含历史走势）。
+// 代理实现见 stocks/proxy/worker.js；部署后把 URL 填进设置。
+export async function proxyQuote(symbol, proxyUrl) {
+  const sym = symbol.toUpperCase();
+  const base = (proxyUrl || '').replace(/\/+$/, '');
+  if (!base) throw new Error('未配置代理 URL');
+  const res = await fetch(`${base}?symbol=${encodeURIComponent(sym)}`);
+  if (!res.ok) throw new Error('代理请求失败 ' + res.status);
+  const d = await res.json();
+  if (d.error) throw new Error(d.error);
+  if (d.price == null) throw new Error('无此标的或暂无报价');
+  return {
+    symbol: d.symbol || sym,
+    price: d.price,
+    change: d.change != null ? d.change : d.prevClose != null ? d.price - d.prevClose : 0,
+    changePct: d.changePct != null ? d.changePct : d.prevClose ? ((d.price - d.prevClose) / d.prevClose) * 100 : 0,
+    prevClose: d.prevClose,
+    series: Array.isArray(d.series) && d.series.length >= 2 ? d.series : null,
+    demo: false,
+  };
+}
+
 /* --------------------------- 统一取数入口 --------------------------- */
 /**
  * 批量取多只标的行情，逐只容错（单只失败不影响其他）。
  * @param {string[]} symbols
- * @param {{provider:'demo'|'finnhub', apiKey?:string}} opts
+ * @param {{provider:'demo'|'finnhub'|'proxy', apiKey?:string, proxyUrl?:string}} opts
  * @returns {Promise<Quote[]>}
  */
-export async function fetchQuotes(symbols, { provider = 'demo', apiKey = '' } = {}) {
+export async function fetchQuotes(symbols, { provider = 'demo', apiKey = '', proxyUrl = '' } = {}) {
   const list = (symbols || []).map((s) => s.trim().toUpperCase()).filter(Boolean);
+
   if (provider === 'finnhub') {
-    if (!apiKey) {
-      return list.map((s) => ({ symbol: s, error: '未配置 Finnhub API key', demo: false }));
-    }
+    if (!apiKey) return list.map((s) => ({ symbol: s, error: '未配置 Finnhub API key', demo: false }));
     return Promise.all(
       list.map(async (s) => {
         try {
@@ -99,6 +121,20 @@ export async function fetchQuotes(symbols, { provider = 'demo', apiKey = '' } = 
       })
     );
   }
+
+  if (provider === 'proxy') {
+    if (!proxyUrl) return list.map((s) => ({ symbol: s, error: '未配置代理 URL', demo: false }));
+    return Promise.all(
+      list.map(async (s) => {
+        try {
+          return await proxyQuote(s, proxyUrl);
+        } catch (e) {
+          return { symbol: s, error: e.message || '获取失败', demo: false };
+        }
+      })
+    );
+  }
+
   // demo
   return list.map((s) => demoQuote(s));
 }

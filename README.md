@@ -26,10 +26,13 @@
 
 ### 5. 📈 股市观测
 自选股清单 + 实时行情观测（手写 SVG 迷你走势图、涨跌配色可切换 红涨绿跌/绿涨红跌）。
-- **数据源**：演示数据（默认，始终可用）/ Finnhub 实时（填自己的免费 key，仅存本机）
-- GitHub Pages 无后端，数据由**浏览器直连第三方行情 API**（见下方说明）
+- **数据源**（设置里切换）：
+  - 演示数据（默认，确定性合成，始终可用）
+  - **行情代理**：自建 Cloudflare Worker 转发 Yahoo，覆盖**美股 / A股(.SS·.SZ) / 港股(.HK)** 且带走势图，免费、无需 key（部署见 [`stocks/proxy/README.md`](stocks/proxy/README.md)）
+  - Finnhub：填自己的免费 key（仅存本机），美股实时但免费版无历史走势
+- **数据落点**：实时行情活在浏览器内存（React state），最近一次快照缓存到 localStorage（重开先秒显示）；自选清单/设置存 localStorage。**GitHub Pages 无后端、无数据库**，数据由浏览器直连 API；代理也只是无状态中转、不存数据。
 
-> 💡 由 `stocks/StockWatch.jsx`（UI）+ `stocks/api.js`（数据适配层）提供。
+> 💡 由 `stocks/StockWatch.jsx`（UI）+ `stocks/api.js`（数据适配层）+ `stocks/proxy/worker.js`（可选代理）提供。
 
 ## 🏗️ 项目结构
 
