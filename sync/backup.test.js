@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BACKUP_KEYS, SYNC_FILENAME, gatherBackup, extractModules, applyBackup, buildMultipartBody } from './backup.js';
+import {
+  BACKUP_KEYS,
+  SYNC_FILENAME,
+  gatherBackup,
+  extractModules,
+  applyBackup,
+  buildMultipartBody,
+  stableStringify,
+  signatureOf,
+} from './backup.js';
 
 function memStore(init = {}) {
   const m = new Map(Object.entries(init));
@@ -64,6 +73,15 @@ test('gather → extract → apply 往返一致', () => {
   for (const k of ['learning-planner', 'fitness-planner', 'savings-planner']) {
     assert.equal(dst.map.get(k), src.get(k));
   }
+});
+
+test('signatureOf：与键顺序无关、内容变化即变化（用于自动同步判断）', () => {
+  const a = { 'savings-planner': { x: 1, y: 2 }, 'stocks-watch': { list: ['A', 'B'] } };
+  const b = { 'stocks-watch': { list: ['A', 'B'] }, 'savings-planner': { y: 2, x: 1 } }; // 键顺序不同
+  assert.equal(signatureOf(a), signatureOf(b)); // 同内容 → 同签名
+  const c = { 'savings-planner': { x: 1, y: 3 } };
+  assert.notEqual(signatureOf(a), signatureOf(c)); // 内容不同 → 签名不同
+  assert.equal(stableStringify({ b: 1, a: 2 }), '{"a":2,"b":1}'); // 键排序
 });
 
 test('buildMultipartBody：包含元数据、媒体与分隔符', () => {
