@@ -1,0 +1,10 @@
+{
+  "name": "g-lab-sync",
+  "version": "1.0.0",
+  "description": "云同步：备份采集/恢复纯逻辑 + Google Drive(appDataFolder) 浏览器侧适配",
+  "type": "module",
+  "main": "backup.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}
