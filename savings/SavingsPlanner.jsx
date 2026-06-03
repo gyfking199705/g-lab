@@ -12,9 +12,30 @@
  *     />
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { computePlan, formatMoney, formatPct, formatYears } from './calc.js';
+import {
+  computePlan,
+  formatMoney,
+  formatPct,
+  formatYears,
+  snapshotTotals,
+  assetBreakdown,
+  netWorthSeries,
+  netWorthChange,
+  financialHealth,
+} from './calc.js';
 
 /* ----------------------------- 默认数据 ----------------------------- */
+/* 净资产默认账户：资产/负债 + 类别（「流动」类计入应急储备） */
+const DEFAULT_ACCOUNTS = [
+  { id: 'cash', name: '现金 / 活期', type: 'asset', category: '流动' },
+  { id: 'deposit', name: '存款 / 理财', type: 'asset', category: '流动' },
+  { id: 'invest', name: '基金 / 股票', type: 'asset', category: '投资' },
+  { id: 'gjj', name: '公积金', type: 'asset', category: '其他' },
+  { id: 'house', name: '自住房产', type: 'asset', category: '固定' },
+  { id: 'mortgage', name: '房贷', type: 'liability', category: '负债' },
+  { id: 'loan', name: '其他贷款', type: 'liability', category: '负债' },
+];
+
 export const DEFAULT_STATE = {
   personA: { gross: 50000, months: 16, socialRate: 20, special: 0, specials: emptySpecials() },
   personB: { enabled: true, gross: 60000, months: 16, socialRate: 20, special: 0, specials: emptySpecials() },
@@ -34,6 +55,8 @@ export const DEFAULT_STATE = {
     useReal: false,
     rateOverride: null,
   },
+  // 净资产追踪：账户定义 + 各期快照
+  netWorth: { accounts: DEFAULT_ACCOUNTS, snapshots: [] },
 };
 
 function emptySpecials() {
@@ -70,20 +93,31 @@ function deepMerge(base, override) {
 
 function loadInitial(initialState, storageKey) {
   let state = DEFAULT_STATE;
+  let saved = null;
   if (storageKey) {
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) state = deepMerge(DEFAULT_STATE, JSON.parse(raw));
+      if (raw) saved = JSON.parse(raw);
     } catch (e) {
       /* 忽略损坏的本地数据 */
     }
   }
+  if (saved) state = deepMerge(DEFAULT_STATE, saved);
   if (initialState) state = deepMerge(state, initialState);
+  // 净资产的 accounts / snapshots 是「长度可变数组」，不能按索引深合并，直接以来源为准
+  const nwSrc = (initialState && initialState.netWorth) || (saved && saved.netWorth) || DEFAULT_STATE.netWorth;
+  state = {
+    ...state,
+    netWorth: {
+      accounts: Array.isArray(nwSrc.accounts) && nwSrc.accounts.length ? nwSrc.accounts : DEFAULT_ACCOUNTS,
+      snapshots: Array.isArray(nwSrc.snapshots) ? nwSrc.snapshots : [],
+    },
+  };
   return state;
 }
 
 /* ============================ 主组件 ============================ */
-export default function SavingsPlanner({ initialState, onChange, storageKey = 'savings-planner' }) {
+export default function SavingsPlanner({ initialState, onChange, storageKey = 'savings-planner', initialTab = 'plan' }) {
   const [state, setState] = useState(() => loadInitial(initialState, storageKey));
 
   // 把每个人的专项附加扣除明细同步成总额，喂给 calc
@@ -129,6 +163,15 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
 
   const reset = () => setState(deepMerge(DEFAULT_STATE, initialState || {}));
 
+  const [tab, setTab] = useState(initialTab); // plan | networth | health
+  // 净资产更新器（accounts/snapshots 整体替换式更新）
+  const setNW = (updater) =>
+    setState((prev) => {
+      const next = structuredCloneSafe(prev);
+      next.netWorth = updater(next.netWorth || { accounts: DEFAULT_ACCOUNTS, snapshots: [] });
+      return next;
+    });
+
   const { taxA, taxB, budget, investment, forecast } = result;
   const totalWeight = investment.totalWeight;
   const weightOk = Math.abs(totalWeight - 100) < 0.01;
@@ -145,6 +188,14 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
         <button className="sp-reset" onClick={reset}>↺ 恢复默认</button>
       </header>
 
+      <div className="sp-tabs">
+        <button className={`sp-tab ${tab === 'plan' ? 'active' : ''}`} onClick={() => setTab('plan')}>测算</button>
+        <button className={`sp-tab ${tab === 'networth' ? 'active' : ''}`} onClick={() => setTab('networth')}>净资产</button>
+        <button className={`sp-tab ${tab === 'health' ? 'active' : ''}`} onClick={() => setTab('health')}>体检</button>
+      </div>
+
+      {tab === 'plan' && (
+        <>
       {/* ===== 顶部关键指标 ===== */}
       <div className="sp-kpis">
         <Kpi label="税后月收入" value={formatMoney(budget.monthlyNetIncome)} tone="calc" />
@@ -335,6 +386,11 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
         ⚠️ 免责声明：投资回报为长期假设，实际会逐年波动，本工具仅供规划参考，<strong>不构成投资建议</strong>；
         个税与五险一金为基于税率表的年度近似估算，<strong>以实际工资条与当地政策为准</strong>。
       </p>
+        </>
+      )}
+
+      {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} />}
+      {tab === 'health' && <HealthTab netWorth={state.netWorth} budget={budget} />}
     </div>
   );
 }
@@ -567,7 +623,283 @@ function WealthChart({ series, target, years }) {
   );
 }
 
+/* ============================ 净资产追踪 ============================ */
+const NW_CATEGORIES = ['流动', '投资', '固定', '其他'];
+
+function NetWorthTab({ netWorth, setNW }) {
+  const accounts = netWorth.accounts || [];
+  const snapshots = netWorth.snapshots || [];
+  const series = useMemo(() => netWorthSeries(snapshots, accounts), [snapshots, accounts]);
+  const change = useMemo(() => netWorthChange(series), [series]);
+  const [manageOpen, setManageOpen] = useState(false);
+
+  const current = snapshots[snapshots.length - 1] || null;
+
+  const addSnapshot = () =>
+    setNW((nw) => {
+      const last = nw.snapshots[nw.snapshots.length - 1];
+      const values = last ? { ...last.values } : {};
+      return { ...nw, snapshots: [...nw.snapshots, { id: uid('snap'), date: monthLabel(), values }] };
+    });
+  const updateValue = (snapId, accId, amount) =>
+    setNW((nw) => ({
+      ...nw,
+      snapshots: nw.snapshots.map((s) => (s.id === snapId ? { ...s, values: { ...s.values, [accId]: amount } } : s)),
+    }));
+  const updateDate = (snapId, date) =>
+    setNW((nw) => ({ ...nw, snapshots: nw.snapshots.map((s) => (s.id === snapId ? { ...s, date } : s)) }));
+  const removeSnapshot = (snapId) =>
+    setNW((nw) => ({ ...nw, snapshots: nw.snapshots.filter((s) => s.id !== snapId) }));
+  const addAccount = (name, type, category) =>
+    setNW((nw) => ({ ...nw, accounts: [...nw.accounts, { id: uid('acc'), name, type, category: type === 'liability' ? '负债' : category }] }));
+  const removeAccount = (accId) =>
+    setNW((nw) => ({ ...nw, accounts: nw.accounts.filter((a) => a.id !== accId) }));
+
+  if (!current) {
+    return (
+      <Section title="净资产追踪" badge="结果">
+        <div className="sp-nw-empty">
+          <div className="sp-nw-empty-ic">📒</div>
+          <p>记录一次你当前的资产与负债，之后定期更新，就能看到净资产随时间增长的曲线，并解锁财务体检。</p>
+          <button className="sp-nw-start" onClick={addSnapshot}>＋ 记录第一笔净资产</button>
+        </div>
+      </Section>
+    );
+  }
+
+  const totals = snapshotTotals(current, accounts);
+  const breakdown = assetBreakdown(current, accounts);
+  const maxCat = Math.max(1, ...breakdown.map((b) => b.amount));
+  const assetAccts = accounts.filter((a) => a.type === 'asset');
+  const liabAccts = accounts.filter((a) => a.type === 'liability');
+  const history = snapshots.filter((s) => s.id !== current.id).map((s) => ({ s, net: snapshotTotals(s, accounts).net })).sort((a, b) => (a.s.date < b.s.date ? 1 : -1));
+
+  return (
+    <div className="sp-nw">
+      <div className="sp-kpis sp-kpis-4">
+        <Kpi label="当前净资产" value={formatMoney(totals.net)} tone="hero" />
+        <Kpi label="总资产" value={formatMoney(totals.assets)} tone="calc" />
+        <Kpi label="总负债" value={formatMoney(totals.liabilities)} tone="bad" />
+        <Kpi
+          label="较上期"
+          value={change ? `${change.abs >= 0 ? '▲' : '▼'} ${formatMoney(Math.abs(change.abs))}` : '—'}
+          tone={change && change.abs >= 0 ? 'good' : change ? 'bad' : 'calc'}
+        />
+      </div>
+
+      <Section title="净资产走势" badge="结果">
+        <NetWorthChart series={series} />
+        {breakdown.length > 0 && (
+          <>
+            <h4 className="sp-h4">资产构成</h4>
+            <div className="sp-nw-breakdown">
+              {breakdown.map((b) => (
+                <div className="sp-nw-brow" key={b.category}>
+                  <span className="sp-nw-bcat">{b.category}</span>
+                  <div className="sp-bar"><div className="sp-bar-fill" style={{ width: `${(b.amount / maxCat) * 100}%` }} /></div>
+                  <span className="sp-nw-bamt">{formatMoney(b.amount)} · {formatPct(b.share)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </Section>
+
+      <Section title="本期明细" badge="输入">
+        <div className="sp-nw-daterow">
+          <span>记录月份</span>
+          <input className="sp-mini-input sp-nw-date" type="month" value={current.date} onChange={(e) => updateDate(current.id, e.target.value)} />
+          <button className="sp-link" onClick={() => removeSnapshot(current.id)}>删除本期</button>
+        </div>
+
+        <h4 className="sp-h4">资产</h4>
+        <div className="sp-fields">
+          {assetAccts.map((a) => (
+            <NumberField key={a.id} label={a.name} value={current.values[a.id] || 0} onChange={(v) => updateValue(current.id, a.id, v)} unit="元" step={10000} />
+          ))}
+        </div>
+
+        <h4 className="sp-h4">负债</h4>
+        <div className="sp-fields">
+          {liabAccts.map((a) => (
+            <NumberField key={a.id} label={a.name} value={current.values[a.id] || 0} onChange={(v) => updateValue(current.id, a.id, v)} unit="元" step={10000} />
+          ))}
+        </div>
+
+        <div className="sp-nw-net">本期净资产 <strong>{formatMoney(totals.net)}</strong>（资产 {formatMoney(totals.assets)} − 负债 {formatMoney(totals.liabilities)}）</div>
+
+        <button className="sp-link" onClick={() => setManageOpen((o) => !o)}>{manageOpen ? '收起' : '管理账户（增删）'}</button>
+        {manageOpen && (
+          <AccountManager accounts={accounts} onAdd={addAccount} onRemove={removeAccount} />
+        )}
+      </Section>
+
+      <Section title="历史记录" badge="结果">
+        <button className="sp-nw-add" onClick={addSnapshot}>＋ 记录新一期（复制本期数值）</button>
+        {history.length === 0 ? (
+          <p className="sp-note" style={{ marginTop: 12 }}>还没有更早的记录。每隔一段时间「记录新一期」，曲线就会长出来。</p>
+        ) : (
+          <div className="sp-nw-hist">
+            {history.map(({ s, net }) => (
+              <div className="sp-nw-hrow" key={s.id}>
+                <span className="sp-nw-hdate">{s.date}</span>
+                <span className="sp-nw-hnet">{formatMoney(net)}</span>
+                <button className="sp-link sp-link-del" onClick={() => removeSnapshot(s.id)}>删除</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
+
+function AccountManager({ accounts, onAdd, onRemove }) {
+  const [name, setName] = useState('');
+  const [type, setType] = useState('asset');
+  const [category, setCategory] = useState('流动');
+  const submit = () => {
+    if (!name.trim()) return;
+    onAdd(name.trim(), type, category);
+    setName('');
+  };
+  return (
+    <div className="sp-acctmgr">
+      <div className="sp-acctlist">
+        {accounts.map((a) => (
+          <div className="sp-acctchip" key={a.id}>
+            <span>{a.name}<em>{a.type === 'liability' ? '负债' : a.category}</em></span>
+            <button onClick={() => onRemove(a.id)} title="删除账户">✕</button>
+          </div>
+        ))}
+      </div>
+      <div className="sp-acctadd">
+        <input className="sp-mini-input" placeholder="账户名" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        <select className="sp-mini-input" value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="asset">资产</option>
+          <option value="liability">负债</option>
+        </select>
+        {type === 'asset' && (
+          <select className="sp-mini-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+            {NW_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
+        <button className="sp-link" onClick={submit}>添加</button>
+      </div>
+    </div>
+  );
+}
+
+/* SVG 净资产走势（按期数等距，悬停看 title） */
+function NetWorthChart({ series }) {
+  if (!series || series.length < 2) {
+    return <div className="sp-nw-charthint">记录至少两期，这里会出现净资产曲线。</div>;
+  }
+  const W = 560;
+  const H = 200;
+  const pad = { t: 16, r: 14, b: 24, l: 60 };
+  const innerW = W - pad.l - pad.r;
+  const innerH = H - pad.t - pad.b;
+  const nets = series.map((d) => d.net);
+  const max = Math.max(...nets, 0) * 1.08;
+  const min = Math.min(...nets, 0);
+  const range = max - min || 1;
+  const n = series.length;
+  const x = (i) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * innerW);
+  const y = (v) => pad.t + innerH - ((v - min) / range) * innerH;
+  const area = `M ${x(0)} ${y(min)} ` + series.map((d, i) => `L ${x(i)} ${y(d.net)}`).join(' ') + ` L ${x(n - 1)} ${y(min)} Z`;
+  const line = series.map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(d.net)}`).join(' ');
+  const ticks = 4;
+  const yTicks = Array.from({ length: ticks + 1 }, (_, i) => min + (range / ticks) * i);
+  return (
+    <div className="sp-chart">
+      <svg viewBox={`0 0 ${W} ${H}`}>
+        <defs>
+          <linearGradient id="sp-nw-area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#CC785C" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#CC785C" stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pad.l} y1={y(v)} x2={W - pad.r} y2={y(v)} stroke="#ECEAE2" />
+            <text x={pad.l - 7} y={y(v) + 4} textAnchor="end" className="sp-axis">{formatMoney(v)}</text>
+          </g>
+        ))}
+        <path d={area} fill="url(#sp-nw-area)" />
+        <path d={line} fill="none" stroke="#CC785C" strokeWidth="2.5" />
+        {series.map((d, i) => (
+          <g key={d.date}>
+            <circle cx={x(i)} cy={y(d.net)} r="3.2" fill="#CC785C" stroke="#fff" strokeWidth="1.5">
+              <title>{`${d.date}：${formatMoney(d.net)}`}</title>
+            </circle>
+            {(i === 0 || i === n - 1) && (
+              <text x={x(i)} y={H - 7} textAnchor={i === 0 ? 'start' : 'end'} className="sp-axis">{d.date}</text>
+            )}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+/* ============================ 财务体检 ============================ */
+function HealthTab({ netWorth, budget }) {
+  const snaps = netWorth.snapshots || [];
+  const current = snaps[snaps.length - 1] || null;
+  const totals = current ? snapshotTotals(current, netWorth.accounts) : null;
+  const health = financialHealth({
+    liquidAssets: totals ? totals.liquid : null,
+    monthlyExpense: budget.monthlyExpense,
+    savingRate: budget.savingRate,
+    totalAssets: totals ? totals.assets : 0,
+    totalLiabilities: totals ? totals.liabilities : 0,
+    annualNetIncome: budget.monthlyNetIncome * 12,
+    netWorth: totals ? totals.net : null,
+  });
+
+  return (
+    <Section title="财务健康体检" badge="结果">
+      <div className={`sp-health-score s-${health.grade === '优' ? 'good' : health.grade === '良' ? 'ok' : 'warn'}`}>
+        <div className="sp-health-grade">{health.grade}</div>
+        <div className="sp-health-meta">
+          <div className="sp-health-num">{health.score == null ? '—' : `${health.score} 分`}</div>
+          <div className="sp-health-cap">综合财务健康度</div>
+        </div>
+      </div>
+
+      {!current && (
+        <p className="sp-note" style={{ marginTop: 12 }}>
+          提示：去「净资产」记录一次资产 / 负债，即可解锁应急储备、负债率、净资产倍数等更多体检项。
+        </p>
+      )}
+
+      <div className="sp-health-list">
+        {health.checks.map((c) => (
+          <div className={`sp-health-item s-${c.status}`} key={c.key}>
+            <div className="sp-health-top">
+              <span className="sp-health-dot" />
+              <span className="sp-health-label">{c.label}</span>
+              <span className="sp-health-val">{c.value}</span>
+            </div>
+            <div className="sp-health-advice">{c.advice}</div>
+          </div>
+        ))}
+      </div>
+      <p className="sp-disclaimer">体检基于通用经验阈值的粗略参考，因人 / 因城而异，<strong>不构成专业财务建议</strong>。</p>
+    </Section>
+  );
+}
+
 /* ----------------------------- 工具函数 ----------------------------- */
+let __sid = 0;
+function uid(prefix) {
+  __sid = (__sid + 1) % 1e6;
+  return `${prefix}_${Date.now().toString(36)}_${__sid.toString(36)}`;
+}
+function monthLabel(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 function num(v) {
   const n = parseFloat(v);
   return isNaN(n) ? 0 : n;
@@ -714,8 +1046,71 @@ const CSS = `
 .sp-disclaimer{margin-top:18px;font-size:11px;color:var(--t3);background:none;border:1px solid var(--bd-soft);border-radius:11px;padding:12px 14px;line-height:1.65;}
 .sp-disclaimer strong{color:var(--t2);}
 
+/* ===== Tab ===== */
+.sp-tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin-bottom:16px;}
+.sp-tab{background:none;border:none;padding:9px 15px;font-size:13px;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans);transition:.15s;}
+.sp-tab:hover{color:var(--t1);}
+.sp-tab.active{color:var(--accent-2);border-bottom-color:var(--accent);font-weight:600;}
+.sp-kpis-4{grid-template-columns:repeat(4,1fr);}
+
+/* ===== 净资产 ===== */
+.sp-nw{display:flex;flex-direction:column;gap:14px;}
+.sp-nw-empty{text-align:center;padding:34px 16px;color:var(--t2);}
+.sp-nw-empty-ic{font-size:34px;margin-bottom:10px;}
+.sp-nw-empty p{font-size:12.5px;max-width:420px;margin:0 auto 16px;line-height:1.7;}
+.sp-nw-start,.sp-nw-add{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:var(--sans);transition:.15s;}
+.sp-nw-start:hover,.sp-nw-add:hover{background:var(--accent-2);}
+.sp-nw-breakdown{display:flex;flex-direction:column;gap:9px;}
+.sp-nw-brow{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:10px;font-size:11.5px;}
+.sp-nw-bcat{color:var(--t2);}
+.sp-nw-bamt{color:var(--t2);font-variant-numeric:tabular-nums;font-size:11px;}
+.sp-nw-daterow{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--t2);margin-bottom:6px;flex-wrap:wrap;}
+.sp-nw-date{width:130px;}
+.sp-nw-net{margin-top:14px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--bd-soft);border-radius:9px;font-size:12.5px;color:var(--t2);}
+.sp-nw-net strong{font-family:var(--serif);font-size:16px;color:var(--accent-2);margin-right:4px;}
+.sp-nw-charthint{padding:26px 16px;text-align:center;color:var(--t3);font-size:12px;background:var(--surface-2);border:1px dashed var(--bd-2);border-radius:10px;}
+.sp-nw-hist{display:flex;flex-direction:column;gap:7px;margin-top:12px;}
+.sp-nw-hrow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;font-size:12.5px;padding:8px 11px;background:var(--surface-2);border:1px solid var(--bd-soft);border-radius:9px;}
+.sp-nw-hdate{color:var(--t2);font-variant-numeric:tabular-nums;}
+.sp-nw-hnet{font-weight:600;font-variant-numeric:tabular-nums;color:var(--t1);}
+.sp-link-del{color:var(--t3);}
+.sp-link-del:hover{color:var(--danger);}
+
+.sp-acctmgr{margin-top:10px;padding:11px;background:var(--surface-2);border:1px solid var(--bd-soft);border-radius:9px;}
+.sp-acctlist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.sp-acctchip{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--bd);border-radius:999px;padding:4px 6px 4px 11px;font-size:11.5px;}
+.sp-acctchip em{font-style:normal;color:var(--t3);margin-left:5px;}
+.sp-acctchip button{background:none;border:none;color:var(--t3);cursor:pointer;font-size:11px;padding:1px 4px;border-radius:5px;}
+.sp-acctchip button:hover{color:var(--danger);background:var(--surface-3);}
+.sp-acctadd{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.sp-acctadd .sp-mini-input{width:auto;flex:1;min-width:90px;}
+
+/* ===== 体检 ===== */
+.sp-health-score{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:14px;background:var(--surface-2);border:1px solid var(--bd-soft);}
+.sp-health-grade{font-family:var(--serif);font-size:34px;font-weight:500;width:58px;height:58px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex:none;}
+.sp-health-score.s-good .sp-health-grade{color:var(--g);background:#EBF1ED;}
+.sp-health-score.s-ok .sp-health-grade{color:var(--warn);background:#F6EFE2;}
+.sp-health-score.s-warn .sp-health-grade{color:var(--danger);background:#F6E8E5;}
+.sp-health-num{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--t1);}
+.sp-health-cap{font-size:11.5px;color:var(--t3);margin-top:2px;}
+.sp-health-list{display:flex;flex-direction:column;gap:9px;margin-top:14px;}
+.sp-health-item{padding:11px 13px;border:1px solid var(--bd-soft);border-radius:10px;background:var(--surface);border-left-width:3px;}
+.sp-health-item.s-good{border-left-color:var(--g);}
+.sp-health-item.s-ok{border-left-color:var(--warn);}
+.sp-health-item.s-warn{border-left-color:var(--danger);}
+.sp-health-item.s-na{border-left-color:var(--bd-2);}
+.sp-health-top{display:flex;align-items:center;gap:8px;}
+.sp-health-dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--t3);}
+.sp-health-item.s-good .sp-health-dot{background:var(--g);}
+.sp-health-item.s-ok .sp-health-dot{background:var(--warn);}
+.sp-health-item.s-warn .sp-health-dot{background:var(--danger);}
+.sp-health-label{font-size:13px;font-weight:600;}
+.sp-health-val{margin-left:auto;font-size:12.5px;color:var(--t2);font-variant-numeric:tabular-nums;}
+.sp-health-advice{font-size:11.5px;color:var(--t2);margin-top:5px;padding-left:15px;}
+
 @media(max-width:860px){
   .sp-kpis{grid-template-columns:repeat(2,1fr);}
+  .sp-kpis-4{grid-template-columns:repeat(2,1fr);}
   .sp-kpi-hero{grid-column:1 / -1;}
   .sp-grid{grid-template-columns:1fr;}
 }
