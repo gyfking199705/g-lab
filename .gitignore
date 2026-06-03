@@ -1,0 +1,6 @@
+# 构建依赖（仅打包时临时安装，不提交）
+node_modules/
+package-lock.json
+
+# 编辑器/系统
+.DS_Store
