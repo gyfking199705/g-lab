@@ -37,6 +37,8 @@ import {
   pctText,
   GRADES,
   STATUS_LABEL,
+  encodePlanShare,
+  decodePlanShare,
 } from './calc.js';
 import { TEMPLATES } from './templates.js';
 import { PROVIDERS, defaultAIConfig, isConfigured, generatePlan, explainLesson } from './ai.js';
@@ -90,8 +92,29 @@ export default function LearningPlanner({ initialState, onChange, storageKey = '
   const [openPlanId, setOpenPlanId] = useState(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [aiSettingsOpen, setAISettingsOpen] = useState(false);
+  const [pendingShare, setPendingShare] = useState(null); // 从链接检测到的待导入计划
+  const [sharePlan, setSharePlan] = useState(null); // 正在「分享」哪个计划
 
   const today = todayStr();
+
+  // 打开页面时检测 URL 里的分享码（#share= 或 ?share=），有则提示导入
+  useEffect(() => {
+    if (typeof location === 'undefined') return;
+    const src = location.hash || location.search;
+    if (!src || src.indexOf('share=') < 0) return;
+    try {
+      const plan = decodePlanShare(src);
+      setPendingShare(plan);
+    } catch (e) {
+      /* 分享码无效则忽略 */
+    }
+    // 清掉地址栏里的分享码，避免刷新重复弹出
+    try {
+      history.replaceState(null, '', location.pathname);
+    } catch (e) {
+      /* 忽略 */
+    }
+  }, []);
 
   // 持久化主数据 + 对外回调
   useEffect(() => {
@@ -227,6 +250,7 @@ export default function LearningPlanner({ initialState, onChange, storageKey = '
               onGrade={(lid, g) => grade(openPlan.id, lid, g)}
               onRemove={() => removePlan(openPlan.id)}
               onNeedAI={() => setAISettingsOpen(true)}
+              onShare={() => setSharePlan(openPlan)}
             />
           ) : (
             <PlansView
@@ -251,6 +275,17 @@ export default function LearningPlanner({ initialState, onChange, storageKey = '
       {aiSettingsOpen && (
         <AISettings config={aiConfig} onChange={setAIConfig} onClose={() => setAISettingsOpen(false)} />
       )}
+      {pendingShare && (
+        <ImportShareModal
+          plan={pendingShare}
+          onClose={() => setPendingShare(null)}
+          onImport={() => {
+            addPlan(pendingShare);
+            setPendingShare(null);
+          }}
+        />
+      )}
+      {sharePlan && <ShareModal plan={sharePlan} onClose={() => setSharePlan(null)} />}
 
       <p className="lp-foot">
         数据保存在本地浏览器（localStorage）。AI 为可选功能，API Key 仅存本地、调用直连模型厂商，
@@ -485,7 +520,7 @@ function PlansView({ plans, today, onOpen, onNew }) {
 }
 
 /* ============================ 计划详情（编辑 + 追踪） ============================ */
-function PlanDetail({ plan, aiConfig, today, onBack, onUpdate, onSetStatus, onGrade, onRemove, onNeedAI }) {
+function PlanDetail({ plan, aiConfig, today, onBack, onUpdate, onSetStatus, onGrade, onRemove, onNeedAI, onShare }) {
   const s = planStats(plan);
   const target = planTargetDate(plan, today);
   const perDay = suggestedDailyLessons(plan, today);
@@ -516,6 +551,7 @@ function PlanDetail({ plan, aiConfig, today, onBack, onUpdate, onSetStatus, onGr
         <div className="lp-detail-acts">
           <button className="lp-mini" onClick={renamePlan}>重命名</button>
           <button className="lp-mini" onClick={editMeta}>设置</button>
+          <button className="lp-mini lp-mini-ai" onClick={onShare}>🔗 分享</button>
           <button className="lp-mini" onClick={exportPlan}>导出</button>
           <button className="lp-mini lp-mini-del" onClick={del}>删除</button>
         </div>
@@ -865,6 +901,7 @@ function Creator({ aiConfig, onClose, onCreate, onNeedAI }) {
         <button className={mode === 'template' ? 'on' : ''} onClick={() => setMode('template')}>📚 从模板</button>
         <button className={mode === 'ai' ? 'on' : ''} onClick={() => setMode('ai')}>✨ AI 生成</button>
         <button className={mode === 'blank' ? 'on' : ''} onClick={() => setMode('blank')}>📝 空白</button>
+        <button className={mode === 'import' ? 'on' : ''} onClick={() => setMode('import')}>🔗 导入</button>
       </div>
 
       {mode === 'template' && (
@@ -883,7 +920,41 @@ function Creator({ aiConfig, onClose, onCreate, onNeedAI }) {
       {mode === 'ai' && <AICreator aiConfig={aiConfig} onCreate={onCreate} onNeedAI={onNeedAI} />}
 
       {mode === 'blank' && <BlankCreator onCreate={onCreate} />}
+
+      {mode === 'import' && <ImportCreator onCreate={onCreate} />}
     </Modal>
+  );
+}
+
+function ImportCreator({ onCreate }) {
+  const [code, setCode] = useState('');
+  const [err, setErr] = useState('');
+  const doImport = () => {
+    setErr('');
+    try {
+      onCreate(decodePlanShare(code));
+    } catch (e) {
+      setErr(e.message || String(e));
+    }
+  };
+  return (
+    <div className="lp-blank">
+      <div className="lp-aihint">
+        把别人分享给你的「分享链接」或「分享码」粘贴到这里，一键导入对方的学习计划（会重置为未开始，无需 API Key）。
+      </div>
+      <label className="lp-flabel">分享链接 / 分享码</label>
+      <textarea
+        className="lp-textarea"
+        rows={4}
+        placeholder="粘贴形如 https://…/learning/#share=LP1.… 的链接，或直接粘贴 LP1. 开头的分享码"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+      />
+      {err && <div className="lp-aierr">{err}</div>}
+      <button className="lp-btn lp-btn-primary lp-btn-block" onClick={doImport} disabled={!code.trim()}>
+        导入这个计划
+      </button>
+    </div>
   );
 }
 
@@ -1061,6 +1132,75 @@ function AISettings({ config, onChange, onClose }) {
         </div>
       </div>
       <p className="lp-aiwarn">⚠️ 纯前端调用会把 Key 暴露在浏览器端，仅建议个人使用；多用户/公开场景请改用后端代理。</p>
+    </Modal>
+  );
+}
+
+/* ============================ 分享 / 导入分享 ============================ */
+function ShareModal({ plan, onClose }) {
+  const code = useMemo(() => encodePlanShare(plan), [plan]);
+  const link = useMemo(() => {
+    if (typeof location === 'undefined') return '#share=' + code;
+    return location.origin + location.pathname + '#share=' + code;
+  }, [code]);
+  const [copied, setCopied] = useState('');
+
+  const copy = async (text, which) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        throw new Error('no clipboard');
+      }
+      setCopied(which);
+      setTimeout(() => setCopied(''), 1800);
+    } catch (e) {
+      // 退化：选中文本让用户手动复制
+      window.prompt('复制下面的内容：', text);
+    }
+  };
+
+  const s = planStats(plan);
+  return (
+    <Modal title="🔗 分享这个学习计划" onClose={onClose}>
+      <p className="lp-aiabout">
+        把链接或分享码发给别人，对方打开链接（或在「新建计划 → 导入」里粘贴）即可一键学习同样的计划。
+        分享只包含计划<strong>结构</strong>，不含你的学习进度，也无需对方配置 API Key。
+      </p>
+      <div className="lp-sharemeta">{plan.icon} <strong>{plan.title}</strong> · {plan.modules.length} 模块 · {s.total} 个知识点</div>
+
+      <label className="lp-flabel">分享链接</label>
+      <div className="lp-copyrow">
+        <input className="lp-input" readOnly value={link} onFocus={(e) => e.target.select()} />
+        <button className="lp-btn lp-btn-primary" onClick={() => copy(link, 'link')}>{copied === 'link' ? '已复制 ✓' : '复制链接'}</button>
+      </div>
+
+      <label className="lp-flabel">分享码（无法用链接时可发这个）</label>
+      <div className="lp-copyrow">
+        <input className="lp-input" readOnly value={code} onFocus={(e) => e.target.select()} />
+        <button className="lp-btn" onClick={() => copy(code, 'code')}>{copied === 'code' ? '已复制 ✓' : '复制码'}</button>
+      </div>
+    </Modal>
+  );
+}
+
+function ImportShareModal({ plan, onClose, onImport }) {
+  const s = planStats(plan);
+  return (
+    <Modal title="📥 导入分享的学习计划" onClose={onClose}>
+      <p className="lp-aiabout">有人给你分享了一个学习计划，是否导入到「我的计划」？</p>
+      <div className="lp-sharecard">
+        <div className="lp-sharecard-icon">{plan.icon}</div>
+        <div>
+          <div className="lp-sharecard-title">{plan.title}</div>
+          <div className="lp-sharecard-sub">{plan.subject} · {plan.level} · {plan.modules.length} 模块 · {s.total} 个知识点</div>
+          {plan.summary && <div className="lp-sharecard-summary">{plan.summary}</div>}
+        </div>
+      </div>
+      <div className="lp-aibtns">
+        <button className="lp-btn lp-btn-ghost" onClick={onClose}>忽略</button>
+        <button className="lp-btn lp-btn-primary" onClick={onImport}>导入并开始学习</button>
+      </div>
     </Modal>
   );
 }
@@ -1425,6 +1565,16 @@ const CSS = `
 .lp-aibtns-right{display:flex;gap:8px;}
 .lp-aiwarn{color:var(--t3);margin:14px 0 0;}
 .lp-foot{color:var(--t3);margin-top:22px;text-align:center;border-top:1px solid var(--bd);padding-top:16px;}
+
+.lp-sharemeta{font-size:13.5px;color:var(--t2);background:var(--surface-2);border:1px solid var(--bd);border-radius:10px;padding:10px 13px;margin-bottom:6px;}
+.lp-copyrow{display:flex;gap:8px;}
+.lp-copyrow .lp-input{flex:1;font-size:12.5px;color:var(--t2);}
+.lp-copyrow .lp-btn{flex:none;white-space:nowrap;}
+.lp-sharecard{display:flex;gap:14px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--bd);border-radius:12px;padding:15px;margin:4px 0 4px;}
+.lp-sharecard-icon{font-size:34px;flex:none;}
+.lp-sharecard-title{font-family:var(--serif);font-size:17px;font-weight:600;}
+.lp-sharecard-sub{font-size:12.5px;color:var(--t3);margin-top:3px;}
+.lp-sharecard-summary{font-size:13px;color:var(--t2);margin-top:8px;line-height:1.6;}
 
 @media(max-width:860px){
   .lp-grid2{grid-template-columns:1fr;}

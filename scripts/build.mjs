@@ -9,6 +9,7 @@
  *   dist/app.js      —— 主应用（首页 index.html 加载）
  *   dist/savings.js  —— 财富规划器独立页（savings/index.html 加载）
  *   dist/learning.js —— AI 学习计划站独立页（learning/index.html 加载）
+ *   dist/fitness.js  —— 健身训练规划独立页（fitness/index.html 加载）
  */
 import { build } from 'esbuild';
 
@@ -26,5 +27,6 @@ const common = {
 await build({ ...common, entryPoints: ['app/bootstrap.jsx'], outfile: 'dist/app.js' });
 await build({ ...common, entryPoints: ['savings/bootstrap.jsx'], outfile: 'dist/savings.js' });
 await build({ ...common, entryPoints: ['learning/bootstrap.jsx'], outfile: 'dist/learning.js' });
+await build({ ...common, entryPoints: ['fitness/bootstrap.jsx'], outfile: 'dist/fitness.js' });
 
-console.log('✅ 打包完成：dist/app.js, dist/savings.js, dist/learning.js');
+console.log('✅ 打包完成：dist/app.js, dist/savings.js, dist/learning.js, dist/fitness.js');

@@ -1,0 +1,10 @@
+{
+  "name": "fitness-planner",
+  "version": "1.0.0",
+  "description": "健身训练规划：纯函数计算逻辑（1RM/容量/肌群/频率）+ React 组件 + 动作库与模板",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

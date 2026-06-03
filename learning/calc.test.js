@@ -26,6 +26,9 @@ import {
   formatDuration,
   pctText,
   fmtDate,
+  encodePlanShare,
+  decodePlanShare,
+  slimPlanForShare,
 } from './calc.js';
 import { TEMPLATES, getTemplate } from './templates.js';
 
@@ -273,6 +276,49 @@ test('parsePlanFromText：无 JSON 或无模块时抛错', () => {
   assert.throws(() => parsePlanFromText('完全没有 JSON 的文字'), /JSON/);
   assert.throws(() => parsePlanFromText('{"title":"Z","modules":[]}'), /模块/);
   assert.throws(() => parsePlanFromText(''), /未返回/);
+});
+
+/* --------------------------- 计划分享 编码/解码 --------------------------- */
+test('encode/decodePlanShare：往返一致，含中文与资源', () => {
+  const plan = scaffoldPlan(getTemplate('tpl-aiml'));
+  plan.modules[0].lessons[0].note = '注意线代的几何含义';
+  plan.modules[0].lessons[0].resources = [{ title: '3Blue1Brown', url: 'https://example.com/la' }];
+  // 模拟已有进度，分享时应被剥离
+  plan.modules[0].lessons[0].status = 'mastered';
+  plan.modules[0].lessons[0].sr = { reps: 3, ease: 2.6, interval: 15, due: '2030-01-01' };
+
+  const code = encodePlanShare(plan);
+  assert.ok(code.startsWith('LP1.'));
+  const decoded = decodePlanShare(code);
+  assert.equal(decoded.title, plan.title);
+  assert.equal(decoded.modules.length, plan.modules.length);
+  assert.equal(decoded.modules[0].lessons[0].title, plan.modules[0].lessons[0].title);
+  assert.equal(decoded.modules[0].lessons[0].note, '注意线代的几何含义');
+  assert.equal(decoded.modules[0].lessons[0].resources[0].url, 'https://example.com/la');
+  // 进度被重置、id 重新生成
+  assert.equal(decoded.modules[0].lessons[0].status, 'todo');
+  assert.equal(decoded.modules[0].lessons[0].sr, null);
+  assert.notEqual(decoded.id, plan.id);
+});
+
+test('decodePlanShare：容忍粘贴整条链接', () => {
+  const plan = scaffoldPlan(getTemplate('tpl-reading'));
+  const code = encodePlanShare(plan);
+  const url = 'https://user.github.io/g-lab/learning/#share=' + code;
+  const decoded = decodePlanShare(url);
+  assert.equal(decoded.title, plan.title);
+});
+
+test('slimPlanForShare：剥离 id/进度/AI 缓存', () => {
+  const plan = scaffoldPlan(getTemplate('tpl-blank'));
+  const slim = slimPlanForShare(plan);
+  assert.equal(slim.id, undefined);
+  assert.ok('title' in slim && Array.isArray(slim.modules));
+});
+
+test('decodePlanShare：垃圾输入抛错', () => {
+  assert.throws(() => decodePlanShare(''), /分享码/);
+  assert.throws(() => decodePlanShare('LP1.@@@not-base64@@@'), /解码|合法/);
 });
 
 /* --------------------------- 格式化 --------------------------- */

@@ -490,3 +490,82 @@ export function fmtDate(str) {
   if (!m || !d) return str;
   return `${Number(m)}月${Number(d)}日`;
 }
+
+/* =============================================================
+ * 10. 计划分享（编码/解码为可放进 URL 的分享码）
+ * 让「别人也能来学」：把一份计划的结构(模块/知识点/笔记/资源)编码成一段字符串，
+ * 通过链接或分享码发给对方，对方一键导入即可——纯前端、无需后端、无需 Key。
+ * 分享只含结构、不含个人进度；解码后用 normalizePlan 补全 id 并重置为「未开始」。
+ * 采用 UTF-8 安全的 URL-safe base64，前缀 'LP1.' 作版本标记。
+ * ============================================================= */
+const SHARE_PREFIX = 'LP1.';
+
+function b64encodeUtf8(str) {
+  const b64 = btoa(unescape(encodeURIComponent(str)));
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64decodeUtf8(b64url) {
+  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  return decodeURIComponent(escape(atob(b64)));
+}
+
+/** 抽取计划中用于分享的「结构」部分（不含进度/id/AI 讲解缓存）。 */
+export function slimPlanForShare(plan) {
+  return {
+    title: plan.title,
+    subject: plan.subject,
+    summary: plan.summary,
+    icon: plan.icon,
+    level: plan.level,
+    weeks: plan.weeks,
+    hoursPerWeek: plan.hoursPerWeek,
+    modules: (plan.modules || []).map((m) => ({
+      title: m.title,
+      lessons: (m.lessons || []).map((l) => {
+        const out = { title: l.title };
+        if (l.note) out.note = l.note;
+        if (l.resources && l.resources.length) out.resources = l.resources.map((r) => ({ title: r.title, url: r.url }));
+        return out;
+      }),
+    })),
+  };
+}
+
+/** 计划 → 分享码（带 'LP1.' 前缀的 URL-safe base64）。 */
+export function encodePlanShare(plan) {
+  return SHARE_PREFIX + b64encodeUtf8(JSON.stringify(slimPlanForShare(plan)));
+}
+
+/**
+ * 分享码 / 分享链接 → 计划（已 normalizePlan，含新 id、进度重置为未开始）。
+ * 容忍直接粘贴整条链接（自动提取 #share= / ?share= 后的部分）。
+ * @throws 解码或解析失败时抛出可读错误
+ */
+export function decodePlanShare(code) {
+  if (!code || typeof code !== 'string') throw new Error('分享码为空');
+  let raw = code.trim();
+  const m = raw.match(/[#?&]share=([^&\s]+)/);
+  if (m) raw = m[1];
+  try {
+    raw = decodeURIComponent(raw);
+  } catch (e) {
+    /* 不是 URL 编码就按原样处理 */
+  }
+  if (raw.startsWith(SHARE_PREFIX)) raw = raw.slice(SHARE_PREFIX.length);
+  let json;
+  try {
+    json = b64decodeUtf8(raw);
+  } catch (e) {
+    throw new Error('分享码无法解码（可能不完整或已损坏）');
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(json);
+  } catch (e) {
+    throw new Error('分享内容不是合法的学习计划');
+  }
+  const plan = normalizePlan(parsed, { source: 'shared' });
+  if (!plan.modules.length) throw new Error('分享的计划没有任何模块');
+  return plan;
+}

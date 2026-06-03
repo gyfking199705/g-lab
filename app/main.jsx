@@ -11,9 +11,10 @@
 import React, { useEffect, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
 import LearningPlanner from '../learning/LearningPlanner.jsx';
+import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 
 /* ----------------------------- 模块定义 ----------------------------- */
-/* 通用「清单」模块（个人 / 健身）；学习与财富为各自的富模块。 */
+/* 通用「清单」模块（个人规划）；学习 / 健身 / 财富为各自的富模块。 */
 const TASK_MODULES = [
   {
     id: 'personal',
@@ -24,22 +25,13 @@ const TASK_MODULES = [
     placeholder: '添加新的待办事项…',
     empty: '还没有待办事项',
   },
-  {
-    id: 'fitness',
-    icon: '💪',
-    label: '健身规划',
-    title: '健身规划',
-    subtitle: '制定和追踪你的健身目标',
-    placeholder: '添加新的健身计划…',
-    empty: '还没有健身计划',
-  },
 ];
 
 /* 侧边栏导航顺序（个人 → 学习 → 健身 → 财富）。kind 决定渲染哪种主内容。 */
 const NAV_ITEMS = [
   { id: 'personal', icon: '📝', label: '个人规划', kind: 'task' },
   { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning' },
-  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'task' },
+  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness' },
   { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth' },
 ];
 
@@ -48,8 +40,9 @@ const NAV_ITEMS = [
 const BACKUP_KEYS = [
   'planning_personal',
   'planning_learning', // 旧版学习待办，保留以兼容历史备份
-  'planning_fitness',
-  'learning-planner', // 新版 AI 学习计划站数据
+  'planning_fitness', // 旧版健身待办，保留以兼容历史备份
+  'learning-planner', // AI 学习计划站数据
+  'fitness-planner', // 健身训练规划数据
   'savings-planner',
 ];
 
@@ -111,6 +104,18 @@ function readLearningBadge() {
   }
 }
 
+/* 健身规划的侧边栏徽章：训练记录次数。 */
+function readFitnessBadge() {
+  try {
+    const raw = localStorage.getItem('fitness-planner');
+    if (!raw) return null;
+    const workouts = (JSON.parse(raw).workouts) || [];
+    return workouts.length ? `${workouts.length} 次` : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ============================ 主应用 ============================ */
 export default function App() {
   const [active, setActive] = useState('personal');
@@ -129,7 +134,13 @@ export default function App() {
           {NAV_ITEMS.map((m) => {
             // 依赖 tick/active 触发的重渲染刷新徽章
             const count =
-              m.kind === 'task' ? readCount(`planning_${m.id}`) : m.kind === 'learning' ? readLearningBadge() : null;
+              m.kind === 'task'
+                ? readCount(`planning_${m.id}`)
+                : m.kind === 'learning'
+                ? readLearningBadge()
+                : m.kind === 'fitness'
+                ? readFitnessBadge()
+                : null;
             return (
               <button
                 key={m.id}
@@ -155,6 +166,8 @@ export default function App() {
             <WealthSection />
           ) : active === 'learning' ? (
             <LearningPlanner storageKey="learning-planner" onChange={bump} />
+          ) : active === 'fitness' ? (
+            <FitnessPlanner storageKey="fitness-planner" onChange={bump} />
           ) : (
             <TaskModule key={active} module={TASK_MODULES.find((m) => m.id === active)} onMutate={bump} />
           )}
