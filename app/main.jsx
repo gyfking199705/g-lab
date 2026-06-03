@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
 import LearningPlanner from '../learning/LearningPlanner.jsx';
 import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
+import StockWatch from '../stocks/StockWatch.jsx';
 
 /* ----------------------------- 模块定义 ----------------------------- */
 /* 通用「清单」模块（个人规划）；学习 / 健身 / 财富为各自的富模块。 */
@@ -27,12 +28,13 @@ const TASK_MODULES = [
   },
 ];
 
-/* 侧边栏导航顺序（个人 → 学习 → 健身 → 财富）。kind 决定渲染哪种主内容。 */
+/* 侧边栏导航顺序（个人 → 学习 → 健身 → 财富 → 股市）。kind 决定渲染哪种主内容。 */
 const NAV_ITEMS = [
   { id: 'personal', icon: '📝', label: '个人规划', kind: 'task' },
   { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning' },
   { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness' },
   { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth' },
+  { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks' },
 ];
 
 /* 参与备份的所有 localStorage 键。
@@ -44,6 +46,7 @@ const BACKUP_KEYS = [
   'learning-planner', // AI 学习计划站数据
   'fitness-planner', // 健身训练规划数据
   'savings-planner',
+  'stocks-watch',
 ];
 
 /* ----------------------------- 本地存储 hook ----------------------------- */
@@ -168,6 +171,8 @@ export default function App() {
             <LearningPlanner storageKey="learning-planner" onChange={bump} />
           ) : active === 'fitness' ? (
             <FitnessPlanner storageKey="fitness-planner" onChange={bump} />
+          ) : active === 'stocks' ? (
+            <StockSection />
           ) : (
             <TaskModule key={active} module={TASK_MODULES.find((m) => m.id === active)} onMutate={bump} />
           )}
@@ -186,6 +191,19 @@ function WealthSection() {
         <p>测算储蓄率、综合年化与达成财富目标所需年数，并预测资产增长曲线</p>
       </div>
       <SavingsPlanner storageKey="savings-planner" />
+    </>
+  );
+}
+
+/* ============================ 股市观测区 ============================ */
+function StockSection() {
+  return (
+    <>
+      <div className="app-modhead">
+        <h2>📈 股市观测</h2>
+        <p>自选股清单与实时行情观测（数据由浏览器直连行情 API，无后端）</p>
+      </div>
+      <StockWatch />
     </>
   );
 }
