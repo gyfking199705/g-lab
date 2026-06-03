@@ -10,9 +10,12 @@
  */
 import React, { useEffect, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
+import LearningPlanner from '../learning/LearningPlanner.jsx';
+import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
 
 /* ----------------------------- 模块定义 ----------------------------- */
+/* 通用「清单」模块（个人规划）；学习 / 健身 / 财富为各自的富模块。 */
 const TASK_MODULES = [
   {
     id: 'personal',
@@ -23,36 +26,25 @@ const TASK_MODULES = [
     placeholder: '添加新的待办事项…',
     empty: '还没有待办事项',
   },
-  {
-    id: 'learning',
-    icon: '📚',
-    label: '学习规划',
-    title: '学习规划',
-    subtitle: '追踪你的学习进度和课程目标',
-    placeholder: '添加新的学习目标…',
-    empty: '还没有学习目标',
-  },
-  {
-    id: 'fitness',
-    icon: '💪',
-    label: '健身规划',
-    title: '健身规划',
-    subtitle: '制定和追踪你的健身目标',
-    placeholder: '添加新的健身计划…',
-    empty: '还没有健身计划',
-  },
 ];
 
-const EXTRA_MODULES = [
-  { id: 'wealth', icon: '💰', label: '财富规划' },
-  { id: 'stocks', icon: '📈', label: '股市观测' },
+/* 侧边栏导航顺序（个人 → 学习 → 健身 → 财富 → 股市）。kind 决定渲染哪种主内容。 */
+const NAV_ITEMS = [
+  { id: 'personal', icon: '📝', label: '个人规划', kind: 'task' },
+  { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning' },
+  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness' },
+  { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth' },
+  { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks' },
 ];
 
-/* 参与备份的所有 localStorage 键 */
+/* 参与备份的所有 localStorage 键。
+   注意：AI 配置键 `learning-ai`（含 API Key）故意不纳入备份，避免随分享外泄。 */
 const BACKUP_KEYS = [
   'planning_personal',
-  'planning_learning',
-  'planning_fitness',
+  'planning_learning', // 旧版学习待办，保留以兼容历史备份
+  'planning_fitness', // 旧版健身待办，保留以兼容历史备份
+  'learning-planner', // AI 学习计划站数据
+  'fitness-planner', // 健身训练规划数据
   'savings-planner',
   'stocks-watch',
 ];
@@ -92,6 +84,41 @@ function readCount(key) {
   }
 }
 
+/* 学习规划的侧边栏徽章：已掌握/总知识点；无知识点时退化为计划数。 */
+function readLearningBadge() {
+  try {
+    const raw = localStorage.getItem('learning-planner');
+    if (!raw) return null;
+    const plans = (JSON.parse(raw).plans) || [];
+    let total = 0;
+    let mastered = 0;
+    for (const p of plans) {
+      for (const m of p.modules || []) {
+        for (const l of m.lessons || []) {
+          total += 1;
+          if (l.status === 'mastered') mastered += 1;
+        }
+      }
+    }
+    if (!total) return plans.length ? `${plans.length} 计划` : null;
+    return `${mastered}/${total}`;
+  } catch (e) {
+    return null;
+  }
+}
+
+/* 健身规划的侧边栏徽章：训练记录次数。 */
+function readFitnessBadge() {
+  try {
+    const raw = localStorage.getItem('fitness-planner');
+    if (!raw) return null;
+    const workouts = (JSON.parse(raw).workouts) || [];
+    return workouts.length ? `${workouts.length} 次` : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ============================ 主应用 ============================ */
 export default function App() {
   const [active, setActive] = useState('personal');
@@ -107,8 +134,16 @@ export default function App() {
           <div className="app-brand-sub">Personal Growth Planner</div>
         </div>
         <nav className="app-nav">
-          {TASK_MODULES.map((m) => {
-            const count = readCount(`planning_${m.id}`); // 依赖 tick/active 触发的重渲染刷新
+          {NAV_ITEMS.map((m) => {
+            // 依赖 tick/active 触发的重渲染刷新徽章
+            const count =
+              m.kind === 'task'
+                ? readCount(`planning_${m.id}`)
+                : m.kind === 'learning'
+                ? readLearningBadge()
+                : m.kind === 'fitness'
+                ? readFitnessBadge()
+                : null;
             return (
               <button
                 key={m.id}
@@ -121,16 +156,6 @@ export default function App() {
               </button>
             );
           })}
-          {EXTRA_MODULES.map((m) => (
-            <button
-              key={m.id}
-              className={`app-navbtn ${active === m.id ? 'active' : ''}`}
-              onClick={() => setActive(m.id)}
-            >
-              <span className="ic">{m.icon}</span>
-              {m.label}
-            </button>
-          ))}
         </nav>
         <div className="app-foot">
           <ExportButton />
@@ -142,6 +167,10 @@ export default function App() {
         <div className="app-mainpad">
           {active === 'wealth' ? (
             <WealthSection />
+          ) : active === 'learning' ? (
+            <LearningPlanner storageKey="learning-planner" onChange={bump} />
+          ) : active === 'fitness' ? (
+            <FitnessPlanner storageKey="fitness-planner" onChange={bump} />
           ) : active === 'stocks' ? (
             <StockSection />
           ) : (
