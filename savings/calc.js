@@ -310,3 +310,162 @@ export function formatYears(years) {
   if (years == null || !isFinite(years)) return '∞';
   return `${years.toFixed(1)} 年`;
 }
+
+/* =============================================================
+ * 8. 净资产追踪 & 财务体检（纯函数）
+ * 账户 account: { id, name, type:'asset'|'liability', category }
+ * 快照 snapshot: { id, date:'YYYY-MM', values: { [accountId]: 金额 } }
+ * 体检会综合「最新快照」与「收支预算」给出几项财务健康度评估。
+ * ============================================================= */
+
+/** 哪些资产类别算作「流动资产」（用于应急储备评估）。 */
+export const LIQUID_CATEGORIES = ['流动'];
+
+function accountsIndex(accounts) {
+  const m = {};
+  for (const a of accounts || []) m[a.id] = a;
+  return m;
+}
+
+/** 单个快照的总资产 / 总负债 / 净资产 / 流动资产。 */
+export function snapshotTotals(snapshot, accounts) {
+  const idx = accountsIndex(accounts);
+  const values = (snapshot && snapshot.values) || {};
+  let assets = 0;
+  let liabilities = 0;
+  let liquid = 0;
+  for (const id of Object.keys(values)) {
+    const a = idx[id];
+    if (!a) continue;
+    const v = Math.max(0, values[id] || 0);
+    if (a.type === 'liability') {
+      liabilities += v;
+    } else {
+      assets += v;
+      if (LIQUID_CATEGORIES.includes(a.category)) liquid += v;
+    }
+  }
+  return { assets, liabilities, net: assets - liabilities, liquid };
+}
+
+/** 资产按类别拆分（降序），用于占比展示。 */
+export function assetBreakdown(snapshot, accounts) {
+  const idx = accountsIndex(accounts);
+  const values = (snapshot && snapshot.values) || {};
+  const byCat = {};
+  let total = 0;
+  for (const id of Object.keys(values)) {
+    const a = idx[id];
+    const v = Math.max(0, values[id] || 0);
+    if (!a || a.type !== 'asset' || v <= 0) continue;
+    byCat[a.category] = (byCat[a.category] || 0) + v;
+    total += v;
+  }
+  return Object.keys(byCat)
+    .map((c) => ({ category: c, amount: byCat[c], share: total > 0 ? byCat[c] / total : 0 }))
+    .sort((x, y) => y.amount - x.amount);
+}
+
+/** 净资产时间序列（按日期升序）。 */
+export function netWorthSeries(snapshots, accounts) {
+  return [...(snapshots || [])]
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map((s) => {
+      const t = snapshotTotals(s, accounts);
+      return { date: s.date, assets: t.assets, liabilities: t.liabilities, net: t.net };
+    });
+}
+
+/** 最新一期相对上一期的净资产变化。 */
+export function netWorthChange(series) {
+  if (!series || series.length < 2) return null;
+  const last = series[series.length - 1];
+  const prev = series[series.length - 2];
+  const abs = last.net - prev.net;
+  const pct = prev.net !== 0 ? abs / Math.abs(prev.net) : null;
+  return { abs, pct, fromDate: prev.date };
+}
+
+/**
+ * 财务健康体检：综合最新净资产与收支，给出若干检查项 + 总评分/等级。
+ * 任一输入缺失的项标记为 'na'（不计入评分）。
+ * @returns {{ checks: Array, score: number|null, grade: string }}
+ */
+export function financialHealth({
+  liquidAssets,
+  monthlyExpense,
+  savingRate,
+  totalAssets,
+  totalLiabilities,
+  annualNetIncome,
+  netWorth,
+} = {}) {
+  const checks = [];
+
+  // 应急储备：流动资产能覆盖几个月支出
+  if (liquidAssets != null && monthlyExpense > 0) {
+    const months = liquidAssets / monthlyExpense;
+    checks.push({
+      key: 'emergency',
+      label: '应急储备',
+      value: `${months.toFixed(1)} 个月支出`,
+      status: months >= 6 ? 'good' : months >= 3 ? 'ok' : 'warn',
+      advice:
+        months >= 6 ? '流动资金充足，能从容应对突发' : months >= 3 ? '够用，建议逐步攒到 6 个月' : '偏低，优先攒够 3~6 个月生活费',
+    });
+  } else {
+    checks.push({ key: 'emergency', label: '应急储备', value: '—', status: 'na', advice: '记录净资产并填好月支出后可评估' });
+  }
+
+  // 储蓄率
+  if (savingRate != null) {
+    checks.push({
+      key: 'saving',
+      label: '储蓄率',
+      value: formatPct(savingRate),
+      status: savingRate >= 0.3 ? 'good' : savingRate >= 0.1 ? 'ok' : 'warn',
+      advice:
+        savingRate < 0
+          ? '入不敷出，先压缩支出或增加收入'
+          : savingRate >= 0.3
+          ? '储蓄强劲，离目标更近'
+          : savingRate >= 0.1
+          ? '还行，能挤就再挤一点'
+          : '偏低，看看哪些支出可优化',
+    });
+  }
+
+  // 负债率：总负债 / 总资产
+  if (totalAssets > 0) {
+    const ratio = totalLiabilities / totalAssets;
+    checks.push({
+      key: 'debt',
+      label: '负债率',
+      value: formatPct(ratio),
+      status: ratio <= 0.4 ? 'good' : ratio <= 0.6 ? 'ok' : 'warn',
+      advice: ratio <= 0.4 ? '负债健康' : ratio <= 0.6 ? '尚可，注意月供压力' : '偏高，警惕现金流风险',
+    });
+  } else {
+    checks.push({ key: 'debt', label: '负债率', value: '—', status: 'na', advice: '记录资产 / 负债后可评估' });
+  }
+
+  // 财富倍数：净资产 / 年到手收入
+  if (annualNetIncome > 0 && netWorth != null) {
+    const mult = netWorth / annualNetIncome;
+    checks.push({
+      key: 'multiple',
+      label: '净资产 / 年收入',
+      value: `${mult.toFixed(1)} 倍`,
+      status: mult >= 3 ? 'good' : mult >= 1 ? 'ok' : 'warn',
+      advice: mult >= 3 ? '资本积累良好' : mult >= 1 ? '稳步积累中' : '起步阶段，靠持续储蓄 + 复利',
+    });
+  } else {
+    checks.push({ key: 'multiple', label: '净资产 / 年收入', value: '—', status: 'na', advice: '记录净资产后可评估' });
+  }
+
+  const scored = checks.filter((c) => c.status !== 'na');
+  const sMap = { good: 2, ok: 1, warn: 0 };
+  const score = scored.length ? Math.round((scored.reduce((s, c) => s + sMap[c.status], 0) / (scored.length * 2)) * 100) : null;
+  const grade = score == null ? '—' : score >= 80 ? '优' : score >= 55 ? '良' : '待改善';
+  return { checks, score, grade };
+}

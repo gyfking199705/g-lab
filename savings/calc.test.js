@@ -12,6 +12,11 @@ import {
   formatMoney,
   formatPct,
   formatYears,
+  snapshotTotals,
+  assetBreakdown,
+  netWorthSeries,
+  netWorthChange,
+  financialHealth,
 } from './calc.js';
 
 const approx = (a, b, eps = 1e-6) =>
@@ -164,6 +169,69 @@ test('rateOverride 与 useReal 影响预测年化', () => {
   assert.ok(real.investment.effectiveReturn < 0.07);
   const overridden = computePlan({ ...base, forecast: { ...base.forecast, rateOverride: 10 } });
   approx(overridden.investment.effectiveReturn, 0.1);
+});
+
+/* --------------------------- 净资产追踪 --------------------------- */
+const NW_ACCOUNTS = [
+  { id: 'cash', name: '现金', type: 'asset', category: '流动' },
+  { id: 'fund', name: '基金', type: 'asset', category: '投资' },
+  { id: 'house', name: '房产', type: 'asset', category: '固定' },
+  { id: 'mortgage', name: '房贷', type: 'liability', category: '负债' },
+];
+const SNAP1 = { id: 's1', date: '2026-01', values: { cash: 100000, fund: 200000, house: 3000000, mortgage: 1500000 } };
+const SNAP2 = { id: 's2', date: '2026-02', values: { cash: 150000, fund: 250000, house: 3000000, mortgage: 1400000 } };
+
+test('snapshotTotals：资产/负债/净资产/流动', () => {
+  const t = snapshotTotals(SNAP1, NW_ACCOUNTS);
+  assert.equal(t.assets, 3300000);
+  assert.equal(t.liabilities, 1500000);
+  assert.equal(t.net, 1800000);
+  assert.equal(t.liquid, 100000); // 仅「流动」类别
+});
+
+test('assetBreakdown：按类别降序 + 占比', () => {
+  const b = assetBreakdown(SNAP1, NW_ACCOUNTS);
+  assert.deepEqual(b.map((x) => x.category), ['固定', '投资', '流动']);
+  approx(b.reduce((s, x) => s + x.share, 0), 1);
+  assert.equal(b[0].amount, 3000000);
+});
+
+test('netWorthSeries：按日期升序；netWorthChange 算环比', () => {
+  const series = netWorthSeries([SNAP2, SNAP1], NW_ACCOUNTS); // 故意乱序传入
+  assert.deepEqual(series.map((s) => s.date), ['2026-01', '2026-02']);
+  assert.equal(series[1].net, 2000000);
+  const chg = netWorthChange(series);
+  assert.equal(chg.abs, 200000);
+  approx(chg.pct, 200000 / 1800000);
+  assert.equal(chg.fromDate, '2026-01');
+  assert.equal(netWorthChange(series.slice(0, 1)), null); // 不足两期
+});
+
+test('financialHealth：综合评分与等级', () => {
+  const h = financialHealth({
+    liquidAssets: 150000,
+    monthlyExpense: 25000, // 6 个月 → good
+    savingRate: 0.35, // good
+    totalAssets: 3400000,
+    totalLiabilities: 1400000, // 负债率 ≈41% → ok
+    annualNetIncome: 1000000,
+    netWorth: 2000000, // 2 倍 → ok
+  });
+  const by = Object.fromEntries(h.checks.map((c) => [c.key, c.status]));
+  assert.equal(by.emergency, 'good');
+  assert.equal(by.saving, 'good');
+  assert.equal(by.debt, 'ok');
+  assert.equal(by.multiple, 'ok');
+  assert.equal(h.score, 75); // (2+2+1+1)/8
+  assert.equal(h.grade, '良');
+});
+
+test('financialHealth：缺数据的项标记 na、不计分', () => {
+  const h = financialHealth({ savingRate: 0.2 });
+  assert.equal(h.checks.length, 4);
+  const na = h.checks.filter((c) => c.status === 'na').map((c) => c.key);
+  assert.deepEqual(na.sort(), ['debt', 'emergency', 'multiple']);
+  assert.equal(h.score, 50); // 仅储蓄率 ok(1)/2
 });
 
 test('格式化：中文金额/比率/年数', () => {
