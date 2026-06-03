@@ -2,6 +2,7 @@
 
 > 本文件是「个人成长规划系统」的视觉风格定稿，也是一份可直接复制给其他 AI agent 的风格 Prompt。
 > 风格基调：**Claude.ai 式的温暖编辑感（warm editorial / quiet-luxury）**。
+> English version: [`DESIGN.en.md`](DESIGN.en.md)。
 
 ---
 
