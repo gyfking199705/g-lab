@@ -8,12 +8,12 @@
  * 数据沿用 localStorage 键 `planning_<id>`，与旧版本兼容（旧数据不丢）。
  * 全局样式见根 index.html；本文件只做结构与交互。
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
 import LearningPlanner from '../learning/LearningPlanner.jsx';
 import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
-import { gatherBackup, extractModules, applyBackup } from '../sync/backup.js';
+import { gatherBackup, extractModules, applyBackup, signatureOf } from '../sync/backup.js';
 import { requestToken, findSyncFile, downloadFile, uploadSync } from '../sync/drive.js';
 
 /* ----------------------------- 模块定义 ----------------------------- */
@@ -365,49 +365,115 @@ function ImportButton() {
   );
 }
 
-/* ============================ Google Drive 云同步 ============================ */
-/* 浏览器侧 OAuth（drive.appdata 最小权限），把备份读写到你 Drive 的应用隐藏目录。
-   先提供「连接 / 上传 / 恢复」三个显式动作，行为可预测；Client ID 存本机、Key 不入同步。 */
+/* ============================ Google Drive 云同步（自动） ============================ */
+/* 浏览器侧 OAuth（drive.appdata 最小权限）。开启「自动同步」后：
+   连接时按内容签名做三向对账（本机改动→推 / 云端较新→拉 / 双改→询问），
+   之后改动防抖自动上传；token 过期自动静默续期。Client ID/签名等存本机、Key 不入同步。 */
+const cloudLink = { background: 'none', border: 'none', padding: 0, color: 'var(--text-3)', fontSize: 11.5, cursor: 'pointer' };
+
 function CloudSync() {
   const [clientId, setClientId] = useState(() => getLS('sync-client-id') || '');
-  const [token, setToken] = useState(null);
-  const [fileId, setFileId] = useState(null);
+  const [auto, setAuto] = useState(() => getLS('sync-auto') === '1');
+  const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
 
-  const editClientId = () => {
-    const v = prompt('粘贴你的 Google OAuth Client ID（在 Google Cloud 创建，步骤见 sync/README.md）：', clientId);
-    if (v == null) return;
-    const id = v.trim();
-    setLS('sync-client-id', id);
-    setClientId(id);
-    setToken(null);
-    setStatus(id ? '已保存 Client ID，可以连接了' : '已清除 Client ID');
+  const tokenRef = useRef(null);
+  const fileIdRef = useRef(null);
+  const syncedSigRef = useRef(getLS('sync-sig') || '');
+  const debRef = useRef(null);
+
+  const localModules = () => gatherBackup(getLS).modules;
+  const localSig = () => signatureOf(localModules());
+  const setSynced = (sig) => {
+    syncedSigRef.current = sig;
+    setLS('sync-sig', sig);
+  };
+  const getToken = async (silent) => {
+    tokenRef.current = await requestToken(clientId, { silent });
+    return tokenRef.current;
+  };
+  // 401 时静默续期重试一次
+  const withAuth = async (fn) => {
+    try {
+      return await fn();
+    } catch (e) {
+      if (/401|登录已过期/.test((e && e.message) || '')) {
+        await getToken(true);
+        return await fn();
+      }
+      throw e;
+    }
+  };
+  const doUpload = async () => {
+    const blob = gatherBackup(getLS);
+    fileIdRef.current = await uploadSync(tokenRef.current, fileIdRef.current, blob);
+    setSynced(signatureOf(blob.modules));
+    setStatus('✅ 已同步 · ' + new Date().toLocaleTimeString('zh-CN'));
+  };
+  const pullApply = (mods, sig) => {
+    applyBackup(setLS, mods);
+    setSynced(sig);
+    alert('已从云端拉取数据，刷新页面。');
+    location.reload();
   };
 
-  const connect = async () => {
-    setBusy(true);
-    setStatus('正在连接 Google…');
-    try {
-      const t = await requestToken(clientId);
-      setToken(t);
-      const f = await findSyncFile(t);
-      setFileId(f ? f.id : null);
-      setStatus(f ? `已连接 · 云端有备份（${(f.modifiedTime || '').slice(0, 10)}）` : '已连接 · 云端暂无备份');
-    } catch (e) {
-      setStatus('❌ ' + (e.message || String(e)));
-    } finally {
-      setBusy(false);
+  /* 连接后的三向对账 */
+  const reconcile = async () => {
+    const f = await findSyncFile(tokenRef.current);
+    fileIdRef.current = f ? f.id : null;
+    const mods = localModules();
+    const lSig = signatureOf(mods);
+    if (!f) {
+      await doUpload();
+      setStatus('已连接 · 首次上传完成');
+      return;
+    }
+    const cMods = extractModules(await downloadFile(tokenRef.current, f.id));
+    const cSig = signatureOf(cMods);
+    if (cSig === lSig) {
+      setSynced(lSig);
+      setStatus('已连接 · 已是最新');
+      return;
+    }
+    if (Object.keys(mods).length === 0) return pullApply(cMods, cSig); // 本机空 → 直接拉
+    const last = syncedSigRef.current;
+    if (lSig === last) return pullApply(cMods, cSig); // 本机无新改动，云端更新 → 拉
+    if (cSig === last) {
+      await doUpload(); // 云端没变，本机有改动 → 推
+      setStatus('已连接 · 本机改动已上传');
+      return;
+    }
+    const useCloud = confirm('云端与本机都有改动（冲突）：\n确定 = 用云端覆盖本机；取消 = 用本机覆盖云端。');
+    if (useCloud) pullApply(cMods, cSig);
+    else {
+      await doUpload();
+      setStatus('已连接 · 以本机为准，已上传');
     }
   };
 
-  const upload = async () => {
+  const connect = async (silent) => {
+    if (!silent) {
+      setBusy(true);
+      setStatus('正在连接 Google…');
+    }
+    try {
+      await getToken(silent);
+      setConnected(true);
+      await withAuth(reconcile);
+    } catch (e) {
+      setStatus(silent ? '点「连接」开启同步' : '❌ ' + (e.message || String(e)));
+      throw e;
+    } finally {
+      if (!silent) setBusy(false);
+    }
+  };
+
+  const uploadManual = async () => {
     setBusy(true);
     setStatus('正在上传…');
     try {
-      const id = await uploadSync(token, fileId, gatherBackup(getLS));
-      setFileId(id);
-      setStatus('✅ 已上传到云 · ' + new Date().toLocaleTimeString('zh-CN'));
+      await withAuth(doUpload);
     } catch (e) {
       setStatus('❌ ' + (e.message || String(e)));
     } finally {
@@ -419,19 +485,19 @@ function CloudSync() {
     setBusy(true);
     setStatus('正在读取云端…');
     try {
-      const f = fileId ? { id: fileId } : await findSyncFile(token);
-      if (!f) {
-        setStatus('云端还没有备份，先「上传到云」一次');
-        return;
-      }
-      const modules = extractModules(await downloadFile(token, f.id));
-      if (!confirm('从云端恢复将覆盖本机当前数据，确定继续吗？')) {
-        setStatus('');
-        return;
-      }
-      applyBackup(setLS, modules);
-      alert('已从云端恢复，即将刷新页面。');
-      location.reload();
+      await withAuth(async () => {
+        const f = fileIdRef.current ? { id: fileIdRef.current } : await findSyncFile(tokenRef.current);
+        if (!f) {
+          setStatus('云端还没有备份，先上传一次');
+          return;
+        }
+        const mods = extractModules(await downloadFile(tokenRef.current, f.id));
+        if (!confirm('从云端恢复将覆盖本机当前数据，确定继续吗？')) {
+          setStatus('');
+          return;
+        }
+        pullApply(mods, signatureOf(mods));
+      });
     } catch (e) {
       setStatus('❌ ' + (e.message || String(e)));
     } finally {
@@ -439,27 +505,77 @@ function CloudSync() {
     }
   };
 
-  const statusEl = status ? (
-    <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{status}</div>
-  ) : null;
+  const editClientId = () => {
+    const v = prompt('粘贴你的 Google OAuth Client ID（在 Google Cloud 创建，步骤见 sync/README.md）：', clientId);
+    if (v == null) return;
+    const id = v.trim();
+    setLS('sync-client-id', id);
+    setClientId(id);
+    tokenRef.current = null;
+    setConnected(false);
+    setStatus(id ? '已保存 Client ID，可以连接了' : '已清除 Client ID');
+  };
+  const toggleAuto = async () => {
+    const next = !auto;
+    setAuto(next);
+    setLS('sync-auto', next ? '1' : '0');
+    if (next && !connected) await connect(false).catch(() => {});
+  };
+  const disconnect = () => {
+    tokenRef.current = null;
+    setConnected(false);
+    setStatus('已断开（自动同步暂停）');
+  };
+
+  /* 启动：已配置 + 开了自动 → 尝试静默连接 */
+  useEffect(() => {
+    if (clientId && auto) connect(true).catch(() => {});
+    // 仅在挂载时尝试一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* 自动上传：连接 + 自动开启时，轮询内容签名，变化则防抖上传 */
+  useEffect(() => {
+    if (!connected || !auto) return undefined;
+    const id = setInterval(() => {
+      if (localSig() === syncedSigRef.current) return;
+      clearTimeout(debRef.current);
+      debRef.current = setTimeout(() => {
+        withAuth(doUpload).catch((e) => setStatus('❌ ' + (e.message || e)));
+      }, 1500);
+    }, 4000);
+    return () => {
+      clearInterval(id);
+      clearTimeout(debRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, auto]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {!clientId ? (
         <button className="app-tool" onClick={editClientId}>☁️ 设置云同步</button>
-      ) : !token ? (
-        <>
-          <button className="app-tool" onClick={connect} disabled={busy}>☁️ 连接 Google Drive</button>
-          <button className="app-tool" onClick={editClientId}>改 Client ID</button>
-        </>
       ) : (
         <>
-          <button className="app-tool" onClick={upload} disabled={busy}>⬆️ 上传到云</button>
-          <button className="app-tool" onClick={restore} disabled={busy}>⬇️ 从云恢复</button>
-          <button className="app-tool" onClick={() => { setToken(null); setStatus('已断开'); }}>断开</button>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={auto} onChange={toggleAuto} style={{ accentColor: 'var(--accent)' }} />
+            自动同步到 Drive
+          </label>
+          {!connected ? (
+            <button className="app-tool" onClick={() => connect(false).catch(() => {})} disabled={busy}>☁️ 连接 Google Drive</button>
+          ) : (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="app-tool" style={{ flex: 1 }} onClick={uploadManual} disabled={busy}>⬆️ 上传</button>
+              <button className="app-tool" style={{ flex: 1 }} onClick={restore} disabled={busy}>⬇️ 恢复</button>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={editClientId} style={cloudLink}>改 ID</button>
+            {connected && <button onClick={disconnect} style={cloudLink}>断开</button>}
+          </div>
         </>
       )}
-      {statusEl}
+      {status && <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{status}</div>}
     </div>
   );
 }

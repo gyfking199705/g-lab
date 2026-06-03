@@ -64,6 +64,23 @@ export function applyBackup(setItem, modules, keys = BACKUP_KEYS) {
   return n;
 }
 
+/** 稳定序列化（对象键排序），用于做「内容签名」时不受键顺序影响。 */
+export function stableStringify(v) {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
+}
+
+/**
+ * 一份 modules 的内容签名（只看 BACKUP_KEYS、与键顺序无关）。
+ * 用于自动同步时判断「本机/云端是否有变化」。
+ */
+export function signatureOf(modules, keys = BACKUP_KEYS) {
+  const norm = {};
+  for (const k of keys) if (modules && modules[k] != null) norm[k] = modules[k];
+  return stableStringify(norm);
+}
+
 /** 构造 Drive 「新建文件」的 multipart/related 请求体（元数据 + 媒体）。 */
 export function buildMultipartBody(metadata, mediaString, boundary) {
   const nl = '\r\n';

@@ -49,8 +49,9 @@ export function ensureGis() {
 /**
  * 弹出 Google 授权，返回 access token（内存持有，调用方自行保存到 state）。
  * @param {string} clientId Google OAuth Client ID
+ * @param {{silent?:boolean}} [opts] silent=true 时尝试免交互续期（已授权过才会成功）
  */
-export async function requestToken(clientId) {
+export async function requestToken(clientId, opts = {}) {
   if (!clientId || !clientId.trim()) throw new Error('未配置 Google OAuth Client ID');
   await ensureGis();
   return new Promise((resolve, reject) => {
@@ -72,7 +73,8 @@ export async function requestToken(clientId) {
       },
     });
     try {
-      client.requestAccessToken();
+      // silent：prompt='' 尽量不弹窗（用于自动同步的续期）；否则正常弹授权
+      client.requestAccessToken(opts.silent ? { prompt: '' } : {});
     } catch (e) {
       if (!settled) reject(e);
     }
