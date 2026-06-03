@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
 import LearningPlanner from '../learning/LearningPlanner.jsx';
 import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
+import ProjectPlanner from '../project/ProjectPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
 import { gatherBackup, extractModules, applyBackup, signatureOf, perKeySig, filesToModules, fileForKey, buildReadme, SYNC_FOLDER, READMEFILE } from '../sync/backup.js';
 import { requestToken, findOrCreateFolder, listChildren, downloadText, uploadFile } from '../sync/drive.js';
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { id: 'personal', icon: '📝', label: '个人规划', kind: 'task' },
   { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning' },
   { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness' },
+  { id: 'project', icon: '📋', label: '项目规划', kind: 'project' },
   { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth' },
   { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks' },
 ];
@@ -112,6 +114,20 @@ function readFitnessBadge() {
   }
 }
 
+/* 项目规划的侧边栏徽章：已完成/总任务。 */
+function readProjectBadge() {
+  try {
+    const raw = localStorage.getItem('project-planner');
+    if (!raw) return null;
+    const tasks = (JSON.parse(raw).tasks) || [];
+    if (!tasks.length) return null;
+    const done = tasks.filter((t) => t.status === 'done').length;
+    return `${done}/${tasks.length}`;
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ============================ 主应用 ============================ */
 export default function App() {
   const [active, setActive] = useState('personal');
@@ -136,6 +152,8 @@ export default function App() {
                 ? readLearningBadge()
                 : m.kind === 'fitness'
                 ? readFitnessBadge()
+                : m.kind === 'project'
+                ? readProjectBadge()
                 : null;
             return (
               <button
@@ -165,6 +183,8 @@ export default function App() {
             <LearningPlanner storageKey="learning-planner" onChange={bump} />
           ) : active === 'fitness' ? (
             <FitnessPlanner storageKey="fitness-planner" onChange={bump} />
+          ) : active === 'project' ? (
+            <ProjectPlanner storageKey="project-planner" onChange={bump} />
           ) : active === 'stocks' ? (
             <StockSection />
           ) : (

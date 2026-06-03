@@ -17,6 +17,7 @@ export const BACKUP_KEYS = [
   'fitness-planner', // 健身训练规划数据
   'savings-planner', // 财富规划（含净资产）
   'stocks-watch', // 股市观测自选与设置
+  'project-planner', // 项目规划（任务/甘特/番茄）
 ];
 
 /** 云端同步文件名（存放在 Drive 的 appDataFolder 隐藏目录内）。 */
@@ -111,6 +112,7 @@ export const FILE_MAP = [
   { key: 'fitness-planner', file: '健身训练.json' },
   { key: 'savings-planner', file: '财富规划.json' },
   { key: 'stocks-watch', file: '股市观测.json' },
+  { key: 'project-planner', file: '项目规划.json' },
 ];
 
 export function fileForKey(key) {
