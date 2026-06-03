@@ -13,6 +13,8 @@ import SavingsPlanner from '../savings/SavingsPlanner.jsx';
 import LearningPlanner from '../learning/LearningPlanner.jsx';
 import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
+import { gatherBackup, extractModules, applyBackup } from '../sync/backup.js';
+import { requestToken, findSyncFile, downloadFile, uploadSync } from '../sync/drive.js';
 
 /* ----------------------------- 模块定义 ----------------------------- */
 /* 通用「清单」模块（个人规划）；学习 / 健身 / 财富为各自的富模块。 */
@@ -37,17 +39,8 @@ const NAV_ITEMS = [
   { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks' },
 ];
 
-/* 参与备份的所有 localStorage 键。
-   注意：AI 配置键 `learning-ai`（含 API Key）故意不纳入备份，避免随分享外泄。 */
-const BACKUP_KEYS = [
-  'planning_personal',
-  'planning_learning', // 旧版学习待办，保留以兼容历史备份
-  'planning_fitness', // 旧版健身待办，保留以兼容历史备份
-  'learning-planner', // AI 学习计划站数据
-  'fitness-planner', // 健身训练规划数据
-  'savings-planner',
-  'stocks-watch',
-];
+/* 参与备份 / 云同步的 localStorage 键集中在 ../sync/backup.js（BACKUP_KEYS）；
+   AI Key（learning-ai）等敏感键不在其中，既不进文件备份、也不进云同步。 */
 
 /* ----------------------------- 本地存储 hook ----------------------------- */
 function useLocalStorage(key, initial) {
@@ -160,6 +153,7 @@ export default function App() {
         <div className="app-foot">
           <ExportButton />
           <ImportButton />
+          <CloudSync />
         </div>
       </aside>
 
@@ -307,20 +301,24 @@ function TaskModule({ module, onMutate }) {
 }
 
 /* ============================ 数据导出 / 导入 ============================ */
+const getLS = (k) => {
+  try {
+    return localStorage.getItem(k);
+  } catch (e) {
+    return null;
+  }
+};
+const setLS = (k, v) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch (e) {
+    /* 静默 */
+  }
+};
+
 function ExportButton() {
   const onExport = () => {
-    const modules = {};
-    for (const key of BACKUP_KEYS) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        try {
-          modules[key] = JSON.parse(raw);
-        } catch (e) {
-          /* 跳过损坏数据 */
-        }
-      }
-    }
-    const backup = { app: 'growth-planner', version: 2, exportedAt: new Date().toISOString(), modules };
+    const backup = gatherBackup(getLS);
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -343,16 +341,12 @@ function ImportButton() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const backup = JSON.parse(ev.target.result);
-        const modules = backup.modules || backup;
-        if (!modules || typeof modules !== 'object') throw new Error('备份文件格式不正确');
+        const modules = extractModules(JSON.parse(ev.target.result));
         if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) {
           e.target.value = '';
           return;
         }
-        for (const key of BACKUP_KEYS) {
-          if (modules[key] != null) localStorage.setItem(key, JSON.stringify(modules[key]));
-        }
+        applyBackup(setLS, modules);
         alert('导入成功，即将刷新页面。');
         location.reload();
       } catch (err) {
@@ -368,5 +362,104 @@ function ImportButton() {
       ⬆️ 导入备份
       <input type="file" accept="application/json" hidden onChange={onPick} />
     </label>
+  );
+}
+
+/* ============================ Google Drive 云同步 ============================ */
+/* 浏览器侧 OAuth（drive.appdata 最小权限），把备份读写到你 Drive 的应用隐藏目录。
+   先提供「连接 / 上传 / 恢复」三个显式动作，行为可预测；Client ID 存本机、Key 不入同步。 */
+function CloudSync() {
+  const [clientId, setClientId] = useState(() => getLS('sync-client-id') || '');
+  const [token, setToken] = useState(null);
+  const [fileId, setFileId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState('');
+
+  const editClientId = () => {
+    const v = prompt('粘贴你的 Google OAuth Client ID（在 Google Cloud 创建，步骤见 sync/README.md）：', clientId);
+    if (v == null) return;
+    const id = v.trim();
+    setLS('sync-client-id', id);
+    setClientId(id);
+    setToken(null);
+    setStatus(id ? '已保存 Client ID，可以连接了' : '已清除 Client ID');
+  };
+
+  const connect = async () => {
+    setBusy(true);
+    setStatus('正在连接 Google…');
+    try {
+      const t = await requestToken(clientId);
+      setToken(t);
+      const f = await findSyncFile(t);
+      setFileId(f ? f.id : null);
+      setStatus(f ? `已连接 · 云端有备份（${(f.modifiedTime || '').slice(0, 10)}）` : '已连接 · 云端暂无备份');
+    } catch (e) {
+      setStatus('❌ ' + (e.message || String(e)));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const upload = async () => {
+    setBusy(true);
+    setStatus('正在上传…');
+    try {
+      const id = await uploadSync(token, fileId, gatherBackup(getLS));
+      setFileId(id);
+      setStatus('✅ 已上传到云 · ' + new Date().toLocaleTimeString('zh-CN'));
+    } catch (e) {
+      setStatus('❌ ' + (e.message || String(e)));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restore = async () => {
+    setBusy(true);
+    setStatus('正在读取云端…');
+    try {
+      const f = fileId ? { id: fileId } : await findSyncFile(token);
+      if (!f) {
+        setStatus('云端还没有备份，先「上传到云」一次');
+        return;
+      }
+      const modules = extractModules(await downloadFile(token, f.id));
+      if (!confirm('从云端恢复将覆盖本机当前数据，确定继续吗？')) {
+        setStatus('');
+        return;
+      }
+      applyBackup(setLS, modules);
+      alert('已从云端恢复，即将刷新页面。');
+      location.reload();
+    } catch (e) {
+      setStatus('❌ ' + (e.message || String(e)));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const statusEl = status ? (
+    <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{status}</div>
+  ) : null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {!clientId ? (
+        <button className="app-tool" onClick={editClientId}>☁️ 设置云同步</button>
+      ) : !token ? (
+        <>
+          <button className="app-tool" onClick={connect} disabled={busy}>☁️ 连接 Google Drive</button>
+          <button className="app-tool" onClick={editClientId}>改 Client ID</button>
+        </>
+      ) : (
+        <>
+          <button className="app-tool" onClick={upload} disabled={busy}>⬆️ 上传到云</button>
+          <button className="app-tool" onClick={restore} disabled={busy}>⬇️ 从云恢复</button>
+          <button className="app-tool" onClick={() => { setToken(null); setStatus('已断开'); }}>断开</button>
+        </>
+      )}
+      {statusEl}
+    </div>
   );
 }
