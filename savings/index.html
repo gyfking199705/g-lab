@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>储蓄与财富规划器 · 独立演示</title>
+  <style>
+    body { margin: 0; background: #eef2f7; padding: 24px 12px; }
+    #root { max-width: 1120px; margin: 0 auto; }
+    #sp-loading { text-align: center; color: #64748b; font-family: sans-serif; padding: 80px 0; }
+    #sp-error { max-width: 720px; margin: 40px auto; background: #fef2f2; border: 1px solid #fecaca;
+      color: #b91c1c; border-radius: 12px; padding: 16px 20px; font-family: sans-serif; font-size: 14px;
+      line-height: 1.7; white-space: pre-wrap; display: none; }
+  </style>
+
+  <!-- React 走 CDN，仅用于「独立运行」演示；集成进主应用时用你项目自己的 React，不需要 CDN -->
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react-dom": "https://esm.sh/react-dom@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+    }
+  }
+  </script>
+  <!-- Babel standalone 仅用于在浏览器里把 .jsx 转成 JS，避免构建步骤；图表本身是纯手写 SVG -->
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"><div id="sp-loading">正在加载储蓄规划器…</div></div>
+  <pre id="sp-error"></pre>
+
+  <script type="module">
+    // 在浏览器里动态加载并转译真正的 SavingsPlanner.jsx（与集成用的是同一份源码，无重复）
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+
+    const showError = (msg) => {
+      const el = document.getElementById('sp-error');
+      el.style.display = 'block';
+      el.textContent = '加载失败：\n' + msg +
+        '\n\n提示：本演示需要联网从 CDN 加载 React 与 Babel。' +
+        '若网络受限，请在能访问 esm.sh / unpkg.com 的环境中打开。';
+      const l = document.getElementById('sp-loading');
+      if (l) l.remove();
+    };
+
+    try {
+      // 1) 取到组件源码 (jsx)
+      const jsxSrc = await fetch('./SavingsPlanner.jsx').then((r) => {
+        if (!r.ok) throw new Error('无法读取 SavingsPlanner.jsx (' + r.status + ')');
+        return r.text();
+      });
+
+      // 2) 用 Babel 把 JSX 转成标准 ES Module（保留 import/export 由浏览器原生处理）
+      let code = Babel.transform(jsxSrc, {
+        presets: ['react'],
+        filename: 'SavingsPlanner.jsx',
+        sourceType: 'module',
+      }).code;
+
+      // 3) 把组件里对 './calc.js' 的相对引用改成绝对 URL（blob 模块无法解析相对路径）
+      const calcUrl = new URL('./calc.js', import.meta.url).href;
+      code = code.replace(/(["'])\.\/calc\.js\1/g, JSON.stringify(calcUrl));
+
+      // 4) 作为 blob 模块动态导入（其中的 import 'react' 由上面的 importmap 解析）
+      const blobUrl = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+      const { default: SavingsPlanner } = await import(blobUrl);
+
+      // 5) 渲染
+      const root = createRoot(document.getElementById('root'));
+      root.render(React.createElement(SavingsPlanner));
+    } catch (err) {
+      console.error(err);
+      showError(err && err.stack ? err.stack : String(err));
+    }
+  </script>
+</body>
+</html>
