@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人规划管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 250px;
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .nav-menu {
+            padding: 16px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-btn {
+            padding: 12px 16px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: left;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .nav-btn:hover {
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+        }
+
+        .nav-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .nav-btn span {
+            font-size: 20px;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .module-section {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .module-section.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .module-header {
+            padding: 32px 32px 16px 32px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+        }
+
+        .module-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .module-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .module-content {
+            padding: 32px;
+            flex: 1;
+        }
+
+        /* 输入组 */
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .input-group input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .input-group input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-success {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+        }
+
+        /* 项目列表 */
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .item-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .item-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+
+        .item-card.completed {
+            opacity: 0.6;
+            background-color: var(--bg-color);
+        }
+
+        .item-card.completed .item-text {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .item-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .item-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        .item-text {
+            flex: 1;
+        }
+
+        .item-text .title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .item-text .subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .item-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        /* 财务摘要 */
+        .finance-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, var(--primary-color), #2563eb);
+            color: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-subtext {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .nav-menu {
+                flex-direction: row;
+                overflow-x: auto;
+                padding: 8px 0;
+            }
+
+            .module-header {
+                padding: 24px 16px 12px 16px;
+            }
+
+            .module-header h2 {
+                font-size: 20px;
+            }
+
+            .module-content {
+                padding: 16px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .input-group input {
+                min-width: auto;
+            }
+
+            .finance-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .item-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .item-actions {
+                width: 100%;
+                margin-top: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>📋 规划系统</h1>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-module="personal">
+                    <span>📝</span> 个人规划
+                </button>
+                <button class="nav-btn" data-module="learning">
+                    <span>📚</span> 学习规划
+                </button>
+                <button class="nav-btn" data-module="fitness">
+                    <span>💪</span> 健身规划
+                </button>
+                <button class="nav-btn" data-module="finance">
+                    <span>💰</span> 理财规划
+                </button>
+            </nav>
+        </aside>
+
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 个人规划模块 -->
+            <section id="personal" class="module-section active">
+                <div class="module-header">
+                    <h2>📝 个人规划</h2>
+                    <p>管理你的待办事项、日志和里程碑</p>
+                </div>
+                <div class="module-content">
+                    <div class="input-group">
+                        <input type="text" id="personal-input" placeholder="添加新的待办事项...">
+                        <button id="personal-add-btn" class="btn btn-primary">添加</button>
+                    </div>
+                    <div class="items-list" id="personal-list"></div>
+                </div>
+            </section>
+
+            <!-- 学习规划模块 -->
+            <section id="learning" class="module-section">
+                <div class="module-header">
+                    <h2>📚 学习规划</h2>
+                    <p>追踪你的学习进度和课程目标</p>
+                </div>
+                <div class="module-content">
+                    <div class="input-group">
+                        <input type="text" id="learning-input" placeholder="添加新的学习目标...">
+                        <button id="learning-add-btn" class="btn btn-primary">添加</button>
+                    </div>
+                    <div class="items-list" id="learning-list"></div>
+                </div>
+            </section>
+
+            <!-- 健身规划模块 -->
+            <section id="fitness" class="module-section">
+                <div class="module-header">
+                    <h2>💪 健身规划</h2>
+                    <p>制定和追踪你的健身目标</p>
+                </div>
+                <div class="module-content">
+                    <div class="input-group">
+                        <input type="text" id="fitness-input" placeholder="添加新的健身计划...">
+                        <button id="fitness-add-btn" class="btn btn-primary">添加</button>
+                    </div>
+                    <div class="items-list" id="fitness-list"></div>
+                </div>
+            </section>
+
+            <!-- 理财规划模块 -->
+            <section id="finance" class="module-section">
+                <div class="module-header">
+                    <h2>💰 理财规划</h2>
+                    <p>追踪储蓄和投资目标 - 目标：5年1000万</p>
+                </div>
+                <div class="module-content">
+                    <div class="finance-summary">
+                        <div class="summary-card">
+                            <div class="summary-label">总储蓄</div>
+                            <div class="summary-value" id="total-savings">¥0</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">目标金额</div>
+                            <div class="summary-value">¥10,000,000</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">完成度</div>
+                            <div class="summary-value" id="progress-percentage">0%</div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="finance-amount" placeholder="金额" min="0">
+                        <input type="text" id="finance-desc" placeholder="描述（储蓄/投资等）">
+                        <button id="finance-add-btn" class="btn btn-primary">记录</button>
+                    </div>
+                    <div class="items-list" id="finance-list"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // 数据管理类
+        class PlanningManager {
+            constructor() {
+                this.modules = {
+                    personal: this.loadData('personal'),
+                    learning: this.loadData('learning'),
+                    fitness: this.loadData('fitness'),
+                    finance: this.loadData('finance')
+                };
+            }
+
+            loadData(module) {
+                const data = localStorage.getItem(`planning_${module}`);
+                return data ? JSON.parse(data) : this.getDefaultData(module);
+            }
+
+            saveData(module, data) {
+                localStorage.setItem(`planning_${module}`, JSON.stringify(data));
+            }
+
+            getDefaultData(module) {
+                const defaults = {
+                    personal: { items: [], createdAt: new Date() },
+                    learning: { items: [], createdAt: new Date() },
+                    fitness: { items: [], createdAt: new Date() },
+                    finance: { items: [], totalSavings: 0, target: 10000000, createdAt: new Date() }
+                };
+                return defaults[module] || {};
+            }
+
+            addItem(module, item) {
+                if (!this.modules[module]) {
+                    this.modules[module] = this.getDefaultData(module);
+                }
+                item.id = Date.now();
+                item.createdAt = new Date().toISOString();
+                item.completed = false;
+                this.modules[module].items.push(item);
+                this.saveData(module, this.modules[module]);
+                return item;
+            }
+
+            updateItem(module, id, updates) {
+                const items = this.modules[module].items;
+                const index = items.findIndex(item => item.id === id);
+                if (index !== -1) {
+                    items[index] = { ...items[index], ...updates };
+                    this.saveData(module, this.modules[module]);
+                }
+            }
+
+            deleteItem(module, id) {
+                const items = this.modules[module].items;
+                this.modules[module].items = items.filter(item => item.id !== id);
+                this.saveData(module, this.modules[module]);
+            }
+
+            getItems(module) {
+                return this.modules[module].items || [];
+            }
+
+            getTotalSavings(module = 'finance') {
+                const items = this.modules[module].items || [];
+                return items.reduce((sum, item) => sum + (item.amount || 0), 0);
+            }
+        }
+
+        // 初始化
+        const manager = new PlanningManager();
+        let currentModule = 'personal';
+
+        // DOM 元素
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const moduleSections = document.querySelectorAll('.module-section');
+
+        // 导航事件
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const module = btn.dataset.module;
+                switchModule(module);
+            });
+        });
+
+        function switchModule(module) {
+            currentModule = module;
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-module="${module}"]`).classList.add('active');
+            moduleSections.forEach(section => section.classList.remove('active'));
+            document.getElementById(module).classList.add('active');
+            renderModule(module);
+        }
+
+        function renderModule(module) {
+            switch (module) {
+                case 'personal':
+                    renderPersonal();
+                    break;
+                case 'learning':
+                    renderLearning();
+                    break;
+                case 'fitness':
+                    renderFitness();
+                    break;
+                case 'finance':
+                    renderFinance();
+                    break;
+            }
+        }
+
+        function renderPersonal() {
+            const items = manager.getItems('personal');
+            const listEl = document.getElementById('personal-list');
+            listEl.innerHTML = items.length === 0 ? getEmptyState('还没有待办事项') : '';
+            items.forEach(item => {
+                const card = createItemCard(item, 'personal');
+                listEl.appendChild(card);
+            });
+        }
+
+        document.getElementById('personal-add-btn').addEventListener('click', () => {
+            const input = document.getElementById('personal-input');
+            if (input.value.trim()) {
+                manager.addItem('personal', { title: input.value });
+                input.value = '';
+                renderPersonal();
+            }
+        });
+
+        function renderLearning() {
+            const items = manager.getItems('learning');
+            const listEl = document.getElementById('learning-list');
+            listEl.innerHTML = items.length === 0 ? getEmptyState('还没有学习目标') : '';
+            items.forEach(item => {
+                const card = createItemCard(item, 'learning');
+                listEl.appendChild(card);
+            });
+        }
+
+        document.getElementById('learning-add-btn').addEventListener('click', () => {
+            const input = document.getElementById('learning-input');
+            if (input.value.trim()) {
+                manager.addItem('learning', { title: input.value });
+                input.value = '';
+                renderLearning();
+            }
+        });
+
+        function renderFitness() {
+            const items = manager.getItems('fitness');
+            const listEl = document.getElementById('fitness-list');
+            listEl.innerHTML = items.length === 0 ? getEmptyState('还没有健身计划') : '';
+            items.forEach(item => {
+                const card = createItemCard(item, 'fitness');
+                listEl.appendChild(card);
+            });
+        }
+
+        document.getElementById('fitness-add-btn').addEventListener('click', () => {
+            const input = document.getElementById('fitness-input');
+            if (input.value.trim()) {
+                manager.addItem('fitness', { title: input.value });
+                input.value = '';
+                renderFitness();
+            }
+        });
+
+        function renderFinance() {
+            const items = manager.getItems('finance');
+            const listEl = document.getElementById('finance-list');
+            listEl.innerHTML = items.length === 0 ? getEmptyState('还没有财务记录') : '';
+            items.forEach(item => {
+                const card = createFinanceCard(item);
+                listEl.appendChild(card);
+            });
+            const totalSavings = manager.getTotalSavings('finance');
+            const target = manager.modules.finance.target;
+            const percentage = Math.round((totalSavings / target) * 100);
+            document.getElementById('total-savings').textContent = `¥${totalSavings.toLocaleString()}`;
+            document.getElementById('progress-percentage').textContent = `${percentage}%`;
+        }
+
+        document.getElementById('finance-add-btn').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('finance-amount').value);
+            const desc = document.getElementById('finance-desc').value;
+            if (amount > 0 && desc.trim()) {
+                manager.addItem('finance', { title: desc, amount });
+                document.getElementById('finance-amount').value = '';
+                document.getElementById('finance-desc').value = '';
+                renderFinance();
+            }
+        });
+
+        function createItemCard(item, module) {
+            const card = document.createElement('div');
+            card.className = `item-card ${item.completed ? 'completed' : ''}`;
+            card.innerHTML = `
+                <div class="item-content">
+                    <input type="checkbox" class="item-checkbox" ${item.completed ? 'checked' : ''}>
+                    <div class="item-text">
+                        <div class="title">${escapeHtml(item.title)}</div>
+                        <div class="subtitle">${new Date(item.createdAt).toLocaleDateString('zh-CN')}</div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <button class="btn btn-danger delete-btn">删除</button>
+                </div>
+            `;
+            const checkbox = card.querySelector('.item-checkbox');
+            checkbox.addEventListener('change', () => {
+                manager.updateItem(module, item.id, { completed: checkbox.checked });
+                card.classList.toggle('completed');
+            });
+            const deleteBtn = card.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                manager.deleteItem(module, item.id);
+                renderModule(module);
+            });
+            return card;
+        }
+
+        function createFinanceCard(item) {
+            const card = document.createElement('div');
+            card.className = `item-card`;
+            card.innerHTML = `
+                <div class="item-content">
+                    <div class="item-text">
+                        <div class="title">💵 ${escapeHtml(item.title)}</div>
+                        <div class="subtitle">¥${item.amount.toLocaleString()} - ${new Date(item.createdAt).toLocaleDateString('zh-CN')}</div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <button class="btn btn-danger delete-btn">删除</button>
+                </div>
+            `;
+            const deleteBtn = card.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                manager.deleteItem('finance', item.id);
+                renderFinance();
+            });
+            return card;
+        }
+
+        function getEmptyState(message) {
+            return `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-text">${message}</div>
+                    <div class="empty-state-subtext">开始添加你的第一项吧！</div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        switchModule('personal');
+    </script>
+</body>
+</html>
