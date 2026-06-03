@@ -35,12 +35,23 @@ export const PROVIDERS = {
 
 /** 默认 AI 配置（未启用、无 Key）。 */
 export function defaultAIConfig() {
-  return { enabled: false, provider: 'anthropic', model: '', apiKey: '', baseURL: '' };
+  return {
+    enabled: false,
+    mode: 'byok', // 'byok'=自带 Key 直连 | 'proxy'=走自部署后端代理
+    provider: 'anthropic',
+    model: '',
+    apiKey: '',
+    baseURL: '',
+    proxyURL: '',
+    accessToken: '',
+  };
 }
 
-/** 配置是否可用（已填 Key）。 */
+/** 配置是否可用：BYOK 看是否填 Key；代理模式看是否填代理 URL。 */
 export function isConfigured(config) {
-  return !!(config && config.apiKey && config.apiKey.trim());
+  if (!config) return false;
+  if (config.mode === 'proxy') return !!(config.proxyURL && config.proxyURL.trim());
+  return !!(config.apiKey && config.apiKey.trim());
 }
 
 function resolveModel(config) {
@@ -61,7 +72,20 @@ function resolveBaseURL(config) {
  */
 export async function callChat({ config, system, user, maxTokens = 2000, signal }) {
   if (typeof fetch !== 'function') throw new Error('当前环境不支持 fetch');
-  if (!isConfigured(config)) throw new Error('尚未配置 API Key');
+  if (!isConfigured(config)) throw new Error('尚未配置 AI');
+
+  // 代理模式：浏览器只调自部署的后端代理，Key 在服务端
+  if (config.mode === 'proxy') {
+    return callProxy({
+      proxyURL: config.proxyURL.trim(),
+      accessToken: (config.accessToken || '').trim(),
+      system,
+      user,
+      maxTokens,
+      signal,
+    });
+  }
+
   const provider = config.provider || 'anthropic';
   const model = resolveModel(config);
   const baseURL = resolveBaseURL(config);
@@ -70,6 +94,28 @@ export async function callChat({ config, system, user, maxTokens = 2000, signal 
     return callAnthropic({ baseURL, apiKey: config.apiKey.trim(), model, system, user, maxTokens, signal });
   }
   return callOpenAI({ baseURL, apiKey: config.apiKey.trim(), model, system, user, maxTokens, signal });
+}
+
+async function callProxy({ proxyURL, accessToken, system, user, maxTokens, signal }) {
+  let res;
+  try {
+    res = await fetch(proxyURL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify({ system, user, max_tokens: maxTokens }),
+      signal,
+    });
+  } catch (e) {
+    throw new Error(networkHint(e));
+  }
+  if (!res.ok) throw new Error(await errorText(res));
+  const data = await res.json();
+  const text = (data.text || '').trim();
+  if (!text) throw new Error('代理未返回文本内容');
+  return text;
 }
 
 async function callAnthropic({ baseURL, apiKey, model, system, user, maxTokens, signal }) {
@@ -147,7 +193,11 @@ async function errorText(res) {
   let detail = '';
   try {
     const body = await res.json();
-    detail = body?.error?.message || body?.error?.type || JSON.stringify(body).slice(0, 200);
+    detail =
+      body?.error?.message ||
+      body?.error?.type ||
+      (typeof body?.error === 'string' ? body.error : '') ||
+      JSON.stringify(body).slice(0, 200);
   } catch (e) {
     detail = await res.text().catch(() => '');
   }

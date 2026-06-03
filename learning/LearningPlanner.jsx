@@ -1069,69 +1069,100 @@ function AISettings({ config, onChange, onClose }) {
     }
   };
 
+  const isProxy = local.mode === 'proxy';
   return (
-    <Modal title="✨ 配置 AI（自带 Key）" onClose={onClose}>
-      <p className="lp-aiabout">
-        填入你自己的 API Key 即可解锁「AI 生成计划 / AI 讲解知识点」。Key <strong>仅保存在本浏览器</strong>，
-        调用时直连模型厂商、不经过任何服务器。
-      </p>
+    <Modal title="✨ 配置 AI" onClose={onClose}>
+      <p className="lp-aiabout">AI 用于「生成学习计划 / 讲解知识点」，是<strong>可选增强</strong>——不配置也能正常学习。</p>
 
-      <label className="lp-flabel">模型厂商</label>
-      <select
-        className="lp-select"
-        value={local.provider}
-        onChange={(e) => set({ provider: e.target.value, model: '' })}
-      >
-        {Object.keys(PROVIDERS).map((k) => (
-          <option key={k} value={k}>{PROVIDERS[k].label}</option>
-        ))}
-      </select>
+      <div className="lp-modetabs">
+        <button className={!isProxy ? 'on' : ''} onClick={() => set({ mode: 'byok' })}>🔑 自带 Key</button>
+        <button className={isProxy ? 'on' : ''} onClick={() => set({ mode: 'proxy' })}>🌐 后端代理</button>
+      </div>
 
-      <label className="lp-flabel">API Key</label>
-      <input
-        className="lp-input"
-        type="password"
-        autoComplete="off"
-        placeholder={preset.keyHint}
-        value={local.apiKey}
-        onChange={(e) => set({ apiKey: e.target.value })}
-      />
-      <a className="lp-getkey" href={preset.keyUrl} target="_blank" rel="noopener noreferrer">获取 {preset.label} 的 Key →</a>
+      {!isProxy ? (
+        <>
+          <p className="lp-aiabout">填你自己的 API Key，<strong>仅存本浏览器</strong>、直连模型厂商、不经任何服务器。</p>
+          <label className="lp-flabel">模型厂商</label>
+          <select className="lp-select" value={local.provider} onChange={(e) => set({ provider: e.target.value, model: '' })}>
+            {Object.keys(PROVIDERS).map((k) => (
+              <option key={k} value={k}>{PROVIDERS[k].label}</option>
+            ))}
+          </select>
 
-      <label className="lp-flabel">模型（可留空用默认 {preset.defaultModel}）</label>
-      <input
-        className="lp-input"
-        list="lp-models"
-        placeholder={preset.defaultModel}
-        value={local.model}
-        onChange={(e) => set({ model: e.target.value })}
-      />
-      <datalist id="lp-models">
-        {preset.models.map((m) => <option key={m} value={m} />)}
-      </datalist>
+          <label className="lp-flabel">API Key</label>
+          <input
+            className="lp-input"
+            type="password"
+            autoComplete="off"
+            placeholder={preset.keyHint}
+            value={local.apiKey}
+            onChange={(e) => set({ apiKey: e.target.value })}
+          />
+          <a className="lp-getkey" href={preset.keyUrl} target="_blank" rel="noopener noreferrer">获取 {preset.label} 的 Key →</a>
 
-      <label className="lp-flabel">自定义 API 地址（可选，用于代理 / 兼容接口）</label>
-      <input
-        className="lp-input"
-        placeholder={preset.defaultBaseURL}
-        value={local.baseURL}
-        onChange={(e) => set({ baseURL: e.target.value })}
-      />
+          <label className="lp-flabel">模型（可留空用默认 {preset.defaultModel}）</label>
+          <input
+            className="lp-input"
+            list="lp-models"
+            placeholder={preset.defaultModel}
+            value={local.model}
+            onChange={(e) => set({ model: e.target.value })}
+          />
+          <datalist id="lp-models">
+            {preset.models.map((m) => <option key={m} value={m} />)}
+          </datalist>
+
+          <label className="lp-flabel">自定义 API 地址（可选，用于代理 / 兼容接口）</label>
+          <input
+            className="lp-input"
+            placeholder={preset.defaultBaseURL}
+            value={local.baseURL}
+            onChange={(e) => set({ baseURL: e.target.value })}
+          />
+        </>
+      ) : (
+        <>
+          <p className="lp-aiabout">
+            走你自部署的后端代理：Key 放在服务端，<strong>这里无需填 Key</strong>，适合公开让别人也来学。
+            部署见 <code>learning/proxy/README.md</code>。
+          </p>
+          <label className="lp-flabel">代理 URL</label>
+          <input
+            className="lp-input"
+            placeholder="https://learn-ai-proxy.xxx.workers.dev"
+            value={local.proxyURL}
+            onChange={(e) => set({ proxyURL: e.target.value })}
+          />
+          <label className="lp-flabel">访问口令（可选，代理设了 ACCESS_TOKEN 才需要）</label>
+          <input
+            className="lp-input"
+            type="password"
+            autoComplete="off"
+            placeholder="代理的访问口令"
+            value={local.accessToken}
+            onChange={(e) => set({ accessToken: e.target.value })}
+          />
+        </>
+      )}
 
       {testMsg && <div className={`lp-testmsg ${testMsg.startsWith('✅') ? 'ok' : 'bad'}`}>{testMsg}</div>}
 
       <div className="lp-aibtns">
-        <button className="lp-btn lp-btn-ghost" onClick={test} disabled={testing || !local.apiKey}>
+        <button className="lp-btn lp-btn-ghost" onClick={test} disabled={testing || !isConfigured(local)}>
           {testing ? '测试中…' : '测试连接'}
         </button>
         <div className="lp-aibtns-right">
-          {config.apiKey && (
-            <button className="lp-btn lp-btn-ghost" onClick={() => { onChange(defaultAIConfig()); onClose(); }}>清除 Key</button>
+          {isConfigured(config) && (
+            <button className="lp-btn lp-btn-ghost" onClick={() => { onChange(defaultAIConfig()); onClose(); }}>清除</button>
           )}
           <button className="lp-btn lp-btn-primary" onClick={save}>保存</button>
         </div>
       </div>
-      <p className="lp-aiwarn">⚠️ 纯前端调用会把 Key 暴露在浏览器端，仅建议个人使用；多用户/公开场景请改用后端代理。</p>
+      <p className="lp-aiwarn">
+        {isProxy
+          ? '⚠️ 代理用的是部署者的 Key、由其付费；建议在代理上设置访问口令（ACCESS_TOKEN）防滥用。'
+          : '⚠️ 纯前端调用会把 Key 暴露在浏览器端，仅建议个人使用；多用户/公开场景请改用「后端代理」。'}
+      </p>
     </Modal>
   );
 }

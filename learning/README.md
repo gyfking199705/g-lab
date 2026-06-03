@@ -4,17 +4,20 @@
 主题不限（编程 / 语言 / 考证 / 读书…），内置可一键开课的模板与一条示例「AI/ML 学习路径」。
 
 默认**全离线可用**；填入你自己的 API Key（仅存本地浏览器）后，解锁「AI 生成计划 / AI 讲解知识点」。
+若想公开让别人也来学、又不想每人各填 Key，可部署 `proxy/` 里的后端代理（Key 放服务端）。
 可作为独立组件单独运行，也可集成进主应用（个人成长规划系统）。
 
 ```
 learning/
-├── calc.js              # ① 纯函数计算（间隔复习 SM-2 / 进度 / 连续天数 / 活跃度 / AI 提示词与解析）— 不依赖 React
-├── calc.test.js         # 计算逻辑单元测试（Node 内置 test runner，24 个用例）
+├── calc.js              # ① 纯函数计算（间隔复习 SM-2 / 进度 / 连续天数 / 活跃度 / AI 解析 / 分享码）— 不依赖 React
+├── calc.test.js         # 计算逻辑单元测试（Node 内置 test runner）
 ├── templates.js         # 内置学习计划模板库（通用 + AI/ML 示例）
-├── ai.js                # BYOK AI 客户端（浏览器直连 Anthropic / OpenAI 兼容接口；Key 仅存本地）
+├── ai.js                # AI 客户端：BYOK 直连 或 走后端代理（Key 仅存本地 / 服务端）
+├── ai.test.js           # AI 配置（BYOK / 代理）单元测试
 ├── LearningPlanner.jsx  # ② React 组件（函数式 + hooks），SVG 热力图，自带样式
 ├── bootstrap.jsx        # 独立页打包入口
 ├── index.html           # ③ 可独立运行的演示页（加载 ../dist/learning.js）
+├── proxy/               # 🌐 可选的 AI 后端代理（Cloudflare Worker + 部署文档）
 └── package.json         # 标记 ESM，便于 Node 测试
 ```
 
@@ -107,9 +110,11 @@ function App() {
 
 ---
 
-## 🔐 关于 AI（BYOK）与隐私
+## 🔐 关于 AI 与隐私
 
-- AI 为**可选增强**：不配置 Key 时，模板、追踪、间隔复习、统计等核心功能均可离线使用。
-- API Key **仅保存在你本地浏览器**（`localStorage` 键 `learning-ai`），调用时**直连模型厂商**、不经过任何服务器；该键**不纳入跨模块备份**，避免随分享外泄。
-- ⚠️ 纯前端调用会把 Key 暴露在浏览器端，**仅建议个人使用**。若要做成「公开让别人来学」的多用户站点，应改为「后端代理 + 服务端密钥」，再把本组件的 AI 调用指向你的代理地址（`baseURL`）。
-- 分享给别人来学的推荐方式：在计划详情里**导出**某个计划的 JSON，对方导入即可，无需 Key。
+AI 为**可选增强**：不配置时，模板、追踪、间隔复习、统计等核心功能均可离线使用。两种接入方式（在「配置 AI」里切换）：
+
+- **🔑 自带 Key（BYOK，默认）**：填你自己的 API Key，**仅存本地浏览器**（`localStorage` 键 `learning-ai`），调用时**直连模型厂商**、不经任何服务器；该键**不纳入跨模块备份**。⚠️ 纯前端会把 Key 暴露在浏览器端，**仅建议个人使用**。
+- **🌐 后端代理**：适合「公开让别人来学、又不想每人各填 Key」。把 Key 放在你部署的 Cloudflare Worker（服务端 Secret），浏览器只填**代理 URL**（+ 可选访问口令），不在本地存任何 Key。部署见 [`proxy/README.md`](proxy/README.md)。建议给代理设 `ACCESS_TOKEN` 防被白嫖。
+
+分享计划给别人学：在计划详情「🔗 分享」生成分享链接/分享码，对方一键导入即可（无需 Key）。
