@@ -1,0 +1,10 @@
+{
+  "name": "learning-planner",
+  "version": "1.0.0",
+  "description": "AI 学习计划站：纯函数计算逻辑（间隔复习/进度/活跃度）+ React 组件 + BYOK AI 客户端",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

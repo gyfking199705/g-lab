@@ -10,8 +10,10 @@
  */
 import React, { useEffect, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
+import LearningPlanner from '../learning/LearningPlanner.jsx';
 
 /* ----------------------------- 模块定义 ----------------------------- */
+/* 通用「清单」模块（个人 / 健身）；学习与财富为各自的富模块。 */
 const TASK_MODULES = [
   {
     id: 'personal',
@@ -21,15 +23,6 @@ const TASK_MODULES = [
     subtitle: '管理你的待办事项、日志和里程碑',
     placeholder: '添加新的待办事项…',
     empty: '还没有待办事项',
-  },
-  {
-    id: 'learning',
-    icon: '📚',
-    label: '学习规划',
-    title: '学习规划',
-    subtitle: '追踪你的学习进度和课程目标',
-    placeholder: '添加新的学习目标…',
-    empty: '还没有学习目标',
   },
   {
     id: 'fitness',
@@ -42,17 +35,21 @@ const TASK_MODULES = [
   },
 ];
 
-const WEALTH_MODULE = {
-  id: 'wealth',
-  icon: '💰',
-  label: '财富规划',
-};
+/* 侧边栏导航顺序（个人 → 学习 → 健身 → 财富）。kind 决定渲染哪种主内容。 */
+const NAV_ITEMS = [
+  { id: 'personal', icon: '📝', label: '个人规划', kind: 'task' },
+  { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning' },
+  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'task' },
+  { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth' },
+];
 
-/* 参与备份的所有 localStorage 键 */
+/* 参与备份的所有 localStorage 键。
+   注意：AI 配置键 `learning-ai`（含 API Key）故意不纳入备份，避免随分享外泄。 */
 const BACKUP_KEYS = [
   'planning_personal',
-  'planning_learning',
+  'planning_learning', // 旧版学习待办，保留以兼容历史备份
   'planning_fitness',
+  'learning-planner', // 新版 AI 学习计划站数据
   'savings-planner',
 ];
 
@@ -91,6 +88,29 @@ function readCount(key) {
   }
 }
 
+/* 学习规划的侧边栏徽章：已掌握/总知识点；无知识点时退化为计划数。 */
+function readLearningBadge() {
+  try {
+    const raw = localStorage.getItem('learning-planner');
+    if (!raw) return null;
+    const plans = (JSON.parse(raw).plans) || [];
+    let total = 0;
+    let mastered = 0;
+    for (const p of plans) {
+      for (const m of p.modules || []) {
+        for (const l of m.lessons || []) {
+          total += 1;
+          if (l.status === 'mastered') mastered += 1;
+        }
+      }
+    }
+    if (!total) return plans.length ? `${plans.length} 计划` : null;
+    return `${mastered}/${total}`;
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ============================ 主应用 ============================ */
 export default function App() {
   const [active, setActive] = useState('personal');
@@ -106,8 +126,10 @@ export default function App() {
           <div className="app-brand-sub">Personal Growth Planner</div>
         </div>
         <nav className="app-nav">
-          {TASK_MODULES.map((m) => {
-            const count = readCount(`planning_${m.id}`); // 依赖 tick/active 触发的重渲染刷新
+          {NAV_ITEMS.map((m) => {
+            // 依赖 tick/active 触发的重渲染刷新徽章
+            const count =
+              m.kind === 'task' ? readCount(`planning_${m.id}`) : m.kind === 'learning' ? readLearningBadge() : null;
             return (
               <button
                 key={m.id}
@@ -120,13 +142,6 @@ export default function App() {
               </button>
             );
           })}
-          <button
-            className={`app-navbtn ${active === WEALTH_MODULE.id ? 'active' : ''}`}
-            onClick={() => setActive(WEALTH_MODULE.id)}
-          >
-            <span className="ic">{WEALTH_MODULE.icon}</span>
-            {WEALTH_MODULE.label}
-          </button>
         </nav>
         <div className="app-foot">
           <ExportButton />
@@ -138,6 +153,8 @@ export default function App() {
         <div className="app-mainpad">
           {active === 'wealth' ? (
             <WealthSection />
+          ) : active === 'learning' ? (
+            <LearningPlanner storageKey="learning-planner" onChange={bump} />
           ) : (
             <TaskModule key={active} module={TASK_MODULES.find((m) => m.id === active)} onMutate={bump} />
           )}
