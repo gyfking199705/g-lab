@@ -1,0 +1,10 @@
+{
+  "name": "project-planner",
+  "version": "1.0.0",
+  "description": "项目规划：共享任务模型 + 日程分桶 / 人力甘特 / 番茄专注（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}
