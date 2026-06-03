@@ -23,6 +23,7 @@ import {
   netWorthChange,
   financialHealth,
 } from './calc.js';
+import { simulate, VOL_PRESETS } from './montecarlo.js';
 
 /* ----------------------------- 默认数据 ----------------------------- */
 /* 净资产默认账户：资产/负债 + 类别（「流动」类计入应急储备） */
@@ -192,6 +193,7 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
         <button className={`sp-tab ${tab === 'plan' ? 'active' : ''}`} onClick={() => setTab('plan')}>测算</button>
         <button className={`sp-tab ${tab === 'networth' ? 'active' : ''}`} onClick={() => setTab('networth')}>净资产</button>
         <button className={`sp-tab ${tab === 'health' ? 'active' : ''}`} onClick={() => setTab('health')}>体检</button>
+        <button className={`sp-tab ${tab === 'mc' ? 'active' : ''}`} onClick={() => setTab('mc')}>压力测试</button>
       </div>
 
       {tab === 'plan' && (
@@ -391,6 +393,7 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
 
       {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} />}
       {tab === 'health' && <HealthTab netWorth={state.netWorth} budget={budget} />}
+      {tab === 'mc' && <MonteCarloTab forecast={state.forecast} budget={budget} investment={investment} />}
     </div>
   );
 }
@@ -891,6 +894,252 @@ function HealthTab({ netWorth, budget }) {
   );
 }
 
+/* ============================ 压力测试（蒙特卡洛） ============================ */
+function MonteCarloTab({ forecast, budget, investment }) {
+  const makeDefaults = () => ({
+    mean: round1((investment.effectiveReturn || 0) * 100),
+    vol: 15,
+    annualSaving: Math.max(0, Math.round(budget.annualSaving || 0)),
+    currentAssets: forecast.currentAssets,
+    target: forecast.target,
+    years: forecast.years,
+    runs: 2000,
+    seed: 1,
+  });
+  const [mc, setMc] = useState(makeDefaults);
+  const set = (patch) => setMc((p) => ({ ...p, ...patch }));
+  const sim = useMemo(
+    () =>
+      simulate({
+        currentAssets: mc.currentAssets,
+        annualSaving: mc.annualSaving,
+        mean: mc.mean / 100,
+        vol: mc.vol / 100,
+        years: mc.years,
+        target: mc.target,
+        runs: mc.runs,
+        seed: mc.seed,
+      }),
+    [mc.currentAssets, mc.annualSaving, mc.mean, mc.vol, mc.years, mc.target, mc.runs, mc.seed]
+  );
+
+  return (
+    <div className="sp-grid">
+      <div className="sp-col">
+        <Section title="假设与变量" badge="输入">
+          <p className="sp-note">
+            收益不再固定，而是每年按「均值 ± 波动率」随机抽样，跑 {mc.runs} 次看结果分布。拖动滑块，下方实时变化。
+          </p>
+          <SliderRow label="预期年化" value={mc.mean} min={0} max={15} step={0.1} unit="%" wide onChange={(v) => set({ mean: v })} />
+          <SliderRow label="波动率" value={mc.vol} min={0} max={35} step={1} unit="%" wide onChange={(v) => set({ vol: v })} />
+          <div className="sp-mc-presets">
+            <span>波动预设：</span>
+            {VOL_PRESETS.map((p) => {
+              const pv = Math.round(p.vol * 100);
+              return (
+                <button key={p.key} className={`sp-mc-preset ${Math.round(mc.vol) === pv ? 'on' : ''}`} onClick={() => set({ vol: pv })}>
+                  {p.label} {pv}%
+                </button>
+              );
+            })}
+          </div>
+          <div className="sp-fields" style={{ marginTop: 12 }}>
+            <NumberField label="当前总资产" value={mc.currentAssets} onChange={(v) => set({ currentAssets: v })} unit="元" step={100000} />
+            <NumberField label="每年储蓄" value={mc.annualSaving} onChange={(v) => set({ annualSaving: v })} unit="元" step={50000} />
+            <NumberField label="目标金额" value={mc.target} onChange={(v) => set({ target: v })} unit="元" step={1000000} />
+          </div>
+          <SliderRow label="预测年限" value={mc.years} min={5} max={50} step={1} unit="年" wide onChange={(v) => set({ years: v })} />
+          <SliderRow label="模拟次数" value={mc.runs} min={500} max={5000} step={500} unit="次" wide onChange={(v) => set({ runs: v })} />
+          <div className="sp-mc-actions">
+            <button className="sp-link" onClick={() => setMc(makeDefaults())}>↺ 用规划数值</button>
+            <button className="sp-mc-roll" onClick={() => set({ seed: mc.seed + 1 })}>🎲 重新模拟</button>
+          </div>
+        </Section>
+      </div>
+
+      <div className="sp-col">
+        <Section title="达成概率" badge="结果">
+          <div className="sp-mc-prob">
+            <Gauge value={sim.successProb} />
+            <div className="sp-mc-readouts">
+              <div className="sp-mc-r"><span>中位结果</span><strong>{formatMoney(sim.finals.p50)}</strong></div>
+              <div className="sp-mc-r"><span>区间 P10–P90</span><strong>{formatMoney(sim.finals.p10)} ~ {formatMoney(sim.finals.p90)}</strong></div>
+              <div className="sp-mc-r"><span>中位达成年数</span><strong>{sim.medianYears ? `${sim.medianYears} 年` : '期限内未达成'}</strong></div>
+              <div className="sp-mc-r"><span>期限内曾达成</span><strong>{formatPct(sim.reachProb)}</strong></div>
+            </div>
+          </div>
+        </Section>
+        <Section title="可能的资产区间" badge="结果">
+          <FanChart bands={sim.bands} target={mc.target} />
+        </Section>
+        <Section title={`第 ${mc.years} 年结果分布`} badge="结果">
+          <Histogram histogram={sim.histogram} target={mc.target} />
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+function Gauge({ value }) {
+  const pct = Math.max(0, Math.min(1, value || 0));
+  const size = 132;
+  const r = 56;
+  const c = 2 * Math.PI * r;
+  const color = pct >= 0.8 ? '#6E9079' : pct >= 0.5 ? '#BE9356' : '#BC6055';
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="sp-gauge">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F1EFE8" strokeWidth="12" />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth="12"
+        strokeLinecap="round"
+        strokeDasharray={`${c * pct} ${c}`}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dasharray .35s, stroke .35s' }}
+      />
+      <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central" className="sp-gauge-num" style={{ fill: color }}>
+        {Math.round(pct * 100)}%
+      </text>
+      <text x="50%" y="64%" textAnchor="middle" className="sp-gauge-cap">达成概率</text>
+    </svg>
+  );
+}
+
+function FanChart({ bands, target }) {
+  const wrapRef = useRef(null);
+  const [width, setWidth] = useState(520);
+  const [hover, setHover] = useState(null);
+  const height = 240;
+  const pad = { top: 16, right: 14, bottom: 26, left: 56 };
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      if (w > 0) setWidth(Math.max(280, w));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const innerW = width - pad.left - pad.right;
+  const innerH = height - pad.top - pad.bottom;
+  const n = bands.length;
+  const maxV = Math.max(target, ...bands.map((b) => b.p90)) * 1.08 || 1;
+  const x = (i) => pad.left + (n <= 1 ? 0 : (i / (n - 1)) * innerW);
+  const y = (v) => pad.top + innerH - (v / maxV) * innerH;
+
+  const areaBetween = (lo, hi) => {
+    let d = `M ${x(0)} ${y(bands[0][hi])}`;
+    for (let i = 1; i < n; i++) d += ` L ${x(i)} ${y(bands[i][hi])}`;
+    for (let i = n - 1; i >= 0; i--) d += ` L ${x(i)} ${y(bands[i][lo])}`;
+    return d + ' Z';
+  };
+  const lineOf = (key) => bands.map((b, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(b[key])}`).join(' ');
+
+  const ticks = 4;
+  const yTicks = Array.from({ length: ticks + 1 }, (_, i) => (maxV / ticks) * i);
+  const xStep = Math.max(1, Math.round((n - 1) / 6));
+  const xTicks = bands.filter((_, i) => i % xStep === 0 || i === n - 1);
+
+  const onMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (width / rect.width);
+    const idx = Math.round(((px - pad.left) / innerW) * (n - 1));
+    if (idx >= 0 && idx < n) setHover(idx);
+  };
+  const hv = hover != null ? bands[hover] : null;
+
+  return (
+    <div className="sp-chart" ref={wrapRef}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+        {yTicks.map((v, i) => (
+          <g key={i}>
+            <line x1={pad.left} y1={y(v)} x2={width - pad.right} y2={y(v)} stroke="#ECEAE2" />
+            <text x={pad.left - 8} y={y(v) + 4} textAnchor="end" className="sp-axis">{formatMoney(v)}</text>
+          </g>
+        ))}
+        {xTicks.map((b) => (
+          <text key={b.year} x={x(b.year)} y={height - 8} textAnchor="middle" className="sp-axis">{b.year}年</text>
+        ))}
+        {target <= maxV && (
+          <g>
+            <line x1={pad.left} y1={y(target)} x2={width - pad.right} y2={y(target)} stroke="#B4493E" strokeDasharray="5 4" />
+            <text x={width - pad.right} y={y(target) - 6} textAnchor="end" className="sp-axis sp-axis-target">目标 {formatMoney(target)}</text>
+          </g>
+        )}
+        <path d={areaBetween('p10', 'p90')} fill="#CC785C" opacity="0.12" />
+        <path d={areaBetween('p25', 'p75')} fill="#CC785C" opacity="0.22" />
+        <path d={lineOf('p50')} fill="none" stroke="#CC785C" strokeWidth="2.5" />
+        {hv && (
+          <g>
+            <line x1={x(hv.year)} y1={pad.top} x2={x(hv.year)} y2={pad.top + innerH} stroke="#B8B5AA" strokeDasharray="3 3" />
+            <circle cx={x(hv.year)} cy={y(hv.p50)} r="4" fill="#CC785C" stroke="#fff" strokeWidth="2" />
+          </g>
+        )}
+      </svg>
+      {hv && (
+        <div className="sp-tip" style={{ left: `${(x(hv.year) / width) * 100}%`, transform: `translateX(${hv.year > n / 2 ? '-105%' : '8px'})` }}>
+          <div className="sp-tip-year">第 {hv.year} 年</div>
+          <div>乐观 P90 {formatMoney(hv.p90)}</div>
+          <div>中位 P50 {formatMoney(hv.p50)}</div>
+          <div className="sp-tip-gain">悲观 P10 {formatMoney(hv.p10)}</div>
+        </div>
+      )}
+      <div className="sp-legend">
+        <span><i className="sp-fan-sw" style={{ background: 'rgba(204,120,92,.22)' }} /> P25–75</span>
+        <span><i className="sp-fan-sw" style={{ background: 'rgba(204,120,92,.12)' }} /> P10–90</span>
+        <span><i className="sp-line sp-line-a" /> 中位</span>
+        <span><i className="sp-line sp-line-t" /> 目标</span>
+      </div>
+    </div>
+  );
+}
+
+function Histogram({ histogram, target }) {
+  const W = 520;
+  const H = 168;
+  const pad = { t: 10, r: 12, b: 22, l: 12 };
+  const innerW = W - pad.l - pad.r;
+  const innerH = H - pad.t - pad.b;
+  const maxC = Math.max(1, ...histogram.map((h) => h.count));
+  const min = histogram[0].x0;
+  const max = histogram[histogram.length - 1].x1;
+  const span = max - min || 1;
+  const bw = innerW / histogram.length;
+  const tx = pad.l + ((target - min) / span) * innerW;
+  return (
+    <div className="sp-chart">
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`}>
+        {histogram.map((h, i) => {
+          const bh = (h.count / maxC) * innerH;
+          const success = h.x0 >= target;
+          return (
+            <rect key={i} x={pad.l + i * bw + 0.5} y={pad.t + innerH - bh} width={Math.max(1, bw - 1)} height={bh} rx={1.5} fill={success ? '#6E9079' : '#D8CFC4'}>
+              <title>{`${formatMoney(h.x0)} ~ ${formatMoney(h.x1)}：${h.count} 次`}</title>
+            </rect>
+          );
+        })}
+        {target > min && target < max && (
+          <line x1={tx} y1={pad.t} x2={tx} y2={pad.t + innerH} stroke="#B4493E" strokeDasharray="4 3" />
+        )}
+        <text x={pad.l} y={H - 6} className="sp-axis" textAnchor="start">{formatMoney(min)}</text>
+        <text x={W - pad.r} y={H - 6} className="sp-axis" textAnchor="end">{formatMoney(max)}</text>
+      </svg>
+      <div className="sp-legend">
+        <span><i className="sp-sq" style={{ background: '#6E9079' }} /> 达标</span>
+        <span><i className="sp-sq" style={{ background: '#D8CFC4' }} /> 未达标</span>
+        <span><i className="sp-line sp-line-t" /> 目标线</span>
+      </div>
+    </div>
+  );
+}
+
 /* ----------------------------- 工具函数 ----------------------------- */
 let __sid = 0;
 function uid(prefix) {
@@ -1107,6 +1356,24 @@ const CSS = `
 .sp-health-label{font-size:13px;font-weight:600;}
 .sp-health-val{margin-left:auto;font-size:12.5px;color:var(--t2);font-variant-numeric:tabular-nums;}
 .sp-health-advice{font-size:11.5px;color:var(--t2);margin-top:5px;padding-left:15px;}
+
+/* ===== 压力测试 ===== */
+.sp-mc-presets{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--t3);margin-top:10px;}
+.sp-mc-preset{border:1px solid var(--bd);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:11.5px;cursor:pointer;color:var(--t2);transition:.15s;font-family:var(--sans);}
+.sp-mc-preset:hover{border-color:var(--bd-2);}
+.sp-mc-preset.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);font-weight:600;}
+.sp-mc-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
+.sp-mc-roll{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 15px;font-size:12.5px;cursor:pointer;font-family:var(--sans);transition:.15s;}
+.sp-mc-roll:hover{background:var(--accent-2);}
+.sp-mc-prob{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.sp-gauge{flex:none;}
+.sp-gauge-num{font-family:var(--serif);font-size:26px;font-weight:600;}
+.sp-gauge-cap{font-size:10.5px;fill:var(--t3);}
+.sp-mc-readouts{flex:1;min-width:180px;display:flex;flex-direction:column;gap:8px;}
+.sp-mc-r{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px;color:var(--t2);border-bottom:1px solid var(--bd-soft);padding-bottom:7px;}
+.sp-mc-r:last-child{border-bottom:none;}
+.sp-mc-r strong{font-family:var(--serif);font-size:14.5px;font-weight:500;color:var(--t1);font-variant-numeric:tabular-nums;text-align:right;}
+.sp-fan-sw{display:inline-block;width:14px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle;}
 
 @media(max-width:860px){
   .sp-kpis{grid-template-columns:repeat(2,1fr);}
