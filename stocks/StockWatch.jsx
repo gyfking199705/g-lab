@@ -11,10 +11,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchQuotes, formatPrice, formatChange, formatPct } from './api.js';
 
 const STORE_KEY = 'stocks-watch';
+const CACHE_KEY = 'stocks-watch-cache'; // 最近一次行情快照，重开页面先秒显示
 const DEFAULT_CFG = {
   symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'BABA'],
-  provider: 'demo', // 'demo' | 'finnhub'
+  provider: 'demo', // 'demo' | 'finnhub' | 'proxy'
   apiKey: '',
+  proxyUrl: '',
   redUp: true, // true=红涨绿跌（A股）  false=绿涨红跌（欧美）
 };
 
@@ -28,11 +30,22 @@ function load() {
   return DEFAULT_CFG;
 }
 
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    /* ignore */
+  }
+  return { quotes: [], at: null };
+}
+
 export default function StockWatch() {
   const [cfg, setCfg] = useState(load);
-  const [quotes, setQuotes] = useState([]);
+  const cached = loadCache();
+  const [quotes, setQuotes] = useState(cached.quotes); // 先用上次快照渲染
   const [loading, setLoading] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState(null);
+  const [updatedAt, setUpdatedAt] = useState(cached.at ? new Date(cached.at) : null);
   const [showSettings, setShowSettings] = useState(false);
   const [input, setInput] = useState('');
 
@@ -52,13 +65,24 @@ export default function StockWatch() {
     }
     setLoading(true);
     try {
-      const q = await fetchQuotes(cfg.symbols, { provider: cfg.provider, apiKey: cfg.apiKey });
+      const q = await fetchQuotes(cfg.symbols, {
+        provider: cfg.provider,
+        apiKey: cfg.apiKey,
+        proxyUrl: cfg.proxyUrl,
+      });
+      const at = new Date();
       setQuotes(q);
-      setUpdatedAt(new Date());
+      setUpdatedAt(at);
+      // 存最近一次快照（浏览器本地），重开页面先秒显示
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ quotes: q, at: at.toISOString() }));
+      } catch (e) {
+        /* ignore */
+      }
     } finally {
       setLoading(false);
     }
-  }, [cfg.symbols, cfg.provider, cfg.apiKey]);
+  }, [cfg.symbols, cfg.provider, cfg.apiKey, cfg.proxyUrl]);
 
   // 标的/数据源变化时自动刷新
   useEffect(() => {
@@ -113,10 +137,16 @@ export default function StockWatch() {
                 演示数据
               </button>
               <button
+                className={cfg.provider === 'proxy' ? 'on' : ''}
+                onClick={() => setCfg((c) => ({ ...c, provider: 'proxy' }))}
+              >
+                行情代理
+              </button>
+              <button
                 className={cfg.provider === 'finnhub' ? 'on' : ''}
                 onClick={() => setCfg((c) => ({ ...c, provider: 'finnhub' }))}
               >
-                Finnhub 实时
+                Finnhub
               </button>
             </div>
           </div>
@@ -136,6 +166,24 @@ export default function StockWatch() {
             <p className="sw-hint">
               免费 key 在 <a href="https://finnhub.io/register" target="_blank" rel="noreferrer">finnhub.io</a> 注册即得；
               仅存在你本机浏览器，不会上传或进仓库。免费版支持美股等实时报价（暂无历史走势权限）。
+            </p>
+          )}
+          {cfg.provider === 'proxy' && (
+            <div className="sw-set-row">
+              <span className="sw-set-label">代理 URL</span>
+              <input
+                className="sw-input"
+                placeholder="https://你的-worker.workers.dev"
+                value={cfg.proxyUrl}
+                onChange={(e) => setCfg((c) => ({ ...c, proxyUrl: e.target.value }))}
+              />
+            </div>
+          )}
+          {cfg.provider === 'proxy' && (
+            <p className="sw-hint">
+              自建 Cloudflare Worker 代理（约 3 分钟，免费），覆盖美股 / A股 / 港股且带走势图。
+              部署步骤见仓库 <code>stocks/proxy/README.md</code>。
+              代码示例：A股 <code>600519.SS</code>、深市 <code>000001.SZ</code>、港股 <code>00700.HK</code>、美股 <code>AAPL</code>。
             </p>
           )}
           <div className="sw-set-row">
@@ -181,7 +229,7 @@ export default function StockWatch() {
 
       <div className="sw-status">
         <span>
-          数据源：{cfg.provider === 'finnhub' ? 'Finnhub 实时' : '演示数据'}
+          数据源：{cfg.provider === 'finnhub' ? 'Finnhub 实时' : cfg.provider === 'proxy' ? '行情代理（实时）' : '演示数据'}
           {updatedAt && ` · 更新于 ${updatedAt.toLocaleTimeString('zh-CN')}`}
         </span>
         {cfg.provider === 'demo' && <span className="sw-demo-tag">演示数据 · 非真实行情</span>}
@@ -281,6 +329,7 @@ const CSS = `
 .sw-seg button.on{background:var(--accent-soft);color:var(--accent-2);font-weight:500;}
 .sw-hint{font-size:11.5px;color:var(--t3);margin:0;line-height:1.6;}
 .sw-hint a{color:var(--accent-2);}
+.sw-hint code{background:var(--surface-3);border-radius:4px;padding:1px 5px;font-size:11px;color:var(--t2);}
 
 .sw-add{display:flex;gap:8px;margin-bottom:18px;}
 .sw-input{flex:1;min-width:0;padding:8px 12px;background:var(--surface-2);border:1px solid var(--bd);border-radius:9px;font-size:13px;color:var(--t1);font-family:var(--sans);transition:.15s;}
