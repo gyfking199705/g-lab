@@ -14,7 +14,7 @@ const STORE_KEY = 'stocks-watch';
 const CACHE_KEY = 'stocks-watch-cache'; // 最近一次行情快照，重开页面先秒显示
 const DEFAULT_CFG = {
   symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'BABA'],
-  provider: 'demo', // 'demo' | 'finnhub' | 'proxy'
+  provider: 'yahoo', // 'yahoo' 实时(默认) | 'proxy' 自建代理 | 'finnhub' | 'demo'
   apiKey: '',
   proxyUrl: '',
   redUp: true, // true=红涨绿跌（A股）  false=绿涨红跌（欧美）
@@ -131,16 +131,16 @@ export default function StockWatch() {
             <span className="sw-set-label">数据源</span>
             <div className="sw-seg">
               <button
-                className={cfg.provider === 'demo' ? 'on' : ''}
-                onClick={() => setCfg((c) => ({ ...c, provider: 'demo' }))}
+                className={cfg.provider === 'yahoo' ? 'on' : ''}
+                onClick={() => setCfg((c) => ({ ...c, provider: 'yahoo' }))}
               >
-                演示数据
+                实时行情
               </button>
               <button
                 className={cfg.provider === 'proxy' ? 'on' : ''}
                 onClick={() => setCfg((c) => ({ ...c, provider: 'proxy' }))}
               >
-                行情代理
+                自建代理
               </button>
               <button
                 className={cfg.provider === 'finnhub' ? 'on' : ''}
@@ -148,8 +148,21 @@ export default function StockWatch() {
               >
                 Finnhub
               </button>
+              <button
+                className={cfg.provider === 'demo' ? 'on' : ''}
+                onClick={() => setCfg((c) => ({ ...c, provider: 'demo' }))}
+              >
+                演示
+              </button>
             </div>
           </div>
+          {cfg.provider === 'yahoo' && (
+            <p className="sw-hint">
+              免费实时行情（数据源 Yahoo Finance），覆盖美股 <code>AAPL</code>、A股 <code>600519.SS</code>/<code>000001.SZ</code>、
+              港股 <code>00700.HK</code>，含走势图，无需 key。直连失败时自动经公共 CORS 代理获取；
+              若偶发不稳定或在受限网络，建议改用「自建代理」（更稳）。
+            </p>
+          )}
           {cfg.provider === 'finnhub' && (
             <div className="sw-set-row">
               <span className="sw-set-label">API Key</span>
@@ -229,7 +242,12 @@ export default function StockWatch() {
 
       <div className="sw-status">
         <span>
-          数据源：{cfg.provider === 'finnhub' ? 'Finnhub 实时' : cfg.provider === 'proxy' ? '行情代理（实时）' : '演示数据'}
+          数据源：{
+            cfg.provider === 'yahoo' ? '实时行情（Yahoo）'
+            : cfg.provider === 'finnhub' ? 'Finnhub 实时'
+            : cfg.provider === 'proxy' ? '自建代理（实时）'
+            : '演示数据'
+          }
           {updatedAt && ` · 更新于 ${updatedAt.toLocaleTimeString('zh-CN')}`}
         </span>
         {cfg.provider === 'demo' && <span className="sw-demo-tag">演示数据 · 非真实行情</span>}

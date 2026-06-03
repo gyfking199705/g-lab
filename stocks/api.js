@@ -76,6 +76,59 @@ export async function finnhubQuote(symbol, apiKey) {
   };
 }
 
+/* ----------------------------- Yahoo 实时（默认，零部署） ----------------------------- */
+// 纯静态页直连 Yahoo 常被 CORS 挡，这里：先尝试直连，失败再依次经公共 CORS 代理转发。
+// 覆盖美股(AAPL) / A股(600519.SS·000001.SZ) / 港股(00700.HK) / 指数(^GSPC)，且带历史走势。
+const CORS_PROXIES = [
+  (u) => u, // 1) 直连（若 Yahoo 放行 CORS 或用户网络可达）
+  (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+  (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+];
+
+function parseYahoo(d, fallbackSym) {
+  const res = d && d.chart && d.chart.result && d.chart.result[0];
+  if (!res) {
+    const msg = d && d.chart && d.chart.error && d.chart.error.description;
+    throw new Error(msg || '无数据');
+  }
+  const meta = res.meta || {};
+  const price = meta.regularMarketPrice;
+  if (price == null) throw new Error('暂无报价');
+  const prevClose = meta.chartPreviousClose != null ? meta.chartPreviousClose : meta.previousClose != null ? meta.previousClose : null;
+  const closes = ((res.indicators && res.indicators.quote && res.indicators.quote[0] && res.indicators.quote[0].close) || []).filter((v) => v != null);
+  const change = prevClose != null ? price - prevClose : 0;
+  const changePct = prevClose ? (change / prevClose) * 100 : 0;
+  return {
+    symbol: meta.symbol || fallbackSym,
+    price,
+    prevClose,
+    change,
+    changePct,
+    series: closes.length >= 2 ? closes : null,
+    demo: false,
+  };
+}
+
+export async function yahooQuote(symbol) {
+  const sym = symbol.toUpperCase();
+  const target = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1mo&interval=1d`;
+  let lastErr;
+  for (const wrap of CORS_PROXIES) {
+    try {
+      const res = await fetch(wrap(target));
+      if (!res.ok) {
+        lastErr = new Error('HTTP ' + res.status);
+        continue;
+      }
+      const d = await res.json();
+      return parseYahoo(d, sym);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw new Error((lastErr && lastErr.message) || '获取失败（可能被网络/CORS 拦截）');
+}
+
 /* ----------------------------- 行情代理（Cloudflare Worker 等） ----------------------------- */
 // 自建无状态代理转发 Yahoo Finance（覆盖美股 / A股 .SS·.SZ / 港股 .HK，含历史走势）。
 // 代理实现见 stocks/proxy/worker.js；部署后把 URL 填进设置。
@@ -106,8 +159,20 @@ export async function proxyQuote(symbol, proxyUrl) {
  * @param {{provider:'demo'|'finnhub'|'proxy', apiKey?:string, proxyUrl?:string}} opts
  * @returns {Promise<Quote[]>}
  */
-export async function fetchQuotes(symbols, { provider = 'demo', apiKey = '', proxyUrl = '' } = {}) {
+export async function fetchQuotes(symbols, { provider = 'yahoo', apiKey = '', proxyUrl = '' } = {}) {
   const list = (symbols || []).map((s) => s.trim().toUpperCase()).filter(Boolean);
+
+  if (provider === 'yahoo') {
+    return Promise.all(
+      list.map(async (s) => {
+        try {
+          return await yahooQuote(s);
+        } catch (e) {
+          return { symbol: s, error: e.message || '获取失败', demo: false };
+        }
+      })
+    );
+  }
 
   if (provider === 'finnhub') {
     if (!apiKey) return list.map((s) => ({ symbol: s, error: '未配置 Finnhub API key', demo: false }));
