@@ -2,22 +2,23 @@
  * Google Drive 同步 —— 浏览器侧（无后端）
  * ------------------------------------------------------------------
  * 用 Google Identity Services (GIS) 走 OAuth「令牌流」拿 access token，
- * 然后用 Drive REST 把一个 JSON 同步文件读写到 **appDataFolder**（应用专属隐藏目录）。
+ * 然后用 Drive REST 在你 Drive 里一个**可见文件夹**（默认「成长规划 (g-lab)」）中，
+ * 按「每个模块一个 JSON 文件」读写数据 —— 你能在 Drive 里直接浏览/备份/编辑。
  *
  * 安全要点：
- *  - 仅申请 `drive.appdata` 范围：应用**只能看到自己创建的同步文件**，看不到你 Drive 的其他内容（最小权限）。
- *  - 无 client secret（令牌流不需要）；OAuth Client ID 是可公开的，建议在 Google 控制台把
- *    「授权来源」限制为你的 Pages 域名。
- *  - access token 只活在内存（本模块闭包），不落 localStorage。
+ *  - 仅申请 `drive.file` 范围：应用**只能访问它自己创建的文件/文件夹**，看不到你 Drive 的其它内容。
+ *  - 无 client secret（令牌流）；OAuth Client ID 可公开，建议在控制台把「授权来源」限定为你的站点域名。
+ *  - access token 只活在内存（调用方持有），不落 localStorage。
  *
- * 纯逻辑（备份采集 / multipart 构造）在 ./backup.js，可单测；本文件只负责 GIS 与网络。
+ * 纯逻辑（文件名映射 / 还原 / 签名 / multipart 构造）在 ./backup.js，可单测；本文件只负责 GIS 与网络。
  */
-import { SYNC_FILENAME, buildMultipartBody } from './backup.js';
+import { buildMultipartBody } from './backup.js';
 
-export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 const FILES = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
 
 let gisPromise = null;
 
@@ -73,7 +74,6 @@ export async function requestToken(clientId, opts = {}) {
       },
     });
     try {
-      // silent：prompt='' 尽量不弹窗（用于自动同步的续期）；否则正常弹授权
       client.requestAccessToken(opts.silent ? { prompt: '' } : {});
     } catch (e) {
       if (!settled) reject(e);
@@ -81,48 +81,60 @@ export async function requestToken(clientId, opts = {}) {
   });
 }
 
-/** 在 appDataFolder 里查找同步文件，返回 {id, modifiedTime} 或 null。 */
-export async function findSyncFile(token) {
-  const q = encodeURIComponent(`name='${SYNC_FILENAME}'`);
-  const url = `${FILES}?spaces=appDataFolder&q=${q}&fields=files(id,name,modifiedTime)&pageSize=1`;
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+const auth = (token) => ({ Authorization: `Bearer ${token}` });
+
+/** 找到（或新建）应用的数据文件夹，返回 folderId。 */
+export async function findOrCreateFolder(token, name) {
+  const q = encodeURIComponent(`name='${name.replace(/'/g, "\\'")}' and mimeType='${FOLDER_MIME}' and trashed=false`);
+  const r = await fetch(`${FILES}?q=${q}&fields=files(id,name)&pageSize=1`, { headers: auth(token) });
   if (!r.ok) throw new Error(await driveErr(r));
   const d = await r.json();
-  return d.files && d.files[0] ? d.files[0] : null;
-}
-
-/** 下载并解析同步文件内容。 */
-export async function downloadFile(token, fileId) {
-  const r = await fetch(`${FILES}/${encodeURIComponent(fileId)}?alt=media`, {
-    headers: { Authorization: `Bearer ${token}` },
+  if (d.files && d.files[0]) return d.files[0].id;
+  const cr = await fetch(`${FILES}?fields=id`, {
+    method: 'POST',
+    headers: { ...auth(token), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: FOLDER_MIME }),
   });
-  if (!r.ok) throw new Error(await driveErr(r));
-  return r.json();
+  if (!cr.ok) throw new Error(await driveErr(cr));
+  return (await cr.json()).id;
 }
 
-/** 上传同步文件：有 fileId 则更新（PATCH media），否则在 appDataFolder 新建。返回 fileId。 */
-export async function uploadSync(token, fileId, obj) {
-  const media = JSON.stringify(obj);
+/** 列出文件夹内的文件（[{id,name,modifiedTime}]）。 */
+export async function listChildren(token, folderId) {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const r = await fetch(`${FILES}?q=${q}&fields=files(id,name,modifiedTime)&pageSize=200`, { headers: auth(token) });
+  if (!r.ok) throw new Error(await driveErr(r));
+  const d = await r.json();
+  return d.files || [];
+}
+
+/** 下载文件文本内容。 */
+export async function downloadText(token, fileId) {
+  const r = await fetch(`${FILES}/${encodeURIComponent(fileId)}?alt=media`, { headers: auth(token) });
+  if (!r.ok) throw new Error(await driveErr(r));
+  return r.text();
+}
+
+/** 写文件：有 fileId 则更新(PATCH media)，否则在 folderId 下新建。返回 fileId。 */
+export async function uploadFile(token, folderId, name, fileId, content, mime = 'application/json') {
   if (fileId) {
     const r = await fetch(`${UPLOAD}/${encodeURIComponent(fileId)}?uploadType=media&fields=id`, {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
-      body: media,
+      headers: { ...auth(token), 'Content-Type': `${mime}; charset=UTF-8` },
+      body: content,
     });
     if (!r.ok) throw new Error(await driveErr(r));
-    const d = await r.json();
-    return d.id || fileId;
+    return (await r.json()).id || fileId;
   }
   const boundary = 'glab' + Math.random().toString(36).slice(2);
-  const body = buildMultipartBody({ name: SYNC_FILENAME, parents: ['appDataFolder'] }, media, boundary);
+  const body = buildMultipartBody({ name, parents: [folderId] }, content, boundary, `${mime}; charset=UTF-8`);
   const r = await fetch(`${UPLOAD}?uploadType=multipart&fields=id`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    headers: { ...auth(token), 'Content-Type': `multipart/related; boundary=${boundary}` },
     body,
   });
   if (!r.ok) throw new Error(await driveErr(r));
-  const d = await r.json();
-  return d.id;
+  return (await r.json()).id;
 }
 
 async function driveErr(r) {

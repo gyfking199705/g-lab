@@ -82,15 +82,81 @@ export function signatureOf(modules, keys = BACKUP_KEYS) {
 }
 
 /** 构造 Drive 「新建文件」的 multipart/related 请求体（元数据 + 媒体）。 */
-export function buildMultipartBody(metadata, mediaString, boundary) {
+export function buildMultipartBody(metadata, mediaString, boundary, mediaMime = 'application/json; charset=UTF-8') {
   const nl = '\r\n';
   return (
     `--${boundary}${nl}` +
     `Content-Type: application/json; charset=UTF-8${nl}${nl}` +
     `${JSON.stringify(metadata)}${nl}` +
     `--${boundary}${nl}` +
-    `Content-Type: application/json; charset=UTF-8${nl}${nl}` +
+    `Content-Type: ${mediaMime}${nl}${nl}` +
     `${mediaString}${nl}` +
     `--${boundary}--`
   );
+}
+
+/* =============================================================
+ * 文件系统布局：Drive 里一个「可见文件夹」，每个模块一个人类可读的 JSON 文件。
+ * 这样你能在 Drive 里直接浏览 / 单独备份 / 编辑 / 删除某个模块的数据。
+ * ============================================================= */
+export const SYNC_FOLDER = '成长规划 (g-lab)';
+export const READMEFILE = '说明.txt';
+
+/** 模块键 ↔ 友好文件名（顺序同 BACKUP_KEYS）。 */
+export const FILE_MAP = [
+  { key: 'planning_personal', file: '个人规划.json' },
+  { key: 'planning_learning', file: '学习待办(旧版).json' },
+  { key: 'planning_fitness', file: '健身待办(旧版).json' },
+  { key: 'learning-planner', file: '学习计划.json' },
+  { key: 'fitness-planner', file: '健身训练.json' },
+  { key: 'savings-planner', file: '财富规划.json' },
+  { key: 'stocks-watch', file: '股市观测.json' },
+];
+
+export function fileForKey(key) {
+  const m = FILE_MAP.find((x) => x.key === key);
+  return m ? m.file : `${key}.json`;
+}
+export function keyForFile(file) {
+  const m = FILE_MAP.find((x) => x.file === file);
+  return m ? m.key : null;
+}
+
+/** 把云端读到的文件列表 [{name,text}] 还原成 modules 对象。 */
+export function filesToModules(files) {
+  const modules = {};
+  for (const f of files || []) {
+    const key = keyForFile(f.name);
+    if (!key) continue;
+    try {
+      modules[key] = JSON.parse(f.text);
+    } catch (e) {
+      /* 跳过损坏文件 */
+    }
+  }
+  return modules;
+}
+
+/** 每个模块单独的内容签名（用于「只上传变化了的文件」）。 */
+export function perKeySig(modules, keys = BACKUP_KEYS) {
+  const out = {};
+  for (const k of keys) if (modules && modules[k] != null) out[k] = stableStringify(modules[k]);
+  return out;
+}
+
+/** 生成 Drive 文件夹里的「说明.txt」内容，便于你以后自己管理。 */
+export function buildReadme() {
+  const lines = [
+    '这是「成长规划」应用的云端数据文件夹（你自己的 Google Drive）。',
+    '',
+    '· 每个模块一个 JSON 文件，人类可读，可单独备份 / 编辑 / 删除：',
+    ...FILE_MAP.map((m) => `    ${m.file}  ←  ${m.key}`),
+    '',
+    '· 应用通过最小权限 drive.file 只能访问它自己创建的这些文件，看不到你 Drive 的其它内容。',
+    '· 不含任何密钥（AI Key 等不会上传）。',
+    '· 直接改 JSON 也可以，但请保持合法 JSON；下次打开应用「从云恢复」即可载入。',
+    '',
+    `最后更新：${new Date().toISOString()}`,
+  ];
+  return lines.join('\n');
 }
