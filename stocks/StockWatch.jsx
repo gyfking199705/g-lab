@@ -13,21 +13,29 @@ import { fetchQuotes, formatPrice, formatChange, formatPct } from './api.js';
 const STORE_KEY = 'stocks-watch';
 const CACHE_KEY = 'stocks-watch-cache'; // 最近一次行情快照，重开页面先秒显示
 const DEFAULT_CFG = {
-  symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'BABA'],
+  symbols: ['CRCL', 'NVDA', 'GOOGL', 'AAPL', 'TSLA', 'MSFT', 'META', 'AMZN'],
   provider: 'yahoo', // 'yahoo' 实时(默认) | 'proxy' 自建代理 | 'finnhub' | 'demo'
   apiKey: '',
   proxyUrl: '',
   redUp: true, // true=红涨绿跌（A股）  false=绿涨红跌（欧美）
 };
 
+// 早期版本的默认自选；若用户从未改动过（等于此集合）则自动升级为新默认
+const OLD_DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'BABA'];
+const sameSet = (a, b) =>
+  Array.isArray(a) && a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
+
 function load() {
+  let cfg = DEFAULT_CFG;
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { ...DEFAULT_CFG, ...JSON.parse(raw) };
+    if (raw) cfg = { ...DEFAULT_CFG, ...JSON.parse(raw) };
   } catch (e) {
     /* ignore */
   }
-  return DEFAULT_CFG;
+  // 未自定义过自选列表的用户，自动换成新默认
+  if (sameSet(cfg.symbols, OLD_DEFAULT_SYMBOLS)) cfg = { ...cfg, symbols: [...DEFAULT_CFG.symbols] };
+  return cfg;
 }
 
 function loadCache() {
@@ -209,6 +217,15 @@ export default function StockWatch() {
                 绿涨红跌（欧美）
               </button>
             </div>
+          </div>
+          <div className="sw-set-row">
+            <span className="sw-set-label">自选列表</span>
+            <button
+              className="sw-icon-btn"
+              onClick={() => setCfg((c) => ({ ...c, symbols: [...DEFAULT_CFG.symbols] }))}
+            >
+              ↺ 恢复默认列表
+            </button>
           </div>
         </div>
       )}
