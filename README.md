@@ -24,6 +24,13 @@
 > 💡 财富规划由独立的 React 组件 `savings/SavingsPlanner.jsx` + 纯函数计算 `savings/calc.js` 提供，
 > 既被主应用集成，也可单独运行。详见 [`savings/README.md`](savings/README.md)。
 
+### 5. 📈 股市观测
+自选股清单 + 实时行情观测（手写 SVG 迷你走势图、涨跌配色可切换 红涨绿跌/绿涨红跌）。
+- **数据源**：演示数据（默认，始终可用）/ Finnhub 实时（填自己的免费 key，仅存本机）
+- GitHub Pages 无后端，数据由**浏览器直连第三方行情 API**（见下方说明）
+
+> 💡 由 `stocks/StockWatch.jsx`（UI）+ `stocks/api.js`（数据适配层）提供。
+
 ## 🏗️ 项目结构
 
 React 单页应用（函数式 + hooks）。源码为 `.jsx`，用 esbuild 预打包成**自托管的单文件 bundle**
@@ -37,6 +44,7 @@ g-lab/
 ├── app/
 │   ├── main.jsx             # 主应用：侧边栏导航 + 通用清单模块 + 数据导出/导入
 │   └── bootstrap.jsx        # 打包入口（挂载 React）
+├── stocks/                   # 📈 股市观测模块（StockWatch.jsx + api.js 数据适配层）
 ├── savings/                  # 💰 财富规划模块
 │   ├── calc.js              #   纯函数计算逻辑（不依赖 UI，可单测）
 │   ├── SavingsPlanner.jsx   #   React 组件 + 手写 SVG 图表，自带样式
