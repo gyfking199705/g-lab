@@ -30,59 +30,63 @@
 
 ## 🏗️ 项目结构
 
+这是一个零依赖的纯前端单文件应用，所有界面、样式和逻辑都内联在 `index.html` 中：
+
 ```
 g-lab/
 ├── README.md                 # 项目说明
-├── web/                      # Web 应用
-│   ├── index.html           # 主页面
-│   ├── styles.css           # 样式文件
-│   └── app.js               # 应用逻辑
-├── data/                    # 数据存储（JSON）
-│   ├── personal.json        # 个人规划数据
-│   ├── learning.json        # 学习规划数据
-│   ├── fitness.json         # 健身规划数据
-│   └── finance.json         # 理财规划数据
-├── api/                     # 后端 API（可选）
-│   └── server.js            # Node.js 服务器
-└── cli/                     # CLI 工具（后续）
-    └── planner.js           # 命令行界面
+├── index.html                # 完整应用（HTML + CSS + JS 内联）
+└── .github/workflows/        # GitHub Pages 自动部署
 ```
 
 ## 🚀 快速开始
 
-### Web 应用
+直接在浏览器中打开 `index.html` 即可使用，无需安装任何依赖或启动服务器：
+
 ```bash
-# 直接打开 web/index.html 在浏览器中使用
+# macOS
+open index.html
+# Linux
+xdg-open index.html
+# 或者直接双击文件
 ```
 
-### API 服务器（可选）
-```bash
-npm install
-node api/server.js
-```
+项目也通过 GitHub Pages 自动部署，可在线访问。
 
 ## 📂 数据存储
 
-所有数据存储在 JSON 文件中，便于管理和版本控制：
-- `data/personal.json` - 个人规划数据
-- `data/learning.json` - 学习规划数据
-- `data/fitness.json` - 健身规划数据
-- `data/finance.json` - 理财规划数据
+所有数据保存在浏览器的 **localStorage** 中（按模块分键存储），刷新或重开浏览器都不会丢失：
+- `planning_personal` - 个人规划数据
+- `planning_learning` - 学习规划数据
+- `planning_fitness` - 健身规划数据
+- `planning_finance` - 理财规划数据
+
+### 💾 备份与迁移
+- 点击侧边栏 **「⬇️ 导出备份」** 可将全部数据导出为一个 JSON 文件
+- 点击 **「⬆️ 导入备份」** 可从备份文件恢复（会覆盖当前数据）
+- 这样即可在不同设备/浏览器之间迁移数据
+
+## ✨ 交互特性
+
+- 输入框支持**回车快速添加**
+- 任务可**勾选完成、编辑、删除**
+- 每个模块头部显示**完成进度统计**
+- 理财模块带**可视化进度条**，直观展示距离目标的完成度
 
 ## 🔄 工作流程
 
-1. 在 Web 界面中创建和管理规划
-2. 数据自动保存到 JSON 文件
-3. 可随时导出或备份
+1. 在 Web 界面中创建和管理各模块规划
+2. 数据自动保存到浏览器 localStorage
+3. 通过导出/导入功能进行备份和跨设备迁移
 4. 支持 Claude Code 访问和协作开发
 
 ## 💡 后续计划
 
-- [ ] CLI 命令行工具
-- [ ] 数据可视化图表
+- [ ] 数据可视化图表（趋势/分类统计）
 - [ ] 提醒和通知功能
-- [ ] 数据库支持（可选）
-- [ ] 移动端应用
+- [ ] 待办优先级与截止日期
+- [ ] 云端同步（可选）
+- [ ] 移动端适配优化
 
 ---
 

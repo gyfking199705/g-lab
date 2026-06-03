@@ -218,6 +218,17 @@
             background-color: #059669;
         }
 
+        .btn-edit {
+            background-color: var(--warning-color);
+            color: white;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .btn-edit:hover {
+            background-color: #d97706;
+        }
+
         /* 项目列表 */
         .items-list {
             display: flex;
@@ -305,6 +316,67 @@
             font-size: 12px;
             font-weight: 600;
             transition: all 0.3s ease;
+        }
+
+        /* 模块统计徽章 */
+        .module-stats {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            padding: 4px 12px;
+        }
+
+        .module-stats .done {
+            color: var(--secondary-color);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background-color: var(--border-color);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+            width: 0%;
+            border-radius: 999px;
+            transition: width 0.5s ease;
+        }
+
+        /* 侧边栏底部工具 */
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-tool {
+            background-color: var(--bg-color);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            justify-content: center;
+            font-size: 13px;
+            padding: 10px 12px;
+        }
+
+        .btn-tool:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
         }
 
         /* 财务摘要 */
@@ -436,6 +508,11 @@
                     <span>💰</span> 理财规划
                 </button>
             </nav>
+            <div class="sidebar-footer">
+                <button id="export-btn" class="btn btn-tool">⬇️ 导出备份</button>
+                <button id="import-btn" class="btn btn-tool">⬆️ 导入备份</button>
+                <input type="file" id="import-file" accept="application/json" hidden>
+            </div>
         </aside>
 
         <!-- 主内容区域 -->
@@ -445,6 +522,7 @@
                 <div class="module-header">
                     <h2>📝 个人规划</h2>
                     <p>管理你的待办事项、日志和里程碑</p>
+                    <div class="module-stats" id="personal-stats"></div>
                 </div>
                 <div class="module-content">
                     <div class="input-group">
@@ -460,6 +538,7 @@
                 <div class="module-header">
                     <h2>📚 学习规划</h2>
                     <p>追踪你的学习进度和课程目标</p>
+                    <div class="module-stats" id="learning-stats"></div>
                 </div>
                 <div class="module-content">
                     <div class="input-group">
@@ -475,6 +554,7 @@
                 <div class="module-header">
                     <h2>💪 健身规划</h2>
                     <p>制定和追踪你的健身目标</p>
+                    <div class="module-stats" id="fitness-stats"></div>
                 </div>
                 <div class="module-content">
                     <div class="input-group">
@@ -505,6 +585,9 @@
                             <div class="summary-label">完成度</div>
                             <div class="summary-value" id="progress-percentage">0%</div>
                         </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="finance-progress-fill"></div>
                     </div>
                     <div class="input-group">
                         <input type="number" id="finance-amount" placeholder="金额" min="0">
@@ -627,6 +710,29 @@
             }
         }
 
+        // 更新任务类模块的完成统计
+        function updateStats(module) {
+            const items = manager.getItems(module);
+            const done = items.filter(item => item.completed).length;
+            const statsEl = document.getElementById(`${module}-stats`);
+            if (!statsEl) return;
+            if (items.length === 0) {
+                statsEl.textContent = '';
+                return;
+            }
+            statsEl.innerHTML = `<span class="done">${done}</span> / ${items.length} 已完成`;
+        }
+
+        // 任务类模块（个人/学习/健身）通用添加逻辑
+        function addTaskItem(module) {
+            const input = document.getElementById(`${module}-input`);
+            if (input.value.trim()) {
+                manager.addItem(module, { title: input.value.trim() });
+                input.value = '';
+                renderModule(module);
+            }
+        }
+
         function renderPersonal() {
             const items = manager.getItems('personal');
             const listEl = document.getElementById('personal-list');
@@ -635,16 +741,8 @@
                 const card = createItemCard(item, 'personal');
                 listEl.appendChild(card);
             });
+            updateStats('personal');
         }
-
-        document.getElementById('personal-add-btn').addEventListener('click', () => {
-            const input = document.getElementById('personal-input');
-            if (input.value.trim()) {
-                manager.addItem('personal', { title: input.value });
-                input.value = '';
-                renderPersonal();
-            }
-        });
 
         function renderLearning() {
             const items = manager.getItems('learning');
@@ -654,16 +752,8 @@
                 const card = createItemCard(item, 'learning');
                 listEl.appendChild(card);
             });
+            updateStats('learning');
         }
-
-        document.getElementById('learning-add-btn').addEventListener('click', () => {
-            const input = document.getElementById('learning-input');
-            if (input.value.trim()) {
-                manager.addItem('learning', { title: input.value });
-                input.value = '';
-                renderLearning();
-            }
-        });
 
         function renderFitness() {
             const items = manager.getItems('fitness');
@@ -673,15 +763,15 @@
                 const card = createItemCard(item, 'fitness');
                 listEl.appendChild(card);
             });
+            updateStats('fitness');
         }
 
-        document.getElementById('fitness-add-btn').addEventListener('click', () => {
-            const input = document.getElementById('fitness-input');
-            if (input.value.trim()) {
-                manager.addItem('fitness', { title: input.value });
-                input.value = '';
-                renderFitness();
-            }
+        // 绑定三个任务模块的「添加」按钮与回车键
+        ['personal', 'learning', 'fitness'].forEach(module => {
+            document.getElementById(`${module}-add-btn`).addEventListener('click', () => addTaskItem(module));
+            document.getElementById(`${module}-input`).addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addTaskItem(module);
+            });
         });
 
         function renderFinance() {
@@ -694,20 +784,30 @@
             });
             const totalSavings = manager.getTotalSavings('finance');
             const target = manager.modules.finance.target;
-            const percentage = Math.round((totalSavings / target) * 100);
+            const percentage = target > 0 ? Math.round((totalSavings / target) * 100) : 0;
             document.getElementById('total-savings').textContent = `¥${totalSavings.toLocaleString()}`;
             document.getElementById('progress-percentage').textContent = `${percentage}%`;
+            document.getElementById('finance-progress-fill').style.width = `${Math.min(percentage, 100)}%`;
         }
 
-        document.getElementById('finance-add-btn').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('finance-amount').value);
-            const desc = document.getElementById('finance-desc').value;
-            if (amount > 0 && desc.trim()) {
+        function addFinanceItem() {
+            const amountInput = document.getElementById('finance-amount');
+            const descInput = document.getElementById('finance-desc');
+            const amount = parseFloat(amountInput.value);
+            const desc = descInput.value.trim();
+            if (amount > 0 && desc) {
                 manager.addItem('finance', { title: desc, amount });
-                document.getElementById('finance-amount').value = '';
-                document.getElementById('finance-desc').value = '';
+                amountInput.value = '';
+                descInput.value = '';
                 renderFinance();
             }
+        }
+
+        document.getElementById('finance-add-btn').addEventListener('click', addFinanceItem);
+        ['finance-amount', 'finance-desc'].forEach(id => {
+            document.getElementById(id).addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addFinanceItem();
+            });
         });
 
         function createItemCard(item, module) {
@@ -722,6 +822,7 @@
                     </div>
                 </div>
                 <div class="item-actions">
+                    <button class="btn btn-edit edit-btn">编辑</button>
                     <button class="btn btn-danger delete-btn">删除</button>
                 </div>
             `;
@@ -729,6 +830,15 @@
             checkbox.addEventListener('change', () => {
                 manager.updateItem(module, item.id, { completed: checkbox.checked });
                 card.classList.toggle('completed');
+                updateStats(module);
+            });
+            const editBtn = card.querySelector('.edit-btn');
+            editBtn.addEventListener('click', () => {
+                const newTitle = prompt('编辑内容：', item.title);
+                if (newTitle !== null && newTitle.trim()) {
+                    manager.updateItem(module, item.id, { title: newTitle.trim() });
+                    renderModule(module);
+                }
             });
             const deleteBtn = card.querySelector('.delete-btn');
             deleteBtn.addEventListener('click', () => {
@@ -749,9 +859,23 @@
                     </div>
                 </div>
                 <div class="item-actions">
+                    <button class="btn btn-edit edit-btn">编辑</button>
                     <button class="btn btn-danger delete-btn">删除</button>
                 </div>
             `;
+            const editBtn = card.querySelector('.edit-btn');
+            editBtn.addEventListener('click', () => {
+                const newDesc = prompt('编辑描述：', item.title);
+                if (newDesc === null) return;
+                const newAmountStr = prompt('编辑金额：', item.amount);
+                if (newAmountStr === null) return;
+                const newAmount = parseFloat(newAmountStr);
+                const updates = {};
+                if (newDesc.trim()) updates.title = newDesc.trim();
+                if (!isNaN(newAmount) && newAmount >= 0) updates.amount = newAmount;
+                manager.updateItem('finance', item.id, updates);
+                renderFinance();
+            });
             const deleteBtn = card.querySelector('.delete-btn');
             deleteBtn.addEventListener('click', () => {
                 manager.deleteItem('finance', item.id);
@@ -780,6 +904,56 @@
             };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
+
+        // 数据导出：把全部模块打包成 JSON 文件下载
+        document.getElementById('export-btn').addEventListener('click', () => {
+            const backup = {
+                exportedAt: new Date().toISOString(),
+                version: 1,
+                modules: manager.modules
+            };
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `planning-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // 数据导入：从备份文件恢复
+        document.getElementById('import-btn').addEventListener('click', () => {
+            document.getElementById('import-file').click();
+        });
+
+        document.getElementById('import-file').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const backup = JSON.parse(event.target.result);
+                    const data = backup.modules || backup;
+                    if (!data.personal || !data.finance) {
+                        throw new Error('备份文件格式不正确');
+                    }
+                    if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) return;
+                    ['personal', 'learning', 'fitness', 'finance'].forEach(module => {
+                        if (data[module]) {
+                            manager.modules[module] = data[module];
+                            manager.saveData(module, data[module]);
+                        }
+                    });
+                    renderModule(currentModule);
+                    alert('导入成功！');
+                } catch (err) {
+                    alert('导入失败：' + err.message);
+                } finally {
+                    e.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        });
 
         switchModule('personal');
     </script>
