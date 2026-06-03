@@ -10,6 +10,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
+import StockWatch from '../stocks/StockWatch.jsx';
 
 /* ----------------------------- 模块定义 ----------------------------- */
 const TASK_MODULES = [
@@ -42,11 +43,10 @@ const TASK_MODULES = [
   },
 ];
 
-const WEALTH_MODULE = {
-  id: 'wealth',
-  icon: '💰',
-  label: '财富规划',
-};
+const EXTRA_MODULES = [
+  { id: 'wealth', icon: '💰', label: '财富规划' },
+  { id: 'stocks', icon: '📈', label: '股市观测' },
+];
 
 /* 参与备份的所有 localStorage 键 */
 const BACKUP_KEYS = [
@@ -54,6 +54,7 @@ const BACKUP_KEYS = [
   'planning_learning',
   'planning_fitness',
   'savings-planner',
+  'stocks-watch',
 ];
 
 /* ----------------------------- 本地存储 hook ----------------------------- */
@@ -120,13 +121,16 @@ export default function App() {
               </button>
             );
           })}
-          <button
-            className={`app-navbtn ${active === WEALTH_MODULE.id ? 'active' : ''}`}
-            onClick={() => setActive(WEALTH_MODULE.id)}
-          >
-            <span className="ic">{WEALTH_MODULE.icon}</span>
-            {WEALTH_MODULE.label}
-          </button>
+          {EXTRA_MODULES.map((m) => (
+            <button
+              key={m.id}
+              className={`app-navbtn ${active === m.id ? 'active' : ''}`}
+              onClick={() => setActive(m.id)}
+            >
+              <span className="ic">{m.icon}</span>
+              {m.label}
+            </button>
+          ))}
         </nav>
         <div className="app-foot">
           <ExportButton />
@@ -138,6 +142,8 @@ export default function App() {
         <div className="app-mainpad">
           {active === 'wealth' ? (
             <WealthSection />
+          ) : active === 'stocks' ? (
+            <StockSection />
           ) : (
             <TaskModule key={active} module={TASK_MODULES.find((m) => m.id === active)} onMutate={bump} />
           )}
@@ -156,6 +162,19 @@ function WealthSection() {
         <p>测算储蓄率、综合年化与达成财富目标所需年数，并预测资产增长曲线</p>
       </div>
       <SavingsPlanner storageKey="savings-planner" />
+    </>
+  );
+}
+
+/* ============================ 股市观测区 ============================ */
+function StockSection() {
+  return (
+    <>
+      <div className="app-modhead">
+        <h2>📈 股市观测</h2>
+        <p>自选股清单与实时行情观测（数据由浏览器直连行情 API，无后端）</p>
+      </div>
+      <StockWatch />
     </>
   );
 }
