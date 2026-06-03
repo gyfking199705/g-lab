@@ -1,20 +1,23 @@
 # 💰 储蓄与财富规划模块
 
-面向中国一线城市家庭（可双人）的交互式财富规划器，三个 Tab：
+面向中国一线城市家庭（可双人）的交互式财富规划器，四个 Tab：
 
 - **测算**：调整收入、支出、投资配置，实时看到 **月储蓄 / 储蓄率 / 综合年化 / 多久达成目标金额**，并用手写 SVG 展示未来资产增长曲线（敏感性测试 + 扣通胀）。
 - **净资产**：定期记录资产 / 负债快照 → **净资产曲线**（手写 SVG）、资产构成占比、环比变化；把「算一次」变成「长期回看」。
 - **体检**：综合最新净资产与收支，给出 **应急储备 / 储蓄率 / 负债率 / 净资产倍数** 等检查项与综合评分。
+- **压力测试（蒙特卡洛）**：收益按「均值 ± 波动率」每年随机抽样、跑几千次，给出**达成概率**、**P10/P50/P90 扇形带**（可悬停）、结果直方图；滑块实时重算、可「🎲 重新模拟」。
 
 可作为独立组件单独运行，也方便集成进主应用（个人成长规划系统）。
 
 ```
 savings/
-├── calc.js            # ① 纯函数计算逻辑（税务/预算/投资/复利预测 + 净资产/体检）— 不依赖 React
-├── calc.test.js       # 计算逻辑单元测试（Node 内置 test runner）
-├── SavingsPlanner.jsx # ② React 组件（函数式 + hooks），图表为手写 SVG，自带样式
-├── index.html         # ③ 可独立运行的演示页（加载 ../dist/savings.js）
-└── package.json       # 标记 ESM（"type":"module"），便于 Node 测试
+├── calc.js             # ① 纯函数计算逻辑（税务/预算/投资/复利预测 + 净资产/体检）— 不依赖 React
+├── calc.test.js        # 计算逻辑单元测试（Node 内置 test runner）
+├── montecarlo.js       # 蒙特卡洛模拟（可固定种子的随机模拟）— 纯函数
+├── montecarlo.test.js  # 蒙特卡洛单元测试
+├── SavingsPlanner.jsx  # ② React 组件（函数式 + hooks），图表为手写 SVG，自带样式
+├── index.html          # ③ 可独立运行的演示页（加载 ../dist/savings.js）
+└── package.json        # 标记 ESM（"type":"module"），便于 Node 测试
 ```
 
 ---
@@ -93,6 +96,8 @@ function App() {
 | `netWorthSeries(snapshots, accounts)` | 多期快照 | `[{date, assets, liabilities, net}]` 升序 | 净资产时间序列 |
 | `netWorthChange(series)` | 序列 | `{abs, pct, fromDate}` 或 `null` | 最新一期环比变化 |
 | `financialHealth({...})` | 流动资产/月支出/储蓄率/总资产/总负债/年收入/净资产 | `{checks, score, grade}` | 财务体检（应急/储蓄率/负债率/净资产倍数）|
+| `simulate({currentAssets, annualSaving, mean, vol, years, target, runs, seed})`（`montecarlo.js`）| 模拟参数 | `{bands(P10..P90逐年), successProb, reachProb, medianYears, finals, histogram}` | 蒙特卡洛：随机收益跑 N 次的分布 |
+| `makeRng(seed)`（`montecarlo.js`）| 种子 | `()=>[0,1)` | 可重现伪随机数（mulberry32）|
 | `formatMoney / formatPct / formatYears` | 数值 | 中文文本（如 `¥320万`、`4.6%`、`8.3 年`）| 展示格式化 |
 
 ### 关键计算口径
