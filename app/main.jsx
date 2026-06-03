@@ -13,8 +13,8 @@ import SavingsPlanner from '../savings/SavingsPlanner.jsx';
 import LearningPlanner from '../learning/LearningPlanner.jsx';
 import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
-import { gatherBackup, extractModules, applyBackup, signatureOf } from '../sync/backup.js';
-import { requestToken, findSyncFile, downloadFile, uploadSync } from '../sync/drive.js';
+import { gatherBackup, extractModules, applyBackup, signatureOf, perKeySig, filesToModules, fileForKey, buildReadme, SYNC_FOLDER, READMEFILE } from '../sync/backup.js';
+import { requestToken, findOrCreateFolder, listChildren, downloadText, uploadFile } from '../sync/drive.js';
 
 /* ----------------------------- 模块定义 ----------------------------- */
 /* 通用「清单」模块（个人规划）；学习 / 健身 / 财富为各自的富模块。 */
@@ -365,10 +365,10 @@ function ImportButton() {
   );
 }
 
-/* ============================ Google Drive 云同步（自动） ============================ */
-/* 浏览器侧 OAuth（drive.appdata 最小权限）。开启「自动同步」后：
-   连接时按内容签名做三向对账（本机改动→推 / 云端较新→拉 / 双改→询问），
-   之后改动防抖自动上传；token 过期自动静默续期。Client ID/签名等存本机、Key 不入同步。 */
+/* ============================ Google Drive 云同步（自动，文件夹/多文件） ============================ */
+/* 浏览器侧 OAuth（drive.file 最小权限）。数据写进你 Drive 里一个**可见文件夹**「成长规划 (g-lab)」，
+   每个模块一个 JSON 文件 + 说明.txt，你可自行浏览/备份/编辑。开启「自动同步」后：连接时按内容签名
+   三向对账；之后只把「变化了的文件」防抖上传；token 过期自动静默续期。Client ID/签名存本机、Key 不上云。 */
 const cloudLink = { background: 'none', border: 'none', padding: 0, color: 'var(--text-3)', fontSize: 11.5, cursor: 'pointer' };
 
 function CloudSync() {
@@ -379,15 +379,16 @@ function CloudSync() {
   const [status, setStatus] = useState('');
 
   const tokenRef = useRef(null);
-  const fileIdRef = useRef(null);
+  const folderRef = useRef(null);
   const syncedSigRef = useRef(getLS('sync-sig') || '');
   const debRef = useRef(null);
 
   const localModules = () => gatherBackup(getLS).modules;
   const localSig = () => signatureOf(localModules());
-  const setSynced = (sig) => {
-    syncedSigRef.current = sig;
-    setLS('sync-sig', sig);
+  const setSigsFrom = (mods) => {
+    syncedSigRef.current = signatureOf(mods);
+    setLS('sync-sig', syncedSigRef.current);
+    setLS('sync-filesigs', JSON.stringify(perKeySig(mods)));
   };
   const getToken = async (silent) => {
     tokenRef.current = await requestToken(clientId, { silent });
@@ -405,49 +406,78 @@ function CloudSync() {
       throw e;
     }
   };
-  const doUpload = async () => {
-    const blob = gatherBackup(getLS);
-    fileIdRef.current = await uploadSync(tokenRef.current, fileIdRef.current, blob);
-    setSynced(signatureOf(blob.modules));
+  const ensureFolder = async () => {
+    if (!folderRef.current) folderRef.current = await findOrCreateFolder(tokenRef.current, SYNC_FOLDER);
+    return folderRef.current;
+  };
+  // 读云端：把文件夹里的 *.json 还原成 modules
+  const readCloud = async () => {
+    const folderId = await ensureFolder();
+    const children = await listChildren(tokenRef.current, folderId);
+    const files = [];
+    for (const c of children) {
+      if (c.name.endsWith('.json')) files.push({ name: c.name, text: await downloadText(tokenRef.current, c.id) });
+    }
+    return { modules: filesToModules(files) };
+  };
+  // 写云端：只写「变化了的模块文件」（force=全写）；确保 说明.txt 存在
+  const pushCloud = async (force) => {
+    const folderId = await ensureFolder();
+    const mods = localModules();
+    const cur = perKeySig(mods);
+    let stored = {};
+    try {
+      stored = JSON.parse(getLS('sync-filesigs') || '{}');
+    } catch (e) {
+      stored = {};
+    }
+    const children = await listChildren(tokenRef.current, folderId);
+    const idByName = {};
+    for (const c of children) idByName[c.name] = c.id;
+    for (const key of Object.keys(cur)) {
+      if (!force && cur[key] === stored[key]) continue;
+      const name = fileForKey(key);
+      await uploadFile(tokenRef.current, folderId, name, idByName[name] || null, JSON.stringify(mods[key]));
+    }
+    if (!idByName[READMEFILE]) await uploadFile(tokenRef.current, folderId, READMEFILE, null, buildReadme(), 'text/plain');
+    setSigsFrom(mods);
     setStatus('✅ 已同步 · ' + new Date().toLocaleTimeString('zh-CN'));
   };
-  const pullApply = (mods, sig) => {
+  const pull = (mods) => {
     applyBackup(setLS, mods);
-    setSynced(sig);
+    setSigsFrom(mods);
     alert('已从云端拉取数据，刷新页面。');
     location.reload();
   };
 
   /* 连接后的三向对账 */
   const reconcile = async () => {
-    const f = await findSyncFile(tokenRef.current);
-    fileIdRef.current = f ? f.id : null;
+    const { modules: cMods } = await readCloud();
     const mods = localModules();
     const lSig = signatureOf(mods);
-    if (!f) {
-      await doUpload();
+    const cSig = signatureOf(cMods);
+    if (Object.keys(cMods).length === 0) {
+      await pushCloud(true);
       setStatus('已连接 · 首次上传完成');
       return;
     }
-    const cMods = extractModules(await downloadFile(tokenRef.current, f.id));
-    const cSig = signatureOf(cMods);
     if (cSig === lSig) {
-      setSynced(lSig);
+      setSigsFrom(mods);
       setStatus('已连接 · 已是最新');
       return;
     }
-    if (Object.keys(mods).length === 0) return pullApply(cMods, cSig); // 本机空 → 直接拉
-    const last = syncedSigRef.current;
-    if (lSig === last) return pullApply(cMods, cSig); // 本机无新改动，云端更新 → 拉
+    if (Object.keys(mods).length === 0) return pull(cMods); // 本机空 → 直接拉
+    const last = getLS('sync-sig') || '';
+    if (lSig === last) return pull(cMods); // 本机无新改动，云端更新 → 拉
     if (cSig === last) {
-      await doUpload(); // 云端没变，本机有改动 → 推
+      await pushCloud(false); // 云端没变，本机有改动 → 推
       setStatus('已连接 · 本机改动已上传');
       return;
     }
     const useCloud = confirm('云端与本机都有改动（冲突）：\n确定 = 用云端覆盖本机；取消 = 用本机覆盖云端。');
-    if (useCloud) pullApply(cMods, cSig);
+    if (useCloud) pull(cMods);
     else {
-      await doUpload();
+      await pushCloud(true);
       setStatus('已连接 · 以本机为准，已上传');
     }
   };
@@ -473,7 +503,7 @@ function CloudSync() {
     setBusy(true);
     setStatus('正在上传…');
     try {
-      await withAuth(doUpload);
+      await withAuth(() => pushCloud(false));
     } catch (e) {
       setStatus('❌ ' + (e.message || String(e)));
     } finally {
@@ -486,17 +516,16 @@ function CloudSync() {
     setStatus('正在读取云端…');
     try {
       await withAuth(async () => {
-        const f = fileIdRef.current ? { id: fileIdRef.current } : await findSyncFile(tokenRef.current);
-        if (!f) {
-          setStatus('云端还没有备份，先上传一次');
+        const { modules } = await readCloud();
+        if (Object.keys(modules).length === 0) {
+          setStatus('云端还没有数据，先上传一次');
           return;
         }
-        const mods = extractModules(await downloadFile(tokenRef.current, f.id));
         if (!confirm('从云端恢复将覆盖本机当前数据，确定继续吗？')) {
           setStatus('');
           return;
         }
-        pullApply(mods, signatureOf(mods));
+        pull(modules);
       });
     } catch (e) {
       setStatus('❌ ' + (e.message || String(e)));
@@ -523,6 +552,7 @@ function CloudSync() {
   };
   const disconnect = () => {
     tokenRef.current = null;
+    folderRef.current = null;
     setConnected(false);
     setStatus('已断开（自动同步暂停）');
   };
@@ -541,7 +571,7 @@ function CloudSync() {
       if (localSig() === syncedSigRef.current) return;
       clearTimeout(debRef.current);
       debRef.current = setTimeout(() => {
-        withAuth(doUpload).catch((e) => setStatus('❌ ' + (e.message || e)));
+        withAuth(() => pushCloud(false)).catch((e) => setStatus('❌ ' + (e.message || e)));
       }, 1500);
     }, 4000);
     return () => {

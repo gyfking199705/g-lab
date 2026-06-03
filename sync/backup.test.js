@@ -9,6 +9,12 @@ import {
   buildMultipartBody,
   stableStringify,
   signatureOf,
+  FILE_MAP,
+  fileForKey,
+  keyForFile,
+  filesToModules,
+  perKeySig,
+  buildReadme,
 } from './backup.js';
 
 function memStore(init = {}) {
@@ -82,6 +88,41 @@ test('signatureOf：与键顺序无关、内容变化即变化（用于自动同
   const c = { 'savings-planner': { x: 1, y: 3 } };
   assert.notEqual(signatureOf(a), signatureOf(c)); // 内容不同 → 签名不同
   assert.equal(stableStringify({ b: 1, a: 2 }), '{"a":2,"b":1}'); // 键排序
+});
+
+test('文件系统映射：fileForKey / keyForFile 往返，覆盖所有备份键', () => {
+  for (const k of BACKUP_KEYS) {
+    const f = fileForKey(k);
+    assert.ok(f.endsWith('.json'));
+    assert.equal(keyForFile(f), k); // 往返一致
+  }
+  assert.equal(keyForFile('陌生文件.json'), null);
+  assert.equal(FILE_MAP.length, BACKUP_KEYS.length);
+});
+
+test('filesToModules：按文件名还原 modules、跳过无关/损坏文件', () => {
+  const files = [
+    { name: fileForKey('savings-planner'), text: JSON.stringify({ a: 1 }) },
+    { name: fileForKey('learning-planner'), text: JSON.stringify({ plans: [] }) },
+    { name: '说明.txt', text: 'hi' }, // 非模块文件
+    { name: fileForKey('stocks-watch'), text: '{坏' }, // 损坏
+  ];
+  const mods = filesToModules(files);
+  assert.deepEqual(mods['savings-planner'], { a: 1 });
+  assert.deepEqual(mods['learning-planner'], { plans: [] });
+  assert.ok(!('stocks-watch' in mods));
+});
+
+test('perKeySig：逐模块签名、只含存在的键', () => {
+  const sig = perKeySig({ 'savings-planner': { x: 1 }, 'learning-ai': { apiKey: 'x' } });
+  assert.ok(sig['savings-planner']);
+  assert.ok(!('learning-ai' in sig)); // 不在 BACKUP_KEYS
+});
+
+test('buildReadme：含文件名映射与最小权限说明', () => {
+  const txt = buildReadme();
+  assert.match(txt, /财富规划\.json/);
+  assert.match(txt, /drive\.file/);
 });
 
 test('buildMultipartBody：包含元数据、媒体与分隔符', () => {
