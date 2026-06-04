@@ -173,6 +173,22 @@ export function Sparkline({ values = [], projection = [], goal, width = 132, hei
   );
 }
 
+/** 迷你柱状图（手写，无图表库）。values:number[]；正负用不同色。 */
+export function MiniBars({ values = [], height = 56, pos = 'var(--success)', neg = 'var(--danger)', single }) {
+  const vals = values.map((v) => (isFinite(v) ? v : 0));
+  if (!vals.length) return null;
+  const maxAbs = Math.max(1, ...vals.map((v) => Math.abs(v)));
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height }}>
+      {vals.map((v, i) => {
+        const h = Math.max(2, (Math.abs(v) / maxAbs) * 100);
+        const color = single || (v >= 0 ? pos : neg);
+        return <div key={i} style={{ flex: 1, height: h + '%', background: color, borderRadius: '3px 3px 0 0', minWidth: 2, transition: 'height .3s' }} title={String(v)} />;
+      })}
+    </div>
+  );
+}
+
 /** 分段切换。tabs=[{id,label}]。 */
 export function Segmented({ tabs, value, onChange }) {
   return (

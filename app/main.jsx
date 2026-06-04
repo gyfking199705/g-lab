@@ -15,6 +15,8 @@ import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 import ProjectPlanner from '../project/ProjectPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
 import Dashboard from './Dashboard.jsx';
+import BigBoard from './BigBoard.jsx';
+import { hasBoard } from './analytics.js';
 import SchedulePlanner from '../schedule/SchedulePlanner.jsx';
 import GoalsPlanner from '../goals/GoalsPlanner.jsx';
 import HabitsPlanner from '../habits/HabitsPlanner.jsx';
@@ -230,7 +232,10 @@ export default function App() {
   // 用一个计数器在数据变化后刷新侧边栏徽章
   const [tick, setTick] = useState(0);
   const bump = () => setTick((t) => t + 1);
-  const go = (id) => { setActive(id); bump(); };
+  const [board, setBoard] = useState(null); // 当前打开的「大盘」模块 id（null=不在大盘）
+  const go = (id) => { setActive(id); setBoard(null); bump(); };
+  // 看板卡片点击：有专属大盘则打开大盘，否则直接进模块
+  const openBoard = (id) => { if (hasBoard(id)) setBoard(id); else go(id); bump(); };
 
   // 按 group 分区渲染导航
   const groups = [];
@@ -257,8 +262,8 @@ export default function App() {
                 return (
                   <button
                     key={m.id}
-                    className={`app-navbtn ${active === m.id ? 'active' : ''}`}
-                    onClick={() => setActive(m.id)}
+                    className={`app-navbtn ${active === m.id && !board ? 'active' : ''}`}
+                    onClick={() => { setActive(m.id); setBoard(null); }}
                   >
                     <span className="ic">{m.icon}</span>
                     {m.label}
@@ -278,8 +283,10 @@ export default function App() {
 
       <main className="app-main">
         <div className="app-mainpad">
-          {active === 'home' ? (
-            <Dashboard onNavigate={go} onChange={bump} />
+          {board ? (
+            <BigBoard id={board} get={readModule} onBack={() => setBoard(null)} onEnter={() => go(board)} />
+          ) : active === 'home' ? (
+            <Dashboard onNavigate={go} onOpenBoard={openBoard} onChange={bump} />
           ) : active === 'schedule' ? (
             <SchedulePlanner storageKey="schedule-planner" onChange={bump} />
           ) : active === 'goals' ? (

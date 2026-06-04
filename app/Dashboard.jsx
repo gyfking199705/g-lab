@@ -20,6 +20,8 @@ import { financeForecast, formatMoney } from '../savings/calc.js';
 import { overallStats as learningStats, computeStreak as learningStreak } from '../learning/calc.js';
 import { summary as papersSummary } from '../papers/calc.js';
 import { summary as ledgerSummary } from '../ledger/calc.js';
+import { workoutsThisWeek, weekStreak } from '../fitness/calc.js';
+import { taskStats } from '../project/calc.js';
 
 const SCHEDULE_KEY = 'schedule-planner';
 const GOALS_KEY = 'goals-planner';
@@ -40,7 +42,8 @@ function greeting() {
   return '晚上好';
 }
 
-export default function Dashboard({ onNavigate, onChange }) {
+export default function Dashboard({ onNavigate, onOpenBoard, onChange }) {
+  const open = onOpenBoard || onNavigate;
   const [tick, setTick] = useState(0);
   const today = todayStr();
 
@@ -62,6 +65,9 @@ export default function Dashboard({ onNavigate, onChange }) {
   }, [tick]);
   const finance = useMemo(() => financeForecast(readModule(SAVINGS_KEY)), [tick]);
   const ledger = useMemo(() => { const d = readModule(LEDGER_KEY); return d && (d.entries || []).length ? ledgerSummary(d.entries, d.budget || 0, today) : null; }, [tick, today]);
+  const fitness = useMemo(() => { const d = readModule('fitness-planner'); const w = (d || {}).workouts || []; return w.length ? { week: workoutsThisWeek(w, today), streak: weekStreak(w, today), total: w.length } : null; }, [tick, today]);
+  const project = useMemo(() => { const d = readModule('project-planner'); const t = (d || {}).tasks || []; return t.length ? taskStats(t) : null; }, [tick]);
+  const stocks = useMemo(() => { const d = readModule('stocks-watch'); const n = ((d || {}).symbols || []).length; return n ? { count: n } : null; }, [tick]);
   const learn = useMemo(() => {
     const d = readModule(LEARNING_KEY);
     if (!d || !(d.plans || []).length) return null;
@@ -82,7 +88,7 @@ export default function Dashboard({ onNavigate, onChange }) {
 
   const scheduleTotal = sView.pending.length + sView.done.length;
   const financeShow = finance && (finance.target || finance.latest);
-  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || financeShow || learn || papers || ledger;
+  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || financeShow || learn || papers || ledger || fitness || project || stocks;
 
   // chips（仅在有数据时显示）
   const chips = [];
@@ -193,18 +199,18 @@ export default function Dashboard({ onNavigate, onChange }) {
               <div className="db-sectitle">进展 · 趋势</div>
 
               {/* 理财趋势 + 预测（重点，整行强调） */}
-              {financeShow && <FinanceTrendCard f={finance} onNav={() => onNavigate('wealth')} />}
+              {financeShow && <FinanceTrendCard f={finance} onNav={() => open('wealth')} />}
 
               <div className="db-grid prog">
                 {gStats.total > 0 && (
-                  <ProgressCard icon="🎯" title="目标进度" onNav={() => onNavigate('goals')} sub="查看全部 ›"
+                  <ProgressCard icon="🎯" title="目标进度" onNav={() => open('goals')} sub="查看全部 ›"
                     big={gStats.avgPercent} bigUnit="% 平均"
                     rightStat={`${gStats.achieved}/${gStats.total} 达成`} rightColor="var(--success)"
                     pct={gStats.avgPercent} good={gStats.total > 0 && gStats.achieved === gStats.total}
                     footLeft={goals[0] ? '近期：' + goals[0].title : ''} footRight="" />
                 )}
                 {cut && (
-                  <ProgressCard icon="📉" title="减脂进度" onNav={() => onNavigate('cut')} sub={`${cut.startWeight}→${cut.goalWeight}kg`}
+                  <ProgressCard icon="📉" title="减脂进度" onNav={() => open('cut')} sub={`${cut.startWeight}→${cut.goalWeight}kg`}
                     big={cut.currentTrend} bigUnit="kg 趋势"
                     rightStat={`已减 ${cut.lost}kg`} rightColor="var(--success)"
                     pct={cut.progressPct} good={cut.progressPct >= 100}
@@ -213,7 +219,7 @@ export default function Dashboard({ onNavigate, onChange }) {
                     footRight={cut.projectedDate ? `预计 ${cut.projectedDate.slice(5)}` : (cut.deficitStreak > 0 ? `🔥缺口${cut.deficitStreak}天` : '')} />
                 )}
                 {ledger && (
-                  <ProgressCard icon="🧾" title="本月记账" onNav={() => onNavigate('ledger')} sub={ledger.budget.set ? `预算 ${ledger.budget.pct}%` : '收支'}
+                  <ProgressCard icon="🧾" title="本月记账" onNav={() => open('ledger')} sub={ledger.budget.set ? `预算 ${ledger.budget.pct}%` : '收支'}
                     big={formatMoney(ledger.monthExpense)} bigUnit="支出"
                     rightStat={`结余 ${ledger.monthNet >= 0 ? '+' : ''}${formatMoney(ledger.monthNet)}`}
                     rightColor={ledger.monthNet >= 0 ? 'var(--success)' : 'var(--danger)'}
@@ -222,18 +228,38 @@ export default function Dashboard({ onNavigate, onChange }) {
                     footLeft={`今日 ${formatMoney(ledger.today)}`} footRight={ledger.budget.set ? (ledger.budget.over ? '已超支' : `剩 ${formatMoney(ledger.budget.remaining)}`) : `${ledger.count} 笔`} />
                 )}
                 {learn && (
-                  <ProgressCard icon="📚" title="学习进度" onNav={() => onNavigate('learning')} sub={`掌握 ${learn.mastered}/${learn.total}`}
+                  <ProgressCard icon="📚" title="学习进度" onNav={() => open('learning')} sub={`掌握 ${learn.mastered}/${learn.total}`}
                     big={Math.round(learn.pct * 100)} bigUnit="% 掌握"
                     rightStat={learn.streak > 0 ? `🔥 ${learn.streak}天` : ''} rightColor="var(--accent-2)"
                     pct={learn.pct * 100} good={learn.pct >= 1}
                     footLeft={`学习中 ${learn.learning}`} footRight={`未开始 ${learn.todo}`} />
                 )}
                 {papers && (
-                  <ProgressCard icon="📄" title="论文阅读" onNav={() => onNavigate('papers')} sub={`已读 ${papers.done}/${papers.total}`}
+                  <ProgressCard icon="📄" title="论文阅读" onNav={() => open('papers')} sub={`已读 ${papers.done}/${papers.total}`}
                     big={papers.progressPct} bigUnit="% 读完"
                     rightStat={papers.streak > 0 ? `🔥 ${papers.streak}天` : ''} rightColor="var(--accent-2)"
                     pct={papers.progressPct} good={papers.progressPct >= 100}
                     footLeft={`在读 ${papers.reading} · 想读 ${papers.want}`} footRight={`近7天 ${papers.thisWeek}`} />
+                )}
+                {fitness && (
+                  <ProgressCard icon="💪" title="健身训练" onNav={() => open('fitness')} sub="本周"
+                    big={fitness.week} bigUnit="次/周"
+                    rightStat={`连续 ${fitness.streak} 周`} rightColor="var(--success)"
+                    pct={Math.min(100, (fitness.week / 3) * 100)} good={fitness.week >= 3}
+                    footLeft={`累计 ${fitness.total} 次`} footRight={fitness.week >= 3 ? '达标 👍' : `再练 ${3 - fitness.week} 次`} />
+                )}
+                {project && (
+                  <ProgressCard icon="📋" title="项目规划" onNav={() => open('project')} sub={`${project.done}/${project.total}`}
+                    big={project.donePct} bigUnit="% 完成"
+                    rightStat={project.doing ? `${project.doing} 进行中` : ''} rightColor="var(--accent-2)"
+                    pct={project.donePct} good={project.donePct >= 100}
+                    footLeft={`待办 ${project.todo}`} footRight={`进行中 ${project.doing}`} />
+                )}
+                {stocks && (
+                  <ProgressCard icon="📈" title="股市观测" onNav={() => onNavigate('stocks')} sub="自选股"
+                    big={stocks.count} bigUnit="只"
+                    pct={null}
+                    footLeft="点开查看行情" footRight="" />
                 )}
               </div>
             </>
@@ -260,9 +286,9 @@ function ProgressCard({ icon, title, onNav, sub, big, bigUnit, rightStat, rightC
       </div>
       {hasSpark ? (
         <div style={{ margin: '2px 0 4px' }}><Sparkline values={series} goal={goal} stroke={sparkStroke || 'var(--accent)'} height={38} /></div>
-      ) : (
+      ) : pct != null ? (
         <Progress pct={pct} good={good} />
-      )}
+      ) : null}
       <div className="db-foot">
         <span className="db-foot-l" title={footLeft}>{footLeft}</span>
         <span>{footRight}</span>
