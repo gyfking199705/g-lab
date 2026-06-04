@@ -469,3 +469,22 @@ export function financialHealth({
   const grade = score == null ? '—' : score >= 80 ? '优' : score >= 55 ? '良' : '待改善';
   return { checks, score, grade };
 }
+
+/**
+ * 理财进度摘要（供首页看板的财富进度卡，纯函数）。
+ * 取最新净资产快照（无则回退 forecast.currentAssets），对比 forecast.target 给出进度。
+ * @param {object} state savings-planner 的完整状态
+ * @returns {null|{netWorth:number,target:number,progress:number,change:object|null,hasSnapshots:boolean}}
+ */
+export function financeSummary(state) {
+  if (!state || typeof state !== 'object') return null;
+  const forecast = state.forecast || {};
+  const target = Number(forecast.target) || 0;
+  const nw = state.netWorth || {};
+  const series = netWorthSeries(nw.snapshots || [], nw.accounts || []);
+  const hasSnapshots = series.length > 0;
+  const netWorth = hasSnapshots ? series[series.length - 1].net : (Number(forecast.currentAssets) || 0);
+  if (!target && !netWorth) return null;
+  const progress = target > 0 ? Math.max(0, Math.min(1, netWorth / target)) : 0;
+  return { netWorth, target, progress, change: netWorthChange(series), hasSnapshots };
+}
