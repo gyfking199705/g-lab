@@ -1,0 +1,8 @@
+{
+  "name": "ledger-planner",
+  "version": "1.0.0",
+  "description": "记账：日常收支流水 + 月度汇总/预算 + 分类占比 + 支出趋势（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": { "test": "node --test" }
+}

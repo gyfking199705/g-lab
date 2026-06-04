@@ -20,6 +20,7 @@ import GoalsPlanner from '../goals/GoalsPlanner.jsx';
 import HabitsPlanner from '../habits/HabitsPlanner.jsx';
 import CutPlanner from '../cut/CutPlanner.jsx';
 import PapersReader from '../papers/PapersReader.jsx';
+import LedgerPlanner from '../ledger/LedgerPlanner.jsx';
 import { readModule } from '../core/store.js';
 import { todayStr } from '../core/date.js';
 import { overdueCount, todayView } from '../schedule/calc.js';
@@ -27,6 +28,8 @@ import { overallStats } from '../goals/calc.js';
 import { todayBoard, fitnessWorkoutDates } from '../habits/calc.js';
 import { summary as cutSummary } from '../cut/calc.js';
 import { statusCounts as papersCounts } from '../papers/calc.js';
+import { monthTotals } from '../ledger/calc.js';
+import { formatMoney } from '../savings/calc.js';
 import { gatherBackup, extractModules, applyBackup, signatureOf, perKeySig, filesToModules, fileForKey, buildReadme, SYNC_FOLDER, READMEFILE } from '../sync/backup.js';
 import { requestToken, findOrCreateFolder, listChildren, downloadText, uploadFile } from '../sync/drive.js';
 
@@ -57,6 +60,7 @@ const NAV_ITEMS = [
   { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning', group: 'more' },
   { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness', group: 'more' },
   { id: 'project', icon: '📋', label: '项目规划', kind: 'project', group: 'more' },
+  { id: 'ledger', icon: '🧾', label: '记账', kind: 'ledger', group: 'more' },
   { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth', group: 'more' },
   { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks', group: 'more' },
 ];
@@ -194,6 +198,14 @@ function readPapersBadge() {
   return c.done ? `${c.done} 已读` : null;
 }
 
+/* 记账徽章：本月支出。 */
+function readLedgerBadge() {
+  const d = readModule('ledger-planner');
+  if (!d || !(d.entries || []).length) return null;
+  const t = monthTotals(d.entries, todayStr().slice(0, 7));
+  return t.expense ? formatMoney(t.expense) : null;
+}
+
 function badgeFor(kind, id) {
   switch (kind) {
     case 'task': return readCount(`planning_${id}`);
@@ -205,6 +217,7 @@ function badgeFor(kind, id) {
     case 'habits': return readHabitsBadge();
     case 'cut': return readCutBadge();
     case 'papers': return readPapersBadge();
+    case 'ledger': return readLedgerBadge();
     default: return null;
   }
 }
@@ -277,6 +290,8 @@ export default function App() {
             <CutPlanner storageKey="cut-planner" onChange={bump} />
           ) : active === 'papers' ? (
             <PapersReader storageKey="papers-planner" onChange={bump} />
+          ) : active === 'ledger' ? (
+            <LedgerPlanner storageKey="ledger-planner" onChange={bump} />
           ) : active === 'wealth' ? (
             <WealthSection />
           ) : active === 'learning' ? (

@@ -10,15 +10,16 @@
  */
 import React, { useMemo, useState } from 'react';
 import { readModule, saveState } from '../core/store.js';
-import { SHARED_CSS, Progress, Empty } from '../core/ui.jsx';
-import { todayStr, fmtDate } from '../core/date.js';
+import { SHARED_CSS, Progress, Empty, Sparkline } from '../core/ui.jsx';
+import { todayStr, fmtDate, fmtMD } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
 import { sortGoalsForBoard, overallStats as goalsOverall } from '../goals/calc.js';
 import { todayBoard, currentStreak, fitnessWorkoutDates, toggleCheck, bumpCount } from '../habits/calc.js';
-import { summary as cutSummary } from '../cut/calc.js';
-import { financeSummary, formatMoney } from '../savings/calc.js';
+import { summary as cutSummary, trendSeries as cutTrend } from '../cut/calc.js';
+import { financeForecast, formatMoney } from '../savings/calc.js';
 import { overallStats as learningStats, computeStreak as learningStreak } from '../learning/calc.js';
 import { summary as papersSummary } from '../papers/calc.js';
+import { summary as ledgerSummary } from '../ledger/calc.js';
 
 const SCHEDULE_KEY = 'schedule-planner';
 const GOALS_KEY = 'goals-planner';
@@ -28,6 +29,7 @@ const CUT_KEY = 'cut-planner';
 const SAVINGS_KEY = 'savings-planner';
 const LEARNING_KEY = 'learning-planner';
 const PAPERS_KEY = 'papers-planner';
+const LEDGER_KEY = 'ledger-planner';
 
 function greeting() {
   const h = new Date().getHours();
@@ -53,7 +55,13 @@ export default function Dashboard({ onNavigate, onChange }) {
   const gStats = useMemo(() => goalsOverall(goalsData.goals || []), [tick]);
 
   const cut = useMemo(() => { const d = readModule(CUT_KEY); return d && d.profile ? cutSummary(d.profile, d.logs || [], today) : null; }, [tick, today]);
-  const finance = useMemo(() => financeSummary(readModule(SAVINGS_KEY)), [tick]);
+  const cutSpark = useMemo(() => {
+    const d = readModule(CUT_KEY);
+    if (!d || !d.profile) return null;
+    return cutTrend(d.logs || []).slice(-20).map((p) => p.trend);
+  }, [tick]);
+  const finance = useMemo(() => financeForecast(readModule(SAVINGS_KEY)), [tick]);
+  const ledger = useMemo(() => { const d = readModule(LEDGER_KEY); return d && (d.entries || []).length ? ledgerSummary(d.entries, d.budget || 0, today) : null; }, [tick, today]);
   const learn = useMemo(() => {
     const d = readModule(LEARNING_KEY);
     if (!d || !(d.plans || []).length) return null;
@@ -73,7 +81,8 @@ export default function Dashboard({ onNavigate, onChange }) {
   const bumpHabit = (h, d) => writeHabits(bumpCount(habitsData.checkins || {}, h.id, today, d));
 
   const scheduleTotal = sView.pending.length + sView.done.length;
-  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || finance || learn || papers;
+  const financeShow = finance && (finance.target || finance.latest);
+  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || financeShow || learn || papers || ledger;
 
   // chips（仅在有数据时显示）
   const chips = [];
@@ -178,10 +187,14 @@ export default function Dashboard({ onNavigate, onChange }) {
             </>
           )}
 
-          {/* 3) 进展 */}
-          {(gStats.total || cut || finance || learn || papers) && (
+          {/* 3) 进展（时间维度 + 趋势预测） */}
+          {(gStats.total || cut || financeShow || learn || papers || ledger) && (
             <>
-              <div className="db-sectitle">进展</div>
+              <div className="db-sectitle">进展 · 趋势</div>
+
+              {/* 理财趋势 + 预测（重点，整行强调） */}
+              {financeShow && <FinanceTrendCard f={finance} onNav={() => onNavigate('wealth')} />}
+
               <div className="db-grid prog">
                 {gStats.total > 0 && (
                   <ProgressCard icon="🎯" title="目标进度" onNav={() => onNavigate('goals')} sub="查看全部 ›"
@@ -195,17 +208,18 @@ export default function Dashboard({ onNavigate, onChange }) {
                     big={cut.currentTrend} bigUnit="kg 趋势"
                     rightStat={`已减 ${cut.lost}kg`} rightColor="var(--success)"
                     pct={cut.progressPct} good={cut.progressPct >= 100}
+                    series={cutSpark} goal={cut.goalWeight} sparkStroke="var(--accent)"
                     footLeft={cut.weeklyRate != null ? `本周 ${cut.weeklyRate > 0 ? '+' : ''}${cut.weeklyRate}kg` : '记录中'}
                     footRight={cut.projectedDate ? `预计 ${cut.projectedDate.slice(5)}` : (cut.deficitStreak > 0 ? `🔥缺口${cut.deficitStreak}天` : '')} />
                 )}
-                {finance && (
-                  <ProgressCard icon="💰" title="财富进度" onNav={() => onNavigate('wealth')} sub="净资产/目标"
-                    big={formatMoney(finance.netWorth)}
-                    rightStat={finance.change ? `${finance.change.abs >= 0 ? '↑' : '↓'} ${formatMoney(Math.abs(finance.change.abs))}` : ''}
-                    rightColor={finance.change && finance.change.abs < 0 ? 'var(--danger)' : 'var(--success)'}
-                    pct={finance.progress * 100}
-                    footLeft={`${Math.round(finance.progress * 100)}% 达成`} footRight={`目标 ${formatMoney(finance.target)}`}
-                    note="长期假设估算，会波动，非投资建议" />
+                {ledger && (
+                  <ProgressCard icon="🧾" title="本月记账" onNav={() => onNavigate('ledger')} sub={ledger.budget.set ? `预算 ${ledger.budget.pct}%` : '收支'}
+                    big={formatMoney(ledger.monthExpense)} bigUnit="支出"
+                    rightStat={`结余 ${ledger.monthNet >= 0 ? '+' : ''}${formatMoney(ledger.monthNet)}`}
+                    rightColor={ledger.monthNet >= 0 ? 'var(--success)' : 'var(--danger)'}
+                    pct={ledger.budget.set ? ledger.budget.pct : 0} good={ledger.budget.set && !ledger.budget.over}
+                    series={ledger.dailySeries} sparkStroke="var(--danger)"
+                    footLeft={`今日 ${formatMoney(ledger.today)}`} footRight={ledger.budget.set ? (ledger.budget.over ? '已超支' : `剩 ${formatMoney(ledger.budget.remaining)}`) : `${ledger.count} 笔`} />
                 )}
                 {learn && (
                   <ProgressCard icon="📚" title="学习进度" onNav={() => onNavigate('learning')} sub={`掌握 ${learn.mastered}/${learn.total}`}
@@ -230,8 +244,9 @@ export default function Dashboard({ onNavigate, onChange }) {
   );
 }
 
-/* 统一进度卡：等高、底部脚注对齐，避免错位 */
-function ProgressCard({ icon, title, onNav, sub, big, bigUnit, rightStat, rightColor, pct, good, footLeft, footRight, note }) {
+/* 统一进度卡：等高、底部脚注对齐；可选迷你趋势图（时间维度） */
+function ProgressCard({ icon, title, onNav, sub, big, bigUnit, rightStat, rightColor, pct, good, footLeft, footRight, note, series, goal, sparkStroke }) {
+  const hasSpark = Array.isArray(series) && series.filter((v) => isFinite(v)).length >= 2;
   return (
     <div className="gx-card db-col">
       <div className="gx-sechead">
@@ -243,12 +258,52 @@ function ProgressCard({ icon, title, onNav, sub, big, bigUnit, rightStat, rightC
         {bigUnit && <span className="db-unit">{bigUnit}</span>}
         {rightStat && <span className="db-right" style={{ color: rightColor || 'var(--text-2)' }}>{rightStat}</span>}
       </div>
-      <Progress pct={pct} good={good} />
+      {hasSpark ? (
+        <div style={{ margin: '2px 0 4px' }}><Sparkline values={series} goal={goal} stroke={sparkStroke || 'var(--accent)'} height={38} /></div>
+      ) : (
+        <Progress pct={pct} good={good} />
+      )}
       <div className="db-foot">
         <span className="db-foot-l" title={footLeft}>{footLeft}</span>
         <span>{footRight}</span>
       </div>
       {note && <div className="gx-disclaim" style={{ marginTop: 6 }}>{note}</div>}
+    </div>
+  );
+}
+
+/* 理财趋势 + 预测卡（重点强调，整行）：净资产历史(实线) + 线性预测(虚线) + 目标线 + 预计达成 */
+function FinanceTrendCard({ f, onNav }) {
+  const pctToTarget = f.target > 0 ? Math.max(0, Math.min(100, Math.round((f.latest / f.target) * 100))) : 0;
+  const delta = f.monthlyRate;
+  return (
+    <div className="gx-card db-finance">
+      <div className="gx-sechead">
+        <h3 className="db-h" onClick={onNav}>💰 财富趋势 · 预测</h3>
+        <span className="gx-sub db-h" onClick={onNav}>净资产 / 目标 ›</span>
+      </div>
+      <div className="db-fin-grid">
+        <div className="db-fin-left">
+          <div className="db-hero" style={{ marginBottom: 4 }}>
+            <span className="db-big" style={{ fontSize: 30 }}>{formatMoney(f.latest)}</span>
+            {delta != null && <span className="db-right" style={{ color: delta >= 0 ? 'var(--success)' : 'var(--danger)' }}>{delta >= 0 ? '↑' : '↓'} {formatMoney(Math.abs(Math.round(delta)))}/月</span>}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+            {f.target > 0 ? <>目标 {formatMoney(f.target)} · {pctToTarget}% 达成</> : '未设目标'}
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--accent-2)', marginTop: 6, fontWeight: 500 }}>🔮 {f.etaText}</div>
+          <Progress pct={pctToTarget} />
+        </div>
+        <div className="db-fin-right">
+          <Sparkline values={f.historyVals} projection={f.projection} goal={f.target || undefined} height={92} stroke="var(--accent)" />
+          <div className="db-fin-legend">
+            <span><i className="solid" /> 历史</span>
+            <span><i className="dash" /> 预测</span>
+            {f.target > 0 && <span><i className="goal" /> 目标</span>}
+          </div>
+        </div>
+      </div>
+      <div className="gx-disclaim" style={{ marginTop: 8 }}>预测为按近期净资产速度的线性外推，仅供参考、实际会波动，非投资建议。</div>
     </div>
   );
 }
@@ -274,7 +329,17 @@ const DASH_CSS = `
 .db-right{margin-left:auto;font-size:12px;white-space:nowrap;}
 .db-foot{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-3);margin-top:auto;padding-top:7px;}
 .db-foot-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.db-finance{margin-bottom:14px;background:linear-gradient(135deg,var(--accent-soft),var(--surface) 60%);}
+.db-fin-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px;align-items:center;}
+.db-fin-left{min-width:0;}
+.db-fin-right{min-width:0;}
+.db-fin-legend{display:flex;gap:14px;font-size:10.5px;color:var(--text-3);margin-top:4px;justify-content:flex-end;}
+.db-fin-legend i{display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);vertical-align:middle;margin-right:4px;}
+.db-fin-legend i.dash{border-top-style:dashed;opacity:.75;}
+.db-fin-legend i.goal{border-top-color:var(--danger);border-top-style:dashed;}
 @media(max-width:560px){
   .db-grid.prog{grid-template-columns:1fr 1fr;}
+  .db-fin-grid{grid-template-columns:1fr;gap:10px;}
+  .db-fin-legend{justify-content:flex-start;}
 }
 `;

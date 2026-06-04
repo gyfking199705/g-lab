@@ -274,3 +274,51 @@ test('financeSummary：空状态返回 null', () => {
   assert.equal(financeSummary(null), null);
   assert.equal(financeSummary({}), null);
 });
+
+import { financeForecast } from './calc.js';
+
+test('financeForecast：净资产线性预测 + 达成时间', () => {
+  const accounts = [{ id: 'a', type: 'asset', category: '流动' }];
+  const state = {
+    forecast: { target: 1000000 },
+    netWorth: { accounts, snapshots: [
+      { date: '2026-01-01', values: { a: 100000 } },
+      { date: '2026-02-01', values: { a: 150000 } },
+      { date: '2026-03-01', values: { a: 200000 } },
+    ] },
+  };
+  const f = financeForecast(state, { horizon: 6 });
+  assert.equal(f.hasHistory, true);
+  assert.equal(f.latest, 200000);
+  assert.deepEqual(f.historyVals, [100000, 150000, 200000]);
+  // 每月约 +50000；6 个月预测末值约 500000
+  assert.equal(f.projection.length, 6);
+  assert.ok(Math.abs(f.projection[5] - 500000) < 5000);
+  assert.ok(f.monthlyRate > 40000 && f.monthlyRate < 60000);
+  // 距 100万还差 80万，约 16 个月 → ~1.3 年
+  assert.ok(f.etaMonths >= 14 && f.etaMonths <= 18);
+  assert.match(f.etaText, /年达成/);
+});
+
+test('financeForecast：已达成 / 无历史 / 无目标', () => {
+  const accounts = [{ id: 'a', type: 'asset', category: '流动' }];
+  assert.equal(financeForecast({ forecast: { target: 0 }, netWorth: { accounts, snapshots: [] } }).etaText, '设个目标，看预计达成');
+  assert.match(financeForecast({ forecast: { target: 1000000, currentAssets: 200000 }, netWorth: { accounts, snapshots: [] } }).etaText, /多记几期/);
+  const done = financeForecast({ forecast: { target: 100000 }, netWorth: { accounts, snapshots: [
+    { date: '2026-01-01', values: { a: 90000 } }, { date: '2026-02-01', values: { a: 120000 } },
+  ] } });
+  assert.match(done.etaText, /已达成/);
+});
+
+test('financeForecast：下降趋势无法预测', () => {
+  const accounts = [{ id: 'a', type: 'asset', category: '流动' }];
+  const f = financeForecast({ forecast: { target: 1000000 }, netWorth: { accounts, snapshots: [
+    { date: '2026-01-01', values: { a: 300000 } }, { date: '2026-02-01', values: { a: 250000 } },
+  ] } });
+  assert.equal(f.etaMonths, null);
+  assert.match(f.etaText, /未增长/);
+});
+
+test('financeForecast：空状态 null', () => {
+  assert.equal(financeForecast(null), null);
+});

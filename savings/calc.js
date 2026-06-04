@@ -488,3 +488,49 @@ export function financeSummary(state) {
   const progress = target > 0 ? Math.max(0, Math.min(1, netWorth / target)) : 0;
   return { netWorth, target, progress, change: netWorthChange(series), hasSnapshots };
 }
+
+/** 两个日期串之间的月数（可带小数，按 30 天折算日）。 */
+function monthsBetween(a, b) {
+  const da = new Date(a), db = new Date(b);
+  return (db.getFullYear() - da.getFullYear()) * 12 + (db.getMonth() - da.getMonth()) + (db.getDate() - da.getDate()) / 30;
+}
+
+/**
+ * 理财「时间维度 + 趋势预测」：净资产历史序列 + 按近期速度的线性预测 + 预计达成目标时间。
+ * 供首页看板的炫酷理财趋势卡。纯函数。
+ * @param {object} state savings-planner 状态
+ * @param {{horizon?:number}} [opts] 预测向前的月数（默认 12）
+ * @returns {null|{historyVals:number[],projection:number[],target:number,latest:number,
+ *   monthlyRate:number|null,etaMonths:number|null,etaText:string,hasHistory:boolean}}
+ */
+export function financeForecast(state, opts = {}) {
+  if (!state || typeof state !== 'object') return null;
+  const forecast = state.forecast || {};
+  const target = Number(forecast.target) || 0;
+  const nw = state.netWorth || {};
+  const series = netWorthSeries(nw.snapshots || [], nw.accounts || []);
+  const hasHistory = series.length >= 2;
+  const latest = series.length ? series[series.length - 1].net : (Number(forecast.currentAssets) || 0);
+
+  let monthlyRate = null;
+  const projection = [];
+  let etaMonths = null;
+  if (hasHistory) {
+    const first = series[0];
+    const last = series[series.length - 1];
+    const months = Math.max(1, monthsBetween(first.date, last.date));
+    monthlyRate = (last.net - first.net) / months;
+    const horizon = opts.horizon || 12;
+    for (let m = 1; m <= horizon; m++) projection.push(Math.round(latest + monthlyRate * m));
+    if (monthlyRate > 0 && target > latest) etaMonths = Math.ceil((target - latest) / monthlyRate);
+  }
+
+  let etaText;
+  if (!target) etaText = '设个目标，看预计达成';
+  else if (latest >= target) etaText = '已达成目标 🎉';
+  else if (!hasHistory) etaText = '多记几期净资产即可预测';
+  else if (monthlyRate == null || monthlyRate <= 0) etaText = '近期未增长，暂无法预测';
+  else etaText = `按近期速度约 ${(etaMonths / 12).toFixed(1)} 年达成`;
+
+  return { historyVals: series.map((s) => s.net), projection, target, latest, monthlyRate, etaMonths, etaText, hasHistory };
+}

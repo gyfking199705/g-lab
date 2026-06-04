@@ -109,6 +109,22 @@ export function buildSummaryMessages(paper) {
   return { system, user };
 }
 
+/** 简单字符串哈希（确定性，用于「每日精选」按日期稳定选一篇）。 */
+export function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/**
+ * 每日精选：在候选列表里按「日期」确定性地选一篇（同一天稳定不变）。
+ * @returns {object|null}
+ */
+export function dailyPick(papers = [], dateStr = todayStr()) {
+  if (!papers || !papers.length) return null;
+  return papers[hashStr(dateStr) % papers.length];
+}
+
 /** 估算阅读时长（基于摘要词数的粗略提示，纯展示用）。 */
 export function estimateReadMinutes(paper) {
   const words = (paper.summary || '').split(/\s+/).filter(Boolean).length;

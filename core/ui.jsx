@@ -120,6 +120,59 @@ export function Empty({ icon = '📭', title = '还没有内容', hint }) {
   );
 }
 
+/**
+ * 迷你趋势图（手写 SVG，无图表库）。
+ * @param {number[]} values        历史值（实线）
+ * @param {number[]} [projection]  预测值（虚线，从 values 末尾接续；首元素应与 values 末值一致或自动衔接）
+ * @param {number} [goal]          目标值（虚线水平参考线）
+ * @param {object} props           width/height/stroke/fill/goalColor
+ */
+export function Sparkline({ values = [], projection = [], goal, width = 132, height = 40, stroke = 'var(--accent)', fill = true, goalColor = 'var(--danger)' }) {
+  const hist = values.filter((v) => isFinite(v));
+  if (hist.length < 2) return <div style={{ height, display: 'flex', alignItems: 'center', fontSize: 10.5, color: 'var(--text-3)' }}>数据不足，记录后显示趋势</div>;
+  const proj = (projection || []).filter((v) => isFinite(v));
+  const all = goal != null && isFinite(goal) ? [...hist, ...proj, goal] : [...hist, ...proj];
+  let min = Math.min(...all), max = Math.max(...all);
+  if (min === max) { min -= 1; max += 1; }
+  const pad = (max - min) * 0.12; min -= pad; max += pad;
+  const total = hist.length + proj.length; // 时间轴总点数（proj 接在 hist 之后）
+  const padX = 2, padY = 3;
+  const x = (i) => padX + (i / (total - 1)) * (width - padX * 2);
+  const y = (v) => padY + (1 - (v - min) / (max - min)) * (height - padY * 2);
+  const histPts = hist.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  const histPath = 'M' + histPts.join(' L');
+  // 预测段：从 hist 末点接续
+  let projPath = '';
+  if (proj.length) {
+    const startI = hist.length - 1;
+    const pts = [`${x(startI).toFixed(1)},${y(hist[hist.length - 1]).toFixed(1)}`,
+      ...proj.map((v, k) => `${x(hist.length + k).toFixed(1)},${y(v).toFixed(1)}`)];
+    projPath = 'M' + pts.join(' L');
+  }
+  const areaPath = `${histPath} L${x(hist.length - 1).toFixed(1)},${(height - padY).toFixed(1)} L${x(0).toFixed(1)},${(height - padY).toFixed(1)} Z`;
+  const gid = 'spk' + Math.random().toString(36).slice(2, 7);
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+      {fill && (
+        <>
+          <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={stroke} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+          </linearGradient></defs>
+          <path d={areaPath} fill={`url(#${gid})`} stroke="none" />
+        </>
+      )}
+      {goal != null && isFinite(goal) && (
+        <line x1={padX} y1={y(goal)} x2={width - padX} y2={y(goal)} stroke={goalColor} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
+      )}
+      <path d={histPath} fill="none" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+      {projPath && <path d={projPath} fill="none" stroke={stroke} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" strokeDasharray="3 3" opacity="0.75" />}
+      <circle cx={x(hist.length - 1)} cy={y(hist[hist.length - 1])} r="2.4" fill={stroke} />
+      {proj.length > 0 && <circle cx={x(total - 1)} cy={y(proj[proj.length - 1])} r="2.2" fill={stroke} opacity="0.7" />}
+    </svg>
+  );
+}
+
 /** 分段切换。tabs=[{id,label}]。 */
 export function Segmented({ tabs, value, onChange }) {
   return (

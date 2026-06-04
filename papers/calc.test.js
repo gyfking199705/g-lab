@@ -12,6 +12,8 @@ import {
   summary,
   buildSummaryMessages,
   estimateReadMinutes,
+  hashStr,
+  dailyPick,
 } from './calc.js';
 
 const items = [
@@ -85,4 +87,14 @@ test('buildSummaryMessages 含标题与摘要、结构化要求', () => {
 test('estimateReadMinutes 有下限', () => {
   assert.ok(estimateReadMinutes({ summary: '' }) >= 8);
   assert.ok(estimateReadMinutes({ summary: 'word '.repeat(200) }) > 8);
+});
+
+test('dailyPick 同一天稳定、不同天可变、空安全', () => {
+  const ps = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
+  const a1 = dailyPick(ps, '2026-06-04');
+  const a2 = dailyPick(ps, '2026-06-04');
+  assert.equal(a1.id, a2.id); // 同一天稳定
+  assert.equal(dailyPick([], '2026-06-04'), null);
+  assert.ok(['a', 'b', 'c', 'd'].includes(dailyPick(ps, '2026-06-05').id));
+  assert.equal(typeof hashStr('x'), 'number');
 });

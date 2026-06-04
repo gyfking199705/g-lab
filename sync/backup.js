@@ -23,6 +23,7 @@ export const BACKUP_KEYS = [
   'habits-planner', // 习惯打卡（习惯定义/打卡记录）
   'cut-planner', // 减脂计划（档案 + 每日体重/热量记录）
   'papers-planner', // 论文阅读器（订阅设置 + 阅读清单/进度/AI总结）
+  'ledger-planner', // 记账（收支流水 + 预算）
 ];
 
 /** 云端同步文件名（存放在 Drive 的 appDataFolder 隐藏目录内）。 */
@@ -123,6 +124,7 @@ export const FILE_MAP = [
   { key: 'habits-planner', file: '习惯打卡.json' },
   { key: 'cut-planner', file: '减脂计划.json' },
   { key: 'papers-planner', file: '论文阅读.json' },
+  { key: 'ledger-planner', file: '记账.json' },
 ];
 
 export function fileForKey(key) {

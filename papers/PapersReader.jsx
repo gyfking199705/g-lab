@@ -12,11 +12,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { loadState, saveState } from '../core/store.js';
 import { SHARED_CSS, Empty, Segmented, Progress } from '../core/ui.jsx';
-import { todayStr, relDay } from '../core/date.js';
+import { todayStr, relDay, fmtMD } from '../core/date.js';
 import { ARXIV_CATEGORIES, fetchArxiv } from './arxiv.js';
 import {
   STATUSES, STATUS_LABEL, statusCounts, filterItems, annotateSaved,
-  summary as readingSummary, byCategory, buildSummaryMessages, estimateReadMinutes,
+  summary as readingSummary, byCategory, buildSummaryMessages, estimateReadMinutes, dailyPick,
 } from './calc.js';
 import { callChat, defaultAIConfig, isConfigured } from '../learning/ai.js';
 
@@ -216,9 +216,17 @@ function RecommendFeed({ feed, loading, status, error, settings, onRetry, onAdd,
   if (!feed.length) {
     return <Empty icon="📄" title="还没有推荐" hint="去「订阅设置」选感兴趣的分类，或上方搜索关键词" />;
   }
+  const pick = dailyPick(feed, todayStr());
+  const rest = pick ? feed.filter((p) => p.id !== pick.id) : feed;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {feed.map((p) => <PaperCard key={p.id} paper={p} onAdd={onAdd} onSummarize={onSummarize} />)}
+      {pick && (
+        <div className="pr-featured">
+          <div className="pr-featured-tag">✨ 今日精选 · {fmtMD(todayStr())}</div>
+          <PaperCard paper={pick} onAdd={onAdd} onSummarize={onSummarize} featured />
+        </div>
+      )}
+      {rest.map((p) => <PaperCard key={p.id} paper={p} onAdd={onAdd} onSummarize={onSummarize} />)}
     </div>
   );
 }
@@ -393,4 +401,7 @@ const PAPERS_CSS = `
 .pr-overlay{position:fixed;inset:0;background:rgba(38,36,31,.32);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
 .pr-modal{background:var(--surface);border-radius:16px;padding:20px;max-width:600px;width:100%;max-height:88vh;overflow:auto;}
 .pr-summary{font-size:13.5px;line-height:1.75;white-space:pre-wrap;color:var(--text);}
+.pr-featured{background:linear-gradient(180deg,var(--accent-soft),var(--surface));border:1px solid #E6C8B9;border-radius:13px;padding:10px;margin-bottom:6px;}
+.pr-featured-tag{font-size:11px;color:var(--accent-2);font-weight:500;letter-spacing:.3px;padding:2px 4px 8px;}
+.pr-featured .pr-card{background:var(--surface);border-color:transparent;}
 `;
