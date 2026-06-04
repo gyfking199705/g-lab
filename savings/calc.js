@@ -534,3 +534,49 @@ export function financeForecast(state, opts = {}) {
 
   return { historyVals: series.map((s) => s.net), projection, target, latest, monthlyRate, etaMonths, etaText, hasHistory };
 }
+
+/** 从资产配置估算综合年化（小数）。读 ret(百分比) 或 expectedReturn；缺省 5%。 */
+function allocAnnualReturn(allocations) {
+  const list = allocations || [];
+  const tw = list.reduce((s, a) => s + Math.max(0, a.weight || 0), 0);
+  if (tw <= 0) return 0.05;
+  const pct = list.reduce((s, a) => s + (Math.max(0, a.weight || 0) / tw) * (Number(a.ret != null ? a.ret : a.expectedReturn) || 0), 0);
+  return pct / 100;
+}
+
+/**
+ * 理财多情景预测带（乐观 / 中性 / 保守）。
+ * 模型：以最新净资产为起点，按「近期月均净流入(储蓄近似) + 投资年化」逐月复利；
+ * 三情景对年化做 ±2% 的不确定性带。纯函数。
+ * @param {object} state savings-planner 状态
+ * @param {{horizon?:number}} [opts] 预测月数（默认 24）
+ * @returns {null|{history:number[],neutral:number[],optimistic:number[],conservative:number[],
+ *   target:number,latest:number,baseReturn:number,contribution:number,etaNeutralMonths:number|null,etaText:string,hasHistory:boolean}}
+ */
+export function financeScenarios(state, opts = {}) {
+  const f = financeForecast(state);
+  if (!f) return null;
+  const horizon = opts.horizon || 24;
+  const latest = f.latest;
+  const target = f.target;
+  const contribution = Math.max(0, f.monthlyRate || 0); // 月均净流入（近似储蓄）
+  const baseR = allocAnnualReturn(state.allocations);
+  const project = (annualR) => {
+    const mr = Math.max(-0.9, annualR) / 12;
+    let v = latest;
+    const arr = [];
+    for (let m = 1; m <= horizon; m++) { v = v * (1 + mr) + contribution; arr.push(Math.round(v)); }
+    return arr;
+  };
+  const neutral = project(baseR);
+  const optimistic = project(baseR + 0.02);
+  const conservative = project(Math.max(0, baseR - 0.02));
+  const etaOf = (arr) => { if (!target || latest >= target) return null; const i = arr.findIndex((v) => v >= target); return i < 0 ? null : i + 1; };
+  const etaN = etaOf(neutral);
+  let etaText;
+  if (!target) etaText = '设个目标看预测';
+  else if (latest >= target) etaText = '已达成目标 🎉';
+  else if (etaN) etaText = `中性情景约 ${(etaN / 12).toFixed(1)} 年达成`;
+  else etaText = `${horizon} 个月内暂未达成，可提高储蓄或收益`;
+  return { history: f.historyVals, neutral, optimistic, conservative, target, latest, baseReturn: baseR, contribution, etaNeutralMonths: etaN, etaText, hasHistory: f.hasHistory };
+}

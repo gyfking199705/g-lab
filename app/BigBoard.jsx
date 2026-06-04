@@ -96,6 +96,12 @@ function BoardHead({ title, sub, onBack, onEnter }) {
 
 function ChartView({ c }) {
   if (c.kind === 'line') return <Sparkline values={c.values} projection={c.projection} goal={c.goal} stroke={c.stroke} height={96} />;
+  if (c.kind === 'fan') return (
+    <>
+      <Sparkline values={c.values} band={c.band} goal={c.goal} stroke={c.stroke} height={110} />
+      <div className="bb-legend"><span><i className="solid" />历史</span><span><i className="band" />保守～乐观</span><span><i className="dash" />中性</span>{c.goal && <span><i className="goal" />目标</span>}</div>
+    </>
+  );
   if (c.kind === 'bars') return <MiniBars values={c.values} single={c.single} height={84} />;
   if (c.kind === 'goalbars') {
     if (!c.goals || !c.goals.length) return <Empty icon="🎯" title="还没有目标" />;
@@ -136,5 +142,11 @@ const BOARD_CSS = `
 .bb-cap{font-size:10.5px;color:var(--text-3);margin-top:7px;text-align:center;}
 .bb-forecast{margin-top:12px;background:var(--accent-soft);border:1px solid #E6C8B9;color:var(--accent-2);border-radius:12px;padding:12px 15px;font-size:13.5px;line-height:1.6;}
 .bb-ins{margin:0;padding-left:18px;color:var(--text-2);font-size:13px;line-height:1.8;}
+.bb-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:10.5px;color:var(--text-3);margin-top:8px;}
+.bb-legend i{display:inline-block;width:14px;height:8px;vertical-align:middle;margin-right:4px;}
+.bb-legend i.solid{height:0;border-top:2px solid var(--accent);}
+.bb-legend i.dash{height:0;border-top:2px dashed var(--accent);opacity:.75;}
+.bb-legend i.band{background:var(--accent);opacity:.13;border-radius:2px;}
+.bb-legend i.goal{height:0;border-top:2px dashed var(--danger);}
 @media(max-width:560px){ .bb-hero-v{font-size:33px;} }
 `;

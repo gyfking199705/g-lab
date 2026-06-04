@@ -24,6 +24,7 @@ import CutPlanner from '../cut/CutPlanner.jsx';
 import PapersReader from '../papers/PapersReader.jsx';
 import LedgerPlanner from '../ledger/LedgerPlanner.jsx';
 import { readModule } from '../core/store.js';
+import { AISettingsButton } from '../core/AISettings.jsx';
 import { todayStr } from '../core/date.js';
 import { overdueCount, todayView } from '../schedule/calc.js';
 import { overallStats } from '../goals/calc.js';
@@ -275,6 +276,7 @@ export default function App() {
           ))}
         </nav>
         <div className="app-foot">
+          <AISettingsButton compact onSaved={bump} />
           <ExportButton />
           <ImportButton />
           <CloudSync />

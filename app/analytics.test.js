@@ -59,8 +59,11 @@ test('buildAnalytics finance：注入 get', () => {
   assert.equal(a.title, '财富大盘');
   assert.ok(a.kpis.length >= 4);
   assert.ok(a.charts[0].values.length === 3);
-  assert.ok(a.charts[0].projection.length > 0);
-  assert.match(a.forecast.text, /达成|预测|增长/);
+  // 三情景预测带
+  assert.equal(a.charts[0].kind, 'fan');
+  assert.ok(a.charts[0].band.mid.length > 0);
+  assert.ok(a.charts[0].band.upper.length === a.charts[0].band.lower.length);
+  assert.match(a.forecast.text, /达成|预测|增长|情景/);
 });
 
 test('buildAnalytics 无数据返回 null；hasBoard', () => {

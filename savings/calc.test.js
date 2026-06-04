@@ -322,3 +322,35 @@ test('financeForecast：下降趋势无法预测', () => {
 test('financeForecast：空状态 null', () => {
   assert.equal(financeForecast(null), null);
 });
+
+import { financeScenarios } from './calc.js';
+
+test('financeScenarios：三情景带 + 复利', () => {
+  const accounts = [{ id: 'a', type: 'asset', category: '流动' }];
+  const state = {
+    allocations: [{ weight: 100, ret: 6 }],
+    forecast: { target: 2000000 },
+    netWorth: { accounts, snapshots: [
+      { date: '2026-01-01', values: { a: 200000 } },
+      { date: '2026-03-01', values: { a: 300000 } },
+    ] },
+  };
+  const s = financeScenarios(state, { horizon: 12 });
+  assert.ok(s);
+  assert.equal(s.neutral.length, 12);
+  // 乐观 ≥ 中性 ≥ 保守（末值）
+  const last = (a) => a[a.length - 1];
+  assert.ok(last(s.optimistic) >= last(s.neutral));
+  assert.ok(last(s.neutral) >= last(s.conservative));
+  // 复利 + 储蓄使净资产增长
+  assert.ok(last(s.neutral) > s.latest);
+  assert.ok(s.baseReturn > 0.05 && s.baseReturn < 0.07);
+});
+
+test('financeScenarios：已达成 / 空', () => {
+  const accounts = [{ id: 'a', type: 'asset', category: '流动' }];
+  const done = financeScenarios({ allocations: [], forecast: { target: 100000 }, netWorth: { accounts, snapshots: [
+    { date: '2026-01-01', values: { a: 80000 } }, { date: '2026-02-01', values: { a: 150000 } } ] } });
+  assert.match(done.etaText, /已达成/);
+  assert.equal(financeScenarios(null), null);
+});

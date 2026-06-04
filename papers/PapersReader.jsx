@@ -18,22 +18,15 @@ import {
   STATUSES, STATUS_LABEL, statusCounts, filterItems, annotateSaved,
   summary as readingSummary, byCategory, buildSummaryMessages, estimateReadMinutes, dailyPick,
 } from './calc.js';
-import { callChat, defaultAIConfig, isConfigured } from '../learning/ai.js';
+import { callChat, isConfigured } from '../learning/ai.js';
+import { loadAIConfig, AISettingsButton } from '../core/AISettings.jsx';
 
 const STORE_KEY = 'papers-planner';
-const AI_KEY = 'learning-ai';
 const DEFAULTS = {
   v: 1,
   settings: { categories: ['cs.LG', 'cs.AI'], keywords: [], maxResults: 30, proxyUrl: '' },
   items: [],
 };
-
-function loadAI() {
-  try {
-    const raw = localStorage.getItem(AI_KEY);
-    return raw ? { ...defaultAIConfig(), ...JSON.parse(raw) } : defaultAIConfig();
-  } catch (e) { return defaultAIConfig(); }
-}
 
 export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
   const [data, setData] = useState(() => loadState(storageKey, DEFAULTS));
@@ -45,7 +38,7 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
   const [query, setQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [modal, setModal] = useState(null); // { paper, text, loading, error }
-  const aiConfig = loadAI();
+  const aiConfig = loadAIConfig();
   const abortRef = useRef(null);
 
   useEffect(() => { saveState(storageKey, data); if (onChange) onChange(); }, [data, storageKey, onChange]);
@@ -101,8 +94,9 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
 
   // AI 总结：确保入库（默认想读），调用 AI，保存到 item.aiSummary
   const summarize = async (paper) => {
-    if (!isConfigured(aiConfig)) {
-      setModal({ paper, text: '', error: '尚未配置 AI。请到「学习规划」右上角配置 AI（Key 仅存本地，论文阅读器与学习站共用一处配置）。', loading: false });
+    const cfg = loadAIConfig(); // 读最新配置（可能刚在别处配好）
+    if (!isConfigured(cfg)) {
+      setModal({ paper, text: '', error: '尚未配置 AI。点右上「✨ 配置 AI」填入你自己的 Key（Key 仅存本地，全站共用一处配置）。', loading: false });
       return;
     }
     let id = paper.id;
@@ -111,7 +105,7 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
     setModal({ paper, text: '', loading: true, error: '' });
     try {
       const { system, user } = buildSummaryMessages(paper);
-      const text = await callChat({ config: aiConfig, system, user, maxTokens: 1200 });
+      const text = await callChat({ config: cfg, system, user, maxTokens: 1200 });
       updateItem(id, { aiSummary: text });
       setModal({ paper, text, loading: false, error: '' });
     } catch (e) {
@@ -132,7 +126,10 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
           <h2>📄 论文阅读器</h2>
           <p>arXiv 优先 · 订阅推荐 + AI 解读 + 阅读进度</p>
         </div>
-        <button className="gx-btn gx-btn-sm" onClick={() => setSettingsOpen(true)}>⚙ 订阅设置</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <AISettingsButton onSaved={() => setData((d) => ({ ...d }))} />
+          <button className="gx-btn gx-btn-sm" onClick={() => setSettingsOpen(true)}>⚙ 订阅设置</button>
+        </div>
       </div>
 
       {/* 进度 KPI */}
@@ -380,7 +377,7 @@ function SettingsModal({ settings, aiOK, onSave, onClose }) {
           <input className="gx-in" value={proxyUrl} onChange={(e) => setProxyUrl(e.target.value)} placeholder="https://your-worker.workers.dev/" />
         </label>
         <div style={{ fontSize: 11.5, color: aiOK ? 'var(--success)' : 'var(--text-3)', marginBottom: 12 }}>
-          {aiOK ? '✓ AI 已就绪（与学习站共用配置）' : '✨ AI 总结需在「学习规划」里配置 AI（Key 仅存本地）'}
+          {aiOK ? '✓ AI 已就绪（全站共用配置）' : '✨ AI 总结需先配置 AI（点页面右上「✨ 配置 AI」，Key 仅存本地）'}
         </div>
         <div className="gx-inrow"><button className="gx-btn gx-btn-primary" onClick={save}>保存</button><button className="gx-btn" onClick={onClose}>取消</button></div>
       </div>

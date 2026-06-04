@@ -127,11 +127,13 @@ export function Empty({ icon = '📭', title = '还没有内容', hint }) {
  * @param {number} [goal]          目标值（虚线水平参考线）
  * @param {object} props           width/height/stroke/fill/goalColor
  */
-export function Sparkline({ values = [], projection = [], goal, width = 132, height = 40, stroke = 'var(--accent)', fill = true, goalColor = 'var(--danger)' }) {
+export function Sparkline({ values = [], projection = [], band = null, goal, width = 132, height = 40, stroke = 'var(--accent)', fill = true, goalColor = 'var(--danger)' }) {
   const hist = values.filter((v) => isFinite(v));
   if (hist.length < 2) return <div style={{ height, display: 'flex', alignItems: 'center', fontSize: 10.5, color: 'var(--text-3)' }}>数据不足，记录后显示趋势</div>;
-  const proj = (projection || []).filter((v) => isFinite(v));
-  const all = goal != null && isFinite(goal) ? [...hist, ...proj, goal] : [...hist, ...proj];
+  const proj = band ? (band.mid || []).filter((v) => isFinite(v)) : (projection || []).filter((v) => isFinite(v));
+  const bandVals = band ? [...(band.upper || []), ...(band.lower || []), ...(band.mid || [])] : [];
+  const all = [...hist, ...proj, ...bandVals];
+  if (goal != null && isFinite(goal)) all.push(goal);
   let min = Math.min(...all), max = Math.max(...all);
   if (min === max) { min -= 1; max += 1; }
   const pad = (max - min) * 0.12; min -= pad; max += pad;
@@ -151,8 +153,17 @@ export function Sparkline({ values = [], projection = [], goal, width = 132, hei
   }
   const areaPath = `${histPath} L${x(hist.length - 1).toFixed(1)},${(height - padY).toFixed(1)} L${x(0).toFixed(1)},${(height - padY).toFixed(1)} Z`;
   const gid = 'spk' + Math.random().toString(36).slice(2, 7);
+  // 预测带（乐观↑ / 保守↓ 之间的扇形）
+  let bandArea = '';
+  if (band && (band.upper || []).length) {
+    const h0 = hist.length - 1, v0 = hist[hist.length - 1];
+    const up = [`${x(h0).toFixed(1)},${y(v0).toFixed(1)}`, ...band.upper.map((v, k) => `${x(hist.length + k).toFixed(1)},${y(v).toFixed(1)}`)];
+    const lo = [...band.lower.map((v, k) => `${x(hist.length + k).toFixed(1)},${y(v).toFixed(1)}`).reverse(), `${x(h0).toFixed(1)},${y(v0).toFixed(1)}`];
+    bandArea = 'M' + up.join(' L') + ' L' + lo.join(' L') + ' Z';
+  }
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+      {bandArea && <path d={bandArea} fill={stroke} opacity="0.13" stroke="none" />}
       {fill && (
         <>
           <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">

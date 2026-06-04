@@ -9,7 +9,7 @@
  * 可测试：node --test app/analytics.test.js
  */
 import { todayStr, addDays, dayDiff, lastNDays, fmtMD } from '../core/date.js';
-import { financeForecast, formatMoney } from '../savings/calc.js';
+import { financeForecast, financeScenarios, formatMoney } from '../savings/calc.js';
 import { summary as cutSummary, trendSeries as cutTrend, deficitSeries, estimateTDEE } from '../cut/calc.js';
 import { monthTotals, byCategory, dailyExpense, balance } from '../ledger/calc.js';
 import { todayBoard, currentStreak, bestStreak, isDoneOn, fitnessWorkoutDates } from '../habits/calc.js';
@@ -78,7 +78,16 @@ function financeBoard(get) {
   const s = get('savings-planner');
   const f = financeForecast(s);
   if (!f || (!f.target && !f.latest)) return null;
+  const sc = financeScenarios(s, { horizon: 24 });
   const pct = f.target > 0 ? Math.round((f.latest / f.target) * 100) : 0;
+  const charts = [];
+  if (sc) {
+    charts.push({ title: '净资产趋势 + 三情景预测（24 个月）', kind: 'fan', values: sc.history,
+      band: { upper: sc.optimistic, mid: sc.neutral, lower: sc.conservative }, goal: f.target || undefined,
+      stroke: 'var(--accent)', captionLeft: '实线=历史 · 阴影带=保守～乐观 · 虚线=中性', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
+  } else {
+    charts.push({ title: '净资产趋势 + 预测', kind: 'line', values: f.historyVals, projection: f.projection, goal: f.target || undefined, stroke: 'var(--accent)', captionLeft: '实线=历史 · 虚线=预测', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
+  }
   return {
     icon: '💰', title: '财富大盘', stroke: 'var(--accent)',
     hero: { value: formatMoney(f.latest), caption: f.target ? `目标 ${formatMoney(f.target)} · ${pct}% 达成` : '净资产', delta: f.monthlyRate != null ? `${f.monthlyRate >= 0 ? '↑' : '↓'} ${formatMoney(Math.abs(Math.round(f.monthlyRate)))}/月` : '', deltaTone: f.monthlyRate >= 0 ? 'good' : 'bad' },
@@ -86,19 +95,25 @@ function financeBoard(get) {
       kpi('净资产', formatMoney(f.latest), '最新快照', 'accent'),
       kpi('月均增速', f.monthlyRate != null ? formatMoney(Math.round(f.monthlyRate)) : '—', '近期'),
       kpi('距目标', f.target ? formatMoney(Math.max(0, f.target - f.latest)) : '—', `${pct}% 已达成`),
-      kpi('预计达成', f.etaMonths ? `${(f.etaMonths / 12).toFixed(1)} 年` : '—', '按近期速度', 'good'),
+      kpi('综合年化', sc ? `${(sc.baseReturn * 100).toFixed(1)}%` : '—', '按资产配置'),
+      kpi('中性预计', sc && sc.etaNeutralMonths ? `${(sc.etaNeutralMonths / 12).toFixed(1)} 年` : (f.etaMonths ? `${(f.etaMonths / 12).toFixed(1)} 年` : '—'), '达成目标', 'good'),
+      kpi('月均储蓄', sc ? formatMoney(Math.round(sc.contribution)) : '—', '近似'),
     ],
-    charts: [{ title: '净资产趋势 + 预测', kind: 'line', values: f.historyVals, projection: f.projection, goal: f.target || undefined, stroke: 'var(--accent)', captionLeft: '实线=历史 · 虚线=预测', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' }],
-    forecast: { text: `🔮 ${f.etaText}` },
-    insights: buildFinanceInsights(f),
-    disclaimer: '预测为线性外推，仅供参考、会波动，非投资建议。',
+    charts,
+    forecast: { text: `🔮 ${sc ? sc.etaText : f.etaText}` },
+    insights: buildFinanceInsights(f, sc),
+    disclaimer: '预测以近期储蓄速度 + 资产配置年化（±2% 不确定性带）复利估算，仅供参考、实际会波动，非投资建议。',
   };
 }
-function buildFinanceInsights(f) {
+function buildFinanceInsights(f, sc) {
   const out = [];
   if (!f.hasHistory) out.push('多记几期净资产快照，预测会更准。');
   else if (f.monthlyRate > 0) out.push(`保持每月约 ${formatMoney(Math.round(f.monthlyRate))} 的增长，离目标越来越近。`);
   else out.push('近期净资产未增长，留意支出或投资波动。');
+  if (sc && sc.target && f.latest < sc.target) {
+    const lo = sc.etaNeutralMonths;
+    out.push(`乐观 / 保守情景下达成时间会前后浮动，关键变量是储蓄率与投资年化（当前约 ${(sc.baseReturn * 100).toFixed(1)}%）。`);
+  }
   return out;
 }
 
