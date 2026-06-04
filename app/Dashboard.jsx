@@ -21,11 +21,18 @@ import {
   bumpCount,
   isDoneOn,
 } from '../habits/calc.js';
+import { summary as cutSummary } from '../cut/calc.js';
+import { financeSummary } from '../savings/calc.js';
+import { overallStats as learningStats, computeStreak as learningStreak } from '../learning/calc.js';
+import { formatMoney } from '../savings/calc.js';
 
 const SCHEDULE_KEY = 'schedule-planner';
 const GOALS_KEY = 'goals-planner';
 const HABITS_KEY = 'habits-planner';
 const FITNESS_KEY = 'fitness-planner';
+const CUT_KEY = 'cut-planner';
+const SAVINGS_KEY = 'savings-planner';
+const LEARNING_KEY = 'learning-planner';
 
 function greeting() {
   const h = new Date().getHours();
@@ -49,6 +56,20 @@ export default function Dashboard({ onNavigate, onChange }) {
   const goals = useMemo(() => sortGoalsForBoard(goalsData.goals || [], today).slice(0, 4), [tick, today]);
   const hBoard = useMemo(() => todayBoard(habitsData.habits || [], habitsData.checkins || {}, today, fitDates), [tick, today, fitDates]);
 
+  // 进展可视化：减脂 / 理财 / 学习（只读各模块数据，存在才显示）
+  const cut = useMemo(() => {
+    const d = readModule(CUT_KEY);
+    return d && d.profile ? cutSummary(d.profile, d.logs || [], today) : null;
+  }, [tick, today]);
+  const finance = useMemo(() => financeSummary(readModule(SAVINGS_KEY)), [tick]);
+  const learn = useMemo(() => {
+    const d = readModule(LEARNING_KEY);
+    if (!d || !(d.plans || []).length) return null;
+    const st = learningStats(d.plans);
+    if (!st.total) return null;
+    return { ...st, streak: learningStreak(d.sessions || [], today) };
+  }, [tick, today]);
+
   const refresh = () => { setTick((t) => t + 1); if (onChange) onChange(); };
 
   // 就地写回各模块
@@ -62,7 +83,7 @@ export default function Dashboard({ onNavigate, onChange }) {
   const toggleHabit = (h) => writeHabits(toggleCheck(habitsData.checkins || {}, h.id, today));
   const bumpHabit = (h, d) => writeHabits(bumpCount(habitsData.checkins || {}, h.id, today, d));
 
-  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length;
+  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || finance || learn;
 
   return (
     <div className="gx-root">
@@ -177,6 +198,67 @@ export default function Dashboard({ onNavigate, onChange }) {
               </div>
             )}
           </div>
+
+          {/* 减脂进度 */}
+          {cut && (
+            <div className="gx-card">
+              <div className="gx-sechead">
+                <h3 style={{ cursor: 'pointer' }} onClick={() => onNavigate('cut')}>📉 减脂进度</h3>
+                <span className="gx-sub">{cut.startWeight}→{cut.goalWeight}kg</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--accent-2)' }}>{cut.currentTrend}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>kg 趋势体重</span>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--success)' }}>已减 {cut.lost}kg</span>
+              </div>
+              <Progress pct={cut.progressPct} good={cut.progressPct >= 100} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                <span>{cut.weeklyRate != null ? `本周 ${cut.weeklyRate > 0 ? '+' : ''}${cut.weeklyRate}kg` : '记录中'}</span>
+                <span>{cut.deficitStreak > 0 ? `🔥 缺口 ${cut.deficitStreak} 天` : ''}</span>
+                <span>{cut.projectedDate ? `预计 ${cut.projectedDate.slice(5)}` : ''}</span>
+              </div>
+            </div>
+          )}
+
+          {/* 理财进度 */}
+          {finance && (
+            <div className="gx-card">
+              <div className="gx-sechead">
+                <h3 style={{ cursor: 'pointer' }} onClick={() => onNavigate('wealth')}>💰 财富进度</h3>
+                <span className="gx-sub">净资产 / 目标</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: 24, color: 'var(--accent-2)' }}>{formatMoney(finance.netWorth)}</span>
+                {finance.change && <span style={{ marginLeft: 'auto', fontSize: 12, color: finance.change.abs >= 0 ? 'var(--success)' : 'var(--danger)' }}>{finance.change.abs >= 0 ? '↑' : '↓'} {formatMoney(Math.abs(finance.change.abs))}</span>}
+              </div>
+              <Progress pct={finance.progress * 100} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                <span>{Math.round(finance.progress * 100)}% 达成</span>
+                <span>目标 {formatMoney(finance.target)}</span>
+              </div>
+              <div className="gx-disclaim" style={{ marginTop: 6 }}>仅为长期假设估算，实际会波动，非投资建议</div>
+            </div>
+          )}
+
+          {/* 学习进度 */}
+          {learn && (
+            <div className="gx-card">
+              <div className="gx-sechead">
+                <h3 style={{ cursor: 'pointer' }} onClick={() => onNavigate('learning')}>📚 学习进度</h3>
+                <span className="gx-sub">已掌握 {learn.mastered}/{learn.total}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--accent-2)' }}>{Math.round(learn.pct * 100)}%</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>知识点掌握</span>
+                {learn.streak > 0 && <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--accent-2)' }}>🔥 {learn.streak} 天</span>}
+              </div>
+              <Progress pct={learn.pct * 100} good={learn.pct >= 1} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                <span>学习中 {learn.learning}</span>
+                <span>未开始 {learn.todo}</span>
+              </div>
+            </div>
+          )}
 
         </div>
       )}

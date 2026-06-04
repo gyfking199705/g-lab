@@ -36,5 +36,6 @@ await build({ ...common, entryPoints: ['project/bootstrap.jsx'], outfile: 'dist/
 await build({ ...common, entryPoints: ['schedule/bootstrap.jsx'], outfile: 'dist/schedule.js' });
 await build({ ...common, entryPoints: ['goals/bootstrap.jsx'], outfile: 'dist/goals.js' });
 await build({ ...common, entryPoints: ['habits/bootstrap.jsx'], outfile: 'dist/habits.js' });
+await build({ ...common, entryPoints: ['cut/bootstrap.jsx'], outfile: 'dist/cut.js' });
 
-console.log('✅ 打包完成：dist/{app,savings,learning,fitness,project,schedule,goals,habits}.js');
+console.log('✅ 打包完成：dist/{app,savings,learning,fitness,project,schedule,goals,habits,cut}.js');

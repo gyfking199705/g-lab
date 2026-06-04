@@ -1,0 +1,10 @@
+{
+  "name": "cut-planner",
+  "version": "1.0.0",
+  "description": "减脂计划：趋势体重(EMA) + 自适应 TDEE + 能量缺口 + 进度投影（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

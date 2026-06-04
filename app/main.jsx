@@ -18,11 +18,13 @@ import Dashboard from './Dashboard.jsx';
 import SchedulePlanner from '../schedule/SchedulePlanner.jsx';
 import GoalsPlanner from '../goals/GoalsPlanner.jsx';
 import HabitsPlanner from '../habits/HabitsPlanner.jsx';
+import CutPlanner from '../cut/CutPlanner.jsx';
 import { readModule } from '../core/store.js';
 import { todayStr } from '../core/date.js';
 import { overdueCount, todayView } from '../schedule/calc.js';
 import { overallStats } from '../goals/calc.js';
 import { todayBoard, fitnessWorkoutDates } from '../habits/calc.js';
+import { summary as cutSummary } from '../cut/calc.js';
 import { gatherBackup, extractModules, applyBackup, signatureOf, perKeySig, filesToModules, fileForKey, buildReadme, SYNC_FOLDER, READMEFILE } from '../sync/backup.js';
 import { requestToken, findOrCreateFolder, listChildren, downloadText, uploadFile } from '../sync/drive.js';
 
@@ -47,6 +49,7 @@ const NAV_ITEMS = [
   { id: 'schedule', icon: '📅', label: '日程安排', kind: 'schedule', group: 'core' },
   { id: 'goals', icon: '🎯', label: '目标进度', kind: 'goals', group: 'core' },
   { id: 'habits', icon: '🔥', label: '习惯打卡', kind: 'habits', group: 'core' },
+  { id: 'cut', icon: '📉', label: '减脂计划', kind: 'cut', group: 'core' },
   { id: 'personal', icon: '📝', label: '个人规划', kind: 'task', group: 'more' },
   { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning', group: 'more' },
   { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness', group: 'more' },
@@ -170,6 +173,14 @@ function readHabitsBadge() {
   return b.total ? `${b.doneCount}/${b.total}` : null;
 }
 
+/* 减脂徽章：当前进度百分比。 */
+function readCutBadge() {
+  const d = readModule('cut-planner');
+  if (!d || !d.profile) return null;
+  const s = cutSummary(d.profile, d.logs || [], todayStr());
+  return s ? `${s.progressPct}%` : null;
+}
+
 function badgeFor(kind, id) {
   switch (kind) {
     case 'task': return readCount(`planning_${id}`);
@@ -179,6 +190,7 @@ function badgeFor(kind, id) {
     case 'schedule': return readScheduleBadge();
     case 'goals': return readGoalsBadge();
     case 'habits': return readHabitsBadge();
+    case 'cut': return readCutBadge();
     default: return null;
   }
 }
@@ -247,6 +259,8 @@ export default function App() {
             <GoalsPlanner storageKey="goals-planner" onChange={bump} />
           ) : active === 'habits' ? (
             <HabitsPlanner storageKey="habits-planner" onChange={bump} />
+          ) : active === 'cut' ? (
+            <CutPlanner storageKey="cut-planner" onChange={bump} />
           ) : active === 'wealth' ? (
             <WealthSection />
           ) : active === 'learning' ? (

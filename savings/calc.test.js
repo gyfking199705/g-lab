@@ -243,3 +243,34 @@ test('格式化：中文金额/比率/年数', () => {
   assert.equal(formatYears(Infinity), '∞');
   assert.equal(formatYears(8.34), '8.3 年');
 });
+
+import { financeSummary } from './calc.js';
+
+test('financeSummary：无快照回退 currentAssets', () => {
+  const s = financeSummary({ forecast: { currentAssets: 2000000, target: 10000000 } });
+  assert.equal(s.netWorth, 2000000);
+  assert.equal(s.target, 10000000);
+  assert.equal(s.progress, 0.2);
+  assert.equal(s.hasSnapshots, false);
+});
+
+test('financeSummary：有快照取最新净资产', () => {
+  const accounts = [{ id: 'a', type: 'asset', category: '流动' }, { id: 'd', type: 'liability', category: '负债' }];
+  const state = {
+    forecast: { target: 10000000 },
+    netWorth: { accounts, snapshots: [
+      { date: '2026-01-01', values: { a: 1000000, d: 200000 } },
+      { date: '2026-02-01', values: { a: 1500000, d: 200000 } },
+    ] },
+  };
+  const s = financeSummary(state);
+  assert.equal(s.netWorth, 1300000); // 1.5M - 0.2M
+  assert.equal(s.hasSnapshots, true);
+  assert.ok(s.change && s.change.abs === 500000);
+  assert.equal(Math.round(s.progress * 100), 13);
+});
+
+test('financeSummary：空状态返回 null', () => {
+  assert.equal(financeSummary(null), null);
+  assert.equal(financeSummary({}), null);
+});
