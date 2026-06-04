@@ -1,0 +1,10 @@
+{
+  "name": "growth-core",
+  "version": "1.0.0",
+  "description": "成长规划共享数据层：日期工具 + 带版本迁移的存储工具（纯函数，可单测）",
+  "type": "module",
+  "main": "store.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

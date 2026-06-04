@@ -18,6 +18,9 @@ export const BACKUP_KEYS = [
   'savings-planner', // 财富规划（含净资产）
   'stocks-watch', // 股市观测自选与设置
   'project-planner', // 项目规划（任务/甘特/番茄）
+  'schedule-planner', // 日程安排（按日/周事项）
+  'goals-planner', // 目标进度（目标/子任务/指标）
+  'habits-planner', // 习惯打卡（习惯定义/打卡记录）
 ];
 
 /** 云端同步文件名（存放在 Drive 的 appDataFolder 隐藏目录内）。 */
@@ -113,6 +116,9 @@ export const FILE_MAP = [
   { key: 'savings-planner', file: '财富规划.json' },
   { key: 'stocks-watch', file: '股市观测.json' },
   { key: 'project-planner', file: '项目规划.json' },
+  { key: 'schedule-planner', file: '日程安排.json' },
+  { key: 'goals-planner', file: '目标进度.json' },
+  { key: 'habits-planner', file: '习惯打卡.json' },
 ];
 
 export function fileForKey(key) {

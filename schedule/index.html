@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>日程安排 · 独立演示</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+  <meta name="theme-color" content="#F6F5F0" />
+  <style>
+    body { margin: 0; background: #F6F5F0; min-height: 100vh; padding: 28px 16px; }
+    #root { max-width: 1000px; margin: 0 auto; }
+    .gx-loading { text-align: center; color: #B0AFA5; font-family: Georgia, serif; font-size: 16px; padding: 90px 0; }
+    #gx-error { max-width: 720px; margin: 40px auto; background: #FBEEEC; border: 1px solid #E8C9C3;
+      color: #9A3F36; border-radius: 12px; padding: 16px 20px; font-family: sans-serif; font-size: 14px;
+      line-height: 1.7; white-space: pre-wrap; display: none; }
+  </style>
+</head>
+<body>
+  <div id="root"><div class="gx-loading">正在加载日程安排…</div></div>
+  <pre id="gx-error"></pre>
+
+  <!-- 自托管打包产物（含 React），同源单文件加载，无任何外部 CDN。
+       源码为 SchedulePlanner.jsx + calc.js + ../core/*；改动后用 `node scripts/build.mjs` 重新生成 dist/。 -->
+  <script type="module" src="../dist/schedule.js"></script>
+  <script>
+    window.addEventListener('error', function (e) {
+      if (e && e.target && e.target.src && e.target.src.indexOf('dist/schedule.js') > -1) {
+        var el = document.getElementById('gx-error');
+        el.style.display = 'block';
+        el.textContent = '应用脚本加载失败，请确认通过 HTTP 访问（GitHub Pages 或 `python3 -m http.server`），不要用 file:// 直接打开。';
+        var l = document.querySelector('.gx-loading');
+        if (l) l.remove();
+      }
+    }, true);
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "goals-planner",
+  "version": "1.0.0",
+  "description": "目标进度：中长期目标拆解、子任务/数值指标、进度可视化（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}
