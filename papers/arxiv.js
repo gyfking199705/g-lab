@@ -102,36 +102,43 @@ export function parseArxivAtom(xml) {
   }).filter((p) => p.id && p.title);
 }
 
-/* 公共 CORS 代理兜底（纯静态页直连 arXiv 可能被 CORS 挡）。 */
-const CORS_WRAPPERS = [
-  (u) => u, // 直连
-  (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
-  (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-];
-
 /**
  * 拉取并解析 arXiv（impure）。先直连，失败依次过公共代理；可传自建 proxyUrl 最优先。
+ * 每个尝试都有超时，避免某个代理挂起导致一直转圈。
  * @param {object} opts buildQueryUrl 的参数
- * @param {{proxyUrl?:string, signal?:AbortSignal}} [net]
+ * @param {{proxyUrl?:string, signal?:AbortSignal, timeoutMs?:number, onStatus?:(s:string)=>void}} [net]
  */
-export async function fetchArxiv(opts = {}, { proxyUrl = '', signal } = {}) {
+export async function fetchArxiv(opts = {}, { proxyUrl = '', signal, timeoutMs = 11000, onStatus } = {}) {
   if (typeof fetch !== 'function') throw new Error('当前环境不支持 fetch');
   const target = buildQueryUrl(opts);
-  const wrappers = proxyUrl
-    ? [(u) => proxyUrl.replace(/\/+$/, '') + '?url=' + encodeURIComponent(u), ...CORS_WRAPPERS]
-    : CORS_WRAPPERS;
+  const steps = [];
+  if (proxyUrl) steps.push({ name: '自建代理', wrap: (u) => proxyUrl.replace(/\/+$/, '') + '?url=' + encodeURIComponent(u) });
+  steps.push({ name: '直连 arXiv', wrap: (u) => u });
+  steps.push({ name: '公共代理 1', wrap: (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u) });
+  steps.push({ name: '公共代理 2', wrap: (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) });
+
   let lastErr = null;
-  for (const wrap of wrappers) {
+  for (const step of steps) {
+    if (signal && signal.aborted) throw new DOMException('aborted', 'AbortError');
+    if (onStatus) onStatus(`正在尝试：${step.name}…`);
+    const ctrl = new AbortController();
+    const onAbort = () => ctrl.abort();
+    if (signal) signal.addEventListener('abort', onAbort);
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
-      const res = await fetch(wrap(target), { signal, headers: { Accept: 'application/atom+xml,application/xml,text/xml' } });
-      if (!res.ok) { lastErr = new Error('HTTP ' + res.status); continue; }
+      const res = await fetch(step.wrap(target), { signal: ctrl.signal, headers: { Accept: 'application/atom+xml,application/xml,text/xml' } });
+      if (!res.ok) { lastErr = new Error(`${step.name} 返回 HTTP ${res.status}`); continue; }
       const xml = await res.text();
       const papers = parseArxivAtom(xml);
       if (papers.length || /<feed/i.test(xml)) return papers; // 合法 feed（可能 0 结果）
-      lastErr = new Error('返回内容无法解析');
+      lastErr = new Error(`${step.name} 返回内容无法解析`);
     } catch (e) {
-      lastErr = e;
+      if (signal && signal.aborted) throw new DOMException('aborted', 'AbortError');
+      lastErr = new Error(`${step.name} ${e.name === 'AbortError' ? '超时' : '失败'}`);
+    } finally {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', onAbort);
     }
   }
-  throw new Error((lastErr && lastErr.message) || '获取失败（可能被网络/CORS 拦截，可在设置里填自建代理）');
+  throw new Error((lastErr ? lastErr.message + '；' : '') + '都没成功，可在设置里填自建代理 URL');
 }

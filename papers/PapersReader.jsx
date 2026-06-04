@@ -40,6 +40,7 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
   const [tab, setTab] = useState('recommend'); // recommend | want | reading | done
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [status, setLoadStatus] = useState('');
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -60,16 +61,16 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
   const setSettings = (patch) => mutate((d) => ({ ...d, settings: { ...d.settings, ...patch } }));
 
   const loadFeed = async (opts) => {
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setLoadStatus('正在连接 arXiv…');
     if (abortRef.current) abortRef.current.abort();
     const ctrl = new AbortController(); abortRef.current = ctrl;
     try {
-      const papers = await fetchArxiv(opts, { proxyUrl: settings.proxyUrl, signal: ctrl.signal });
+      const papers = await fetchArxiv(opts, { proxyUrl: settings.proxyUrl, signal: ctrl.signal, onStatus: setLoadStatus });
       setFeed(papers);
       if (!papers.length) setError('没有结果，换个分类 / 关键词试试');
     } catch (e) {
       if (e.name !== 'AbortError') setError(e.message || '获取失败');
-    } finally { setLoading(false); }
+    } finally { setLoading(false); setLoadStatus(''); }
   };
 
   // 进入推荐页且无数据时自动拉取
@@ -166,7 +167,7 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
         </div>
 
         {tab === 'recommend' ? (
-          <RecommendFeed feed={annotatedFeed} loading={loading} error={error} settings={settings}
+          <RecommendFeed feed={annotatedFeed} loading={loading} status={status} error={error} settings={settings}
             onRetry={refreshRecommend} onAdd={addToList} onSummarize={summarize} onOpenSettings={() => setSettingsOpen(true)} />
         ) : (
           <ReadingList items={listForTab} status={tab} onSetStatus={setStatus} onUpdate={updateItem}
@@ -192,8 +193,14 @@ export default function PapersReader({ storageKey = STORE_KEY, onChange }) {
 }
 
 /* ----------------------------- 推荐 / 搜索结果 ----------------------------- */
-function RecommendFeed({ feed, loading, error, settings, onRetry, onAdd, onSummarize, onOpenSettings }) {
-  if (loading && !feed.length) return <div className="gx-empty"><div className="t">正在从 arXiv 拉取…</div></div>;
+function RecommendFeed({ feed, loading, status, error, settings, onRetry, onAdd, onSummarize, onOpenSettings }) {
+  if (loading && !feed.length) return (
+    <div className="gx-empty">
+      <div className="ic">📡</div>
+      <div className="t">{status || '正在从 arXiv 拉取…'}</div>
+      <div style={{ fontSize: 11.5, marginTop: 6 }}>arXiv 需跨域，直连不行会自动转公共代理，请稍候(最多约 30 秒)</div>
+    </div>
+  );
   if (error && !feed.length) {
     return (
       <div className="gx-empty">
