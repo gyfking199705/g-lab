@@ -22,7 +22,10 @@
 ### 0d. 📉 减脂计划
 数据驱动的体态/减脂追踪器，效仿 MacroFactor / Happy Scale：**趋势体重**(EMA 抹平水分噪声) + **自适应 TDEE**(由趋势体重+摄入反推真实消耗) + 能量缺口与连续达标 + 进度投影(预计达成日) + 体重趋势曲线(手写 SVG) + 脂肪量/瘦体重拆分。每天只记体重 + 摄入热量(可选运动/体脂)。由独立模块 `cut/` 提供，详见 [`cut/README.md`](cut/README.md)。
 
-> 首页看板会自动汇总**减脂 / 财富 / 学习**三块的进展卡（趋势体重·进度条、净资产·目标达成%、知识点掌握%·学习连续），打开一屏看到所有进展，给自己持续的信心与动力。
+### 0e. 📄 论文阅读器
+以 **arXiv** 为主的论文推荐阅读器:按订阅的分类 + 关键词拉取最新论文(也可关键词/arXiv ID 搜索),**AI 解读摘要**(复用学习站 BYOK AI,讲清「解决什么问题/核心方法/结论亮点」),阅读清单(想读/在读/已读)+ 评分笔记 + 连续阅读天数 + 已读分类分布。由独立模块 `papers/` 提供,详见 [`papers/README.md`](papers/README.md)。
+
+> 首页看板会自动汇总**减脂 / 财富 / 学习 / 论文**等进展卡（趋势体重·进度条、净资产·目标达成%、知识点掌握%、论文已读%·连续阅读），打开一屏看到所有进展，给自己持续的信心与动力。
 
 > 💡 上述核心模块共用 `core/`（共享日期工具 `date.js` + 带版本迁移的存储 `store.js` + 设计令牌/UI 基元 `ui.jsx`），详见 [`core/README.md`](core/README.md)。
 
@@ -117,6 +120,11 @@ g-lab/
 │   ├── calc.js              #   纯函数（EMA趋势/Mifflin/自适应TDEE/缺口/体成分），可单测
 │   ├── CutPlanner.jsx       #   React 组件（英雄进度+SVG趋势图+缺口柱+每日记录），复用 core/ui
 │   ├── bootstrap.jsx / index.html / calc.test.js / README.md
+├── papers/                   # 📄 论文推荐阅读器（arXiv 推荐 + AI 摘要解读 + 进度）
+│   ├── arxiv.js             #   arXiv 客户端（查询构造/Atom 解析纯函数 + CORS 兜底 fetch），可单测
+│   ├── calc.js              #   纯函数（阅读进度/连续/分类/AI prompt 构造），可单测
+│   ├── PapersReader.jsx     #   React 组件（推荐 feed/阅读清单/AI 总结弹窗），复用 core/ui + learning/ai
+│   ├── arxiv.test.js / calc.test.js / bootstrap.jsx / index.html / README.md
 ├── learning/                 # 📚 AI 学习计划站模块
 │   ├── calc.js              #   纯函数（间隔复习/进度/连续天数/活跃度/AI 解析/分享码），可单测
 │   ├── templates.js         #   内置学习计划模板库（通用 + AI/ML 示例）
@@ -156,7 +164,7 @@ g-lab/
 │   └── README.md            #   一次性 OAuth 配置 + 安全说明
 ├── dist/                     # 打包产物（提交入库，Pages 直接部署）
 │   ├── app.js               #   主应用 bundle（含 React）
-│   ├── schedule.js / goals.js / habits.js / cut.js  # 核心模块独立页 bundle
+│   ├── schedule.js / goals.js / habits.js / cut.js / papers.js  # 核心模块独立页 bundle
 │   ├── learning.js          #   学习站 bundle（含 React）
 │   ├── fitness.js           #   健身 bundle（含 React）
 │   └── savings.js           #   财富规划器 bundle（含 React）
@@ -173,7 +181,7 @@ python3 -m http.server 8000
 # 浏览器打开 http://localhost:8000/
 ```
 
-部署到 GitHub Pages 后直接访问站点首页；各模块也有独立演示页：日程 `/schedule/`、目标 `/goals/`、习惯 `/habits/`、减脂 `/cut/`、学习站 `/learning/`、健身 `/fitness/`、项目规划 `/project/`、财富规划器 `/savings/`。
+部署到 GitHub Pages 后直接访问站点首页；各模块也有独立演示页：日程 `/schedule/`、目标 `/goals/`、习惯 `/habits/`、减脂 `/cut/`、论文 `/papers/`、学习站 `/learning/`、健身 `/fitness/`、项目规划 `/project/`、财富规划器 `/savings/`。
 
 ### 🔧 修改源码后重新打包
 
@@ -181,7 +189,7 @@ python3 -m http.server 8000
 
 ```bash
 npm install --no-save esbuild react@18.3.1 react-dom@18.3.1
-node scripts/build.mjs        # 产出 dist/{app,learning,fitness,project,savings,schedule,goals,habits,cut}.js
+node scripts/build.mjs        # 产出 dist/{app,learning,fitness,project,savings,schedule,goals,habits,cut,papers}.js
 ```
 
 ## 🧪 测试
@@ -199,6 +207,7 @@ cd goals    && node --test    # 目标进度/达成/截止状态/排序（11 个
 cd habits   && node --test    # 连续打卡/最长/完成率/热力图/健身联动（15 个用例）
 cd schedule && node --test    # 日/周分组/今日分桶/逾期统计（5 个用例）
 cd cut      && node --test    # BMR/趋势体重EMA/自适应TDEE/缺口/投影/体成分（16 个用例）
+cd papers   && node --test    # arXiv 查询构造/Atom 解析 + 阅读进度/连续/分类/AI prompt（18 个用例）
 ```
 
 ## 📂 数据存储与备份
@@ -216,6 +225,7 @@ cd cut      && node --test    # BMR/趋势体重EMA/自适应TDEE/缺口/投影/
 - `goals-planner` — 目标进度（目标 / 子任务 / 数值指标），结构带版本号 `v`
 - `habits-planner` — 习惯打卡（习惯定义 / 打卡记录），结构带版本号 `v`
 - `cut-planner` — 减脂计划（档案 + 每日体重/热量记录），结构带版本号 `v`
+- `papers-planner` — 论文阅读器（订阅设置 + 阅读清单/进度/AI总结），结构带版本号 `v`
 - `sync-client-id` / `sync-auto` / `sync-sig` / `sync-filesigs` — 云同步的本机配置（Client ID / 自动开关 / 内容签名）；**仅本机，不纳入备份与同步**
 
 > 日常核心三块（日程/目标/习惯）的数据结构带版本号 `v`，经 `core/store.js` 的 `migrate` 做向后兼容迁移；新增字段不会破坏旧数据。

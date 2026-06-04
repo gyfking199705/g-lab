@@ -25,6 +25,7 @@ import { summary as cutSummary } from '../cut/calc.js';
 import { financeSummary } from '../savings/calc.js';
 import { overallStats as learningStats, computeStreak as learningStreak } from '../learning/calc.js';
 import { formatMoney } from '../savings/calc.js';
+import { summary as papersSummary } from '../papers/calc.js';
 
 const SCHEDULE_KEY = 'schedule-planner';
 const GOALS_KEY = 'goals-planner';
@@ -33,6 +34,7 @@ const FITNESS_KEY = 'fitness-planner';
 const CUT_KEY = 'cut-planner';
 const SAVINGS_KEY = 'savings-planner';
 const LEARNING_KEY = 'learning-planner';
+const PAPERS_KEY = 'papers-planner';
 
 function greeting() {
   const h = new Date().getHours();
@@ -69,6 +71,11 @@ export default function Dashboard({ onNavigate, onChange }) {
     if (!st.total) return null;
     return { ...st, streak: learningStreak(d.sessions || [], today) };
   }, [tick, today]);
+  const papers = useMemo(() => {
+    const d = readModule(PAPERS_KEY);
+    if (!d || !(d.items || []).length) return null;
+    return papersSummary(d.items, today);
+  }, [tick, today]);
 
   const refresh = () => { setTick((t) => t + 1); if (onChange) onChange(); };
 
@@ -83,7 +90,7 @@ export default function Dashboard({ onNavigate, onChange }) {
   const toggleHabit = (h) => writeHabits(toggleCheck(habitsData.checkins || {}, h.id, today));
   const bumpHabit = (h, d) => writeHabits(bumpCount(habitsData.checkins || {}, h.id, today, d));
 
-  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || finance || learn;
+  const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || finance || learn || papers;
 
   return (
     <div className="gx-root">
@@ -256,6 +263,26 @@ export default function Dashboard({ onNavigate, onChange }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
                 <span>学习中 {learn.learning}</span>
                 <span>未开始 {learn.todo}</span>
+              </div>
+            </div>
+          )}
+
+          {/* 论文阅读 */}
+          {papers && (
+            <div className="gx-card">
+              <div className="gx-sechead">
+                <h3 style={{ cursor: 'pointer' }} onClick={() => onNavigate('papers')}>📄 论文阅读</h3>
+                <span className="gx-sub">已读 {papers.done}/{papers.total}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--accent-2)' }}>{papers.progressPct}%</span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>清单读完</span>
+                {papers.streak > 0 && <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--accent-2)' }}>🔥 {papers.streak} 天</span>}
+              </div>
+              <Progress pct={papers.progressPct} good={papers.progressPct >= 100} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                <span>在读 {papers.reading} · 想读 {papers.want}</span>
+                <span>近 7 天读完 {papers.thisWeek}</span>
               </div>
             </div>
           )}

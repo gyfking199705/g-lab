@@ -1,0 +1,8 @@
+{
+  "name": "papers-reader",
+  "version": "1.0.0",
+  "description": "论文推荐阅读器：arXiv 订阅推荐 + AI 摘要解读 + 阅读进度（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": { "test": "node --test" }
+}

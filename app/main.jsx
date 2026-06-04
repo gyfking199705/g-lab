@@ -19,12 +19,14 @@ import SchedulePlanner from '../schedule/SchedulePlanner.jsx';
 import GoalsPlanner from '../goals/GoalsPlanner.jsx';
 import HabitsPlanner from '../habits/HabitsPlanner.jsx';
 import CutPlanner from '../cut/CutPlanner.jsx';
+import PapersReader from '../papers/PapersReader.jsx';
 import { readModule } from '../core/store.js';
 import { todayStr } from '../core/date.js';
 import { overdueCount, todayView } from '../schedule/calc.js';
 import { overallStats } from '../goals/calc.js';
 import { todayBoard, fitnessWorkoutDates } from '../habits/calc.js';
 import { summary as cutSummary } from '../cut/calc.js';
+import { statusCounts as papersCounts } from '../papers/calc.js';
 import { gatherBackup, extractModules, applyBackup, signatureOf, perKeySig, filesToModules, fileForKey, buildReadme, SYNC_FOLDER, READMEFILE } from '../sync/backup.js';
 import { requestToken, findOrCreateFolder, listChildren, downloadText, uploadFile } from '../sync/drive.js';
 
@@ -50,6 +52,7 @@ const NAV_ITEMS = [
   { id: 'goals', icon: '🎯', label: '目标进度', kind: 'goals', group: 'core' },
   { id: 'habits', icon: '🔥', label: '习惯打卡', kind: 'habits', group: 'core' },
   { id: 'cut', icon: '📉', label: '减脂计划', kind: 'cut', group: 'core' },
+  { id: 'papers', icon: '📄', label: '论文阅读', kind: 'papers', group: 'core' },
   { id: 'personal', icon: '📝', label: '个人规划', kind: 'task', group: 'more' },
   { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning', group: 'more' },
   { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness', group: 'more' },
@@ -181,6 +184,16 @@ function readCutBadge() {
   return s ? `${s.progressPct}%` : null;
 }
 
+/* 论文徽章：在读篇数（无则想读篇数）。 */
+function readPapersBadge() {
+  const d = readModule('papers-planner');
+  if (!d || !(d.items || []).length) return null;
+  const c = papersCounts(d.items);
+  if (c.reading) return `${c.reading} 在读`;
+  if (c.want) return `${c.want} 想读`;
+  return c.done ? `${c.done} 已读` : null;
+}
+
 function badgeFor(kind, id) {
   switch (kind) {
     case 'task': return readCount(`planning_${id}`);
@@ -191,6 +204,7 @@ function badgeFor(kind, id) {
     case 'goals': return readGoalsBadge();
     case 'habits': return readHabitsBadge();
     case 'cut': return readCutBadge();
+    case 'papers': return readPapersBadge();
     default: return null;
   }
 }
@@ -261,6 +275,8 @@ export default function App() {
             <HabitsPlanner storageKey="habits-planner" onChange={bump} />
           ) : active === 'cut' ? (
             <CutPlanner storageKey="cut-planner" onChange={bump} />
+          ) : active === 'papers' ? (
+            <PapersReader storageKey="papers-planner" onChange={bump} />
           ) : active === 'wealth' ? (
             <WealthSection />
           ) : active === 'learning' ? (
