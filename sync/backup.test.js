@@ -29,7 +29,7 @@ function memStore(init = {}) {
 test('BACKUP_KEYS：不含含密键，含各模块数据键', () => {
   assert.ok(!BACKUP_KEYS.includes('learning-ai')); // AI Key 不入备份
   assert.ok(!BACKUP_KEYS.includes('sync-client-id'));
-  for (const k of ['learning-planner', 'fitness-planner', 'savings-planner', 'stocks-watch']) {
+  for (const k of ['learning-planner', 'fitness-planner', 'savings-planner', 'stocks-watch', 'schedule-planner', 'goals-planner', 'habits-planner']) {
     assert.ok(BACKUP_KEYS.includes(k), `应包含 ${k}`);
   }
   assert.equal(SYNC_FILENAME, 'g-lab-sync.json');

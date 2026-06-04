@@ -11,6 +11,9 @@
  *   dist/learning.js —— AI 学习计划站独立页（learning/index.html 加载）
  *   dist/fitness.js  —— 健身训练规划独立页（fitness/index.html 加载）
  *   dist/project.js  —— 项目规划独立页（project/index.html 加载）
+ *   dist/schedule.js —— 日程安排独立页（schedule/index.html 加载）
+ *   dist/goals.js    —— 目标进度独立页（goals/index.html 加载）
+ *   dist/habits.js   —— 习惯打卡独立页（habits/index.html 加载）
  */
 import { build } from 'esbuild';
 
@@ -30,5 +33,8 @@ await build({ ...common, entryPoints: ['savings/bootstrap.jsx'], outfile: 'dist/
 await build({ ...common, entryPoints: ['learning/bootstrap.jsx'], outfile: 'dist/learning.js' });
 await build({ ...common, entryPoints: ['fitness/bootstrap.jsx'], outfile: 'dist/fitness.js' });
 await build({ ...common, entryPoints: ['project/bootstrap.jsx'], outfile: 'dist/project.js' });
+await build({ ...common, entryPoints: ['schedule/bootstrap.jsx'], outfile: 'dist/schedule.js' });
+await build({ ...common, entryPoints: ['goals/bootstrap.jsx'], outfile: 'dist/goals.js' });
+await build({ ...common, entryPoints: ['habits/bootstrap.jsx'], outfile: 'dist/habits.js' });
 
-console.log('✅ 打包完成：dist/app.js, dist/savings.js, dist/learning.js, dist/fitness.js, dist/project.js');
+console.log('✅ 打包完成：dist/{app,savings,learning,fitness,project,schedule,goals,habits}.js');

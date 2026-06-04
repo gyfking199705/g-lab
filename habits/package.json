@@ -1,0 +1,10 @@
+{
+  "name": "habits-planner",
+  "version": "1.0.0",
+  "description": "习惯打卡：连续打卡 streak、热力图回顾、与健身联动（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}

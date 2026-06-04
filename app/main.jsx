@@ -14,6 +14,15 @@ import LearningPlanner from '../learning/LearningPlanner.jsx';
 import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 import ProjectPlanner from '../project/ProjectPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
+import Dashboard from './Dashboard.jsx';
+import SchedulePlanner from '../schedule/SchedulePlanner.jsx';
+import GoalsPlanner from '../goals/GoalsPlanner.jsx';
+import HabitsPlanner from '../habits/HabitsPlanner.jsx';
+import { readModule } from '../core/store.js';
+import { todayStr } from '../core/date.js';
+import { overdueCount, todayView } from '../schedule/calc.js';
+import { overallStats } from '../goals/calc.js';
+import { todayBoard, fitnessWorkoutDates } from '../habits/calc.js';
 import { gatherBackup, extractModules, applyBackup, signatureOf, perKeySig, filesToModules, fileForKey, buildReadme, SYNC_FOLDER, READMEFILE } from '../sync/backup.js';
 import { requestToken, findOrCreateFolder, listChildren, downloadText, uploadFile } from '../sync/drive.js';
 
@@ -31,14 +40,19 @@ const TASK_MODULES = [
   },
 ];
 
-/* 侧边栏导航顺序（个人 → 学习 → 健身 → 财富 → 股市）。kind 决定渲染哪种主内容。 */
+/* 侧边栏导航：日常核心四块置顶（看板 / 日程 / 目标 / 习惯），其后为领域规划器。
+   kind 决定渲染哪种主内容；group 用于在侧栏分区。 */
 const NAV_ITEMS = [
-  { id: 'personal', icon: '📝', label: '个人规划', kind: 'task' },
-  { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning' },
-  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness' },
-  { id: 'project', icon: '📋', label: '项目规划', kind: 'project' },
-  { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth' },
-  { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks' },
+  { id: 'home', icon: '🏠', label: '首页看板', kind: 'home', group: 'core' },
+  { id: 'schedule', icon: '📅', label: '日程安排', kind: 'schedule', group: 'core' },
+  { id: 'goals', icon: '🎯', label: '目标进度', kind: 'goals', group: 'core' },
+  { id: 'habits', icon: '🔥', label: '习惯打卡', kind: 'habits', group: 'core' },
+  { id: 'personal', icon: '📝', label: '个人规划', kind: 'task', group: 'more' },
+  { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning', group: 'more' },
+  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness', group: 'more' },
+  { id: 'project', icon: '📋', label: '项目规划', kind: 'project', group: 'more' },
+  { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth', group: 'more' },
+  { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks', group: 'more' },
 ];
 
 /* 参与备份 / 云同步的 localStorage 键集中在 ../sync/backup.js（BACKUP_KEYS）；
@@ -128,12 +142,64 @@ function readProjectBadge() {
   }
 }
 
+/* 日程徽章：今天 已完成/总数；有逾期时优先提示逾期数。 */
+function readScheduleBadge() {
+  const items = (readModule('schedule-planner') || {}).items || [];
+  if (!items.length) return null;
+  const od = overdueCount(items);
+  if (od) return `⚠${od}`;
+  const v = todayView(items);
+  const total = v.pending.length + v.done.length;
+  return total ? `${v.done.length}/${total}` : null;
+}
+
+/* 目标徽章：已达成/进行中。 */
+function readGoalsBadge() {
+  const goals = (readModule('goals-planner') || {}).goals || [];
+  const s = overallStats(goals);
+  return s.total ? `${s.achieved}/${s.total}` : null;
+}
+
+/* 习惯徽章：今日 已打卡/总数。 */
+function readHabitsBadge() {
+  const d = readModule('habits-planner') || {};
+  const habits = d.habits || [];
+  if (!habits.filter((h) => !h.archived).length) return null;
+  const fit = fitnessWorkoutDates(readModule('fitness-planner'));
+  const b = todayBoard(habits, d.checkins || {}, todayStr(), fit);
+  return b.total ? `${b.doneCount}/${b.total}` : null;
+}
+
+function badgeFor(kind, id) {
+  switch (kind) {
+    case 'task': return readCount(`planning_${id}`);
+    case 'learning': return readLearningBadge();
+    case 'fitness': return readFitnessBadge();
+    case 'project': return readProjectBadge();
+    case 'schedule': return readScheduleBadge();
+    case 'goals': return readGoalsBadge();
+    case 'habits': return readHabitsBadge();
+    default: return null;
+  }
+}
+
+const GROUP_LABEL = { core: '日常', more: '规划工具' };
+
 /* ============================ 主应用 ============================ */
 export default function App() {
-  const [active, setActive] = useState('personal');
+  const [active, setActive] = useState('home');
   // 用一个计数器在数据变化后刷新侧边栏徽章
   const [tick, setTick] = useState(0);
   const bump = () => setTick((t) => t + 1);
+  const go = (id) => { setActive(id); bump(); };
+
+  // 按 group 分区渲染导航
+  const groups = [];
+  for (const m of NAV_ITEMS) {
+    let g = groups.find((x) => x.id === m.group);
+    if (!g) { g = { id: m.group, items: [] }; groups.push(g); }
+    g.items.push(m);
+  }
 
   return (
     <div className="app-shell">
@@ -143,30 +209,26 @@ export default function App() {
           <div className="app-brand-sub">Personal Growth Planner</div>
         </div>
         <nav className="app-nav">
-          {NAV_ITEMS.map((m) => {
-            // 依赖 tick/active 触发的重渲染刷新徽章
-            const count =
-              m.kind === 'task'
-                ? readCount(`planning_${m.id}`)
-                : m.kind === 'learning'
-                ? readLearningBadge()
-                : m.kind === 'fitness'
-                ? readFitnessBadge()
-                : m.kind === 'project'
-                ? readProjectBadge()
-                : null;
-            return (
-              <button
-                key={m.id}
-                className={`app-navbtn ${active === m.id ? 'active' : ''}`}
-                onClick={() => setActive(m.id)}
-              >
-                <span className="ic">{m.icon}</span>
-                {m.label}
-                {count && <span className="badge">{count}</span>}
-              </button>
-            );
-          })}
+          {groups.map((g) => (
+            <React.Fragment key={g.id}>
+              {GROUP_LABEL[g.id] && <div className="app-navgroup">{GROUP_LABEL[g.id]}</div>}
+              {g.items.map((m) => {
+                // 依赖 tick/active 触发的重渲染刷新徽章
+                const count = badgeFor(m.kind, m.id);
+                return (
+                  <button
+                    key={m.id}
+                    className={`app-navbtn ${active === m.id ? 'active' : ''}`}
+                    onClick={() => setActive(m.id)}
+                  >
+                    <span className="ic">{m.icon}</span>
+                    {m.label}
+                    {count && <span className="badge">{count}</span>}
+                  </button>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </nav>
         <div className="app-foot">
           <ExportButton />
@@ -177,7 +239,15 @@ export default function App() {
 
       <main className="app-main">
         <div className="app-mainpad">
-          {active === 'wealth' ? (
+          {active === 'home' ? (
+            <Dashboard onNavigate={go} onChange={bump} />
+          ) : active === 'schedule' ? (
+            <SchedulePlanner storageKey="schedule-planner" onChange={bump} />
+          ) : active === 'goals' ? (
+            <GoalsPlanner storageKey="goals-planner" onChange={bump} />
+          ) : active === 'habits' ? (
+            <HabitsPlanner storageKey="habits-planner" onChange={bump} />
+          ) : active === 'wealth' ? (
             <WealthSection />
           ) : active === 'learning' ? (
             <LearningPlanner storageKey="learning-planner" onChange={bump} />

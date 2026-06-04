@@ -1,0 +1,10 @@
+{
+  "name": "schedule-planner",
+  "version": "1.0.0",
+  "description": "日程安排：按日/周管理日常事项（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": {
+    "test": "node --test"
+  }
+}
