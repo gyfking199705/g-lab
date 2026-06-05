@@ -9,6 +9,9 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchQuotes, formatPrice, formatChange, formatPct } from './api.js';
+import { buildStockAnalysisMessages } from './analysis.js';
+import { loadAIConfig, AISettingsButton } from '../core/AISettings.jsx';
+import { callChat, isConfigured } from '../learning/ai.js';
 
 const STORE_KEY = 'stocks-watch';
 const CACHE_KEY = 'stocks-watch-cache'; // 最近一次行情快照，重开页面先秒显示
@@ -56,6 +59,22 @@ export default function StockWatch() {
   const [updatedAt, setUpdatedAt] = useState(cached.at ? new Date(cached.at) : null);
   const [showSettings, setShowSettings] = useState(false);
   const [input, setInput] = useState('');
+  const [ai, setAi] = useState(null); // { loading, text, error }
+
+  const analyze = async () => {
+    const cfgAI = loadAIConfig();
+    if (!isConfigured(cfgAI)) { setAi({ error: '尚未配置 AI。点右上「✨ 配置 AI」填入你自己的 Key（仅存本地）。' }); return; }
+    const valid = (quotes || []).filter((q) => q && !q.error);
+    if (!valid.length) { setAi({ error: '还没有有效行情，先添加自选股并刷新。' }); return; }
+    setAi({ loading: true });
+    try {
+      const { system, user } = buildStockAnalysisMessages(valid);
+      const text = await callChat({ config: cfgAI, system, user, maxTokens: 1500 });
+      setAi({ text });
+    } catch (e) {
+      setAi({ error: e.message || 'AI 调用失败' });
+    }
+  };
 
   // 持久化配置
   useEffect(() => {
@@ -123,6 +142,8 @@ export default function StockWatch() {
           <p className="sw-sub">自选股实时观测 · 数据由浏览器直连行情 API（无后端）</p>
         </div>
         <div className="sw-head-acts">
+          <AISettingsButton />
+          <button className="sw-btn" onClick={analyze} disabled={loading} title="用你的 AI 分析自选股" style={{ marginRight: 4 }}>🤖 AI 分析</button>
           <button className="sw-icon-btn" onClick={refresh} disabled={loading} title="刷新">
             {loading ? '刷新中…' : '↻ 刷新'}
           </button>
@@ -274,6 +295,21 @@ export default function StockWatch() {
         ⚠️ 行情仅供观测参考，可能延迟或不准确，<strong>不构成任何投资建议</strong>。
         GitHub Pages 为纯静态托管、无后端，数据由你的浏览器直接向第三方 API 获取。
       </p>
+
+      {ai && (
+        <div className="sw-modal-bg" onClick={() => setAi(null)}>
+          <div className="sw-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sw-modal-head">
+              <strong>🤖 AI 股票分析</strong>
+              <button className="sw-icon-btn" onClick={() => setAi(null)}>✕</button>
+            </div>
+            {ai.loading && <div className="sw-modal-body" style={{ color: 'var(--t3)' }}>AI 正在分析你的自选股…</div>}
+            {ai.error && <div className="sw-modal-body" style={{ color: 'var(--danger)' }}>{ai.error}</div>}
+            {ai.text && <div className="sw-modal-body sw-ai-text">{ai.text}</div>}
+            <div className="sw-modal-foot">⚠️ AI 基于有限快照数据的客观观察，可能有误，<strong>非投资建议</strong>。</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -398,6 +434,14 @@ const CSS = `
 .sw-demo-tag{color:var(--accent-2);background:var(--accent-soft);border-radius:999px;padding:2px 9px;}
 .sw-disclaimer{margin-top:12px;font-size:11px;color:var(--t3);border:1px solid var(--bd-soft);border-radius:11px;padding:12px 14px;line-height:1.65;}
 .sw-disclaimer strong{color:var(--t2);}
+.sw-modal-bg{position:fixed;inset:0;background:rgba(38,36,31,.32);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
+.sw-modal{background:var(--surface);border:1px solid var(--bd);border-radius:16px;max-width:600px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.sw-modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--bd-soft);font-size:15px;}
+.sw-modal-body{padding:16px 18px;overflow:auto;font-size:13.5px;line-height:1.75;}
+.sw-ai-text{white-space:pre-wrap;color:var(--t1);}
+.sw-modal-foot{padding:10px 18px;border-top:1px solid var(--bd-soft);font-size:11px;color:var(--t3);}
+.sw-btn{padding:7px 13px;border:1px solid var(--bd);background:var(--surface);border-radius:9px;font-size:13px;cursor:pointer;color:var(--t1);font-family:var(--sans);transition:.15s;}
+.sw-btn:hover{border-color:var(--bd-2);background:var(--surface-2);}
 
 @media(max-width:480px){
   .sw-grid{grid-template-columns:1fr 1fr;}

@@ -68,9 +68,11 @@ test('buildAnalytics finance：注入 get', () => {
 
 test('buildAnalytics 无数据返回 null；hasBoard', () => {
   assert.equal(buildAnalytics('wealth', () => null), null);
-  assert.equal(buildAnalytics('stocks', () => ({})), null); // 无专属
+  assert.equal(buildAnalytics('stocks', () => null), null); // 无数据
+  assert.equal(buildAnalytics('personal', () => ({})), null); // 无专属大盘
   assert.equal(hasBoard('cut'), true);
-  assert.equal(hasBoard('stocks'), false);
+  assert.equal(hasBoard('stocks'), true);
+  assert.equal(hasBoard('personal'), false);
 });
 
 import { boardToText, boardToSVG } from './analytics.js';
@@ -91,4 +93,45 @@ test('boardToSVG 生成合法 svg 字符串', () => {
   assert.match(svg, /<\/svg>$/);
   assert.match(svg, /减脂大盘/);
   assert.ok(svg.includes('82.9'));
+});
+
+import { scheduleDailyDone, goalsCumulativeDone } from './analytics.js';
+
+test('scheduleDailyDone 每日完成数', () => {
+  const items = [
+    { done: true, doneAt: '2026-06-10T09:00' },
+    { done: true, doneAt: '2026-06-10T10:00' },
+    { done: true, doneAt: '2026-06-09T10:00' },
+    { done: false },
+  ];
+  const s = scheduleDailyDone(items, 2, '2026-06-10');
+  assert.equal(s.length, 2);
+  assert.equal(s[0].done, 1); // 6/9
+  assert.equal(s[1].done, 2); // 6/10
+});
+
+test('goalsCumulativeDone 累计完成子任务', () => {
+  const goals = [{ subtasks: [
+    { done: true, doneAt: '2026-06-08T0' },
+    { done: true, doneAt: '2026-06-10T0' },
+    { done: false },
+  ] }];
+  const c = goalsCumulativeDone(goals, 3, '2026-06-10'); // 6/8,6/9,6/10
+  assert.equal(c[0].cum, 1); // 6/8
+  assert.equal(c[2].cum, 2); // 6/10
+});
+
+test('buildAnalytics schedule / stocks 有数据出板', () => {
+  const M = {
+    'schedule-planner': { items: [{ id: 'a', date: '2026-06-10', done: true, doneAt: '2026-06-10T0' }] },
+    'stocks-watch': { symbols: ['NVDA', 'AAPL'] },
+    'stocks-watch-cache': { quotes: [{ symbol: 'NVDA', price: 120, changePct: 2, series: [110, 120] }, { symbol: 'AAPL', price: 200, changePct: -1, series: [205, 200] }] },
+  };
+  const sb = buildAnalytics('schedule', (k) => M[k] || null, '2026-06-10');
+  assert.equal(sb.title, '日程大盘');
+  assert.ok(sb.charts.length >= 1);
+  const st = buildAnalytics('stocks', (k) => M[k] || null, '2026-06-10');
+  assert.equal(st.title, '股市大盘');
+  assert.ok(st.kpis.length >= 3);
+  assert.equal(hasBoard('stocks'), true);
 });

@@ -18,6 +18,8 @@ import { overallStats as goalsOverall, sortGoalsForBoard, goalPercent, daysLeft,
 import { overallStats as learningStats, computeStreak as learnStreak, studyMinutes, activitySeries as learnActivity } from '../learning/calc.js';
 import { workoutsThisWeek, weekStreak, totalVolume, activitySeries as fitActivity, formatVolume } from '../fitness/calc.js';
 import { taskStats, totalFocusMinutes, focusStreak, lastNDays as projLastDays } from '../project/calc.js';
+import { todayView, overdueCount } from '../schedule/calc.js';
+import { portfolioStats, seriesChangePct } from '../stocks/analysis.js';
 
 /* ----------------------------- 时间序列 / 预测辅助（纯，已测） ----------------------------- */
 
@@ -66,6 +68,30 @@ export function papersDailyDone(items = [], n = 30, today = todayStr()) {
   const from = addDays(today, -(n - 1));
   for (const it of items) if (it.status === 'done' && it.doneAt && it.doneAt.slice(0, 10) < from) cum += 1;
   return lastNDays(n, today).map((date) => { cum += doneByDate[date] || 0; return { date, done: doneByDate[date] || 0, cum }; });
+}
+
+/** 最近 n 天每日「完成的日程数」（按 doneAt）。 */
+export function scheduleDailyDone(items = [], n = 30, today = todayStr()) {
+  const byDate = {};
+  for (const it of items) if (it && it.done && it.doneAt) {
+    const d = it.doneAt.slice(0, 10);
+    byDate[d] = (byDate[d] || 0) + 1;
+  }
+  return lastNDays(n, today).map((date) => ({ date, done: byDate[date] || 0 }));
+}
+
+/** 最近 n 天「累计完成的目标子任务数」（按子任务 doneAt）。 */
+export function goalsCumulativeDone(goals = [], n = 30, today = todayStr()) {
+  const byDate = {};
+  for (const g of goals) for (const s of (g.subtasks || [])) {
+    if (s.done && s.doneAt) { const d = s.doneAt.slice(0, 10); byDate[d] = (byDate[d] || 0) + 1; }
+  }
+  const from = addDays(today, -(n - 1));
+  let cum = 0;
+  for (const g of goals) for (const s of (g.subtasks || [])) {
+    if (s.done && s.doneAt && s.doneAt.slice(0, 10) < from) cum += 1;
+  }
+  return lastNDays(n, today).map((date) => { cum += byDate[date] || 0; return { date, cum }; });
 }
 
 /* ----------------------------- 通用小工具 ----------------------------- */
@@ -302,12 +328,15 @@ function papersBoard(get, _today, opts = {}) {
   };
 }
 
-function goalsBoard(get) {
+function goalsBoard(get, _today, opts = {}) {
   const d = get('goals-planner');
-  const o = goalsOverall((d || {}).goals || []);
+  const goals = (d || {}).goals || [];
+  const o = goalsOverall(goals);
   if (!o.total) return null;
   const today = todayStr();
-  const sorted = sortGoalsForBoard((d || {}).goals || [], today);
+  const days = opts.days || 30;
+  const cum = goalsCumulativeDone(goals, days, today).map((x) => x.cum);
+  const sorted = sortGoalsForBoard(goals, today);
   const overdue = sorted.filter((g) => !isAchieved(g) && g.deadline && daysLeft(g, today) < 0).length;
   const soon = sorted.filter((g) => !isAchieved(g) && g.deadline && daysLeft(g, today) >= 0 && daysLeft(g, today) <= 14).length;
   const next = sorted.find((g) => !isAchieved(g));
@@ -320,7 +349,10 @@ function goalsBoard(get) {
       kpi('平均进度', o.avgPercent + '%', ''),
       kpi('逾期 / 临近', `${overdue} / ${soon}`, '14 天内', overdue ? 'bad' : undefined),
     ],
-    charts: [{ title: '各目标进度', kind: 'goalbars', goals: sorted.slice(0, 8).map((g) => ({ title: g.title, pct: goalPercent(g), done: isAchieved(g) })) }],
+    charts: [
+      { title: `近 ${days} 天累计完成子任务`, kind: 'line', values: cum, stroke: 'var(--accent)', captionLeft: '累计完成数', captionRight: `共 ${cum[cum.length - 1] || 0}` },
+      { title: '各目标进度', kind: 'goalbars', goals: sorted.slice(0, 8).map((g) => ({ title: g.title, pct: goalPercent(g), done: isAchieved(g) })) },
+    ],
     forecast: { text: next ? `🔮 建议优先推进：「${next.title}」（当前 ${goalPercent(next)}%${next.deadline ? `，${daysLeft(next, today) < 0 ? '已逾期' : daysLeft(next, today) + ' 天后截止'}` : ''}）` : '🔮 目标都达成了，定个新目标吧！' },
     insights: [],
   };
@@ -410,10 +442,67 @@ function projectBoard(get, _today, opts = {}) {
   };
 }
 
+function scheduleBoard(get, _today, opts = {}) {
+  const d = get('schedule-planner');
+  const items = (d || {}).items || [];
+  if (!items.length) return null;
+  const today = todayStr();
+  const days = opts.days || 30;
+  const v = todayView(items, today);
+  const todayTotal = v.pending.length + v.done.length;
+  const od = overdueCount(items, today);
+  const series = scheduleDailyDone(items, days, today).map((x) => x.done);
+  const doneTotal = items.filter((it) => it.done).length;
+  const recent = series.reduce((s, x) => s + x, 0);
+  return {
+    icon: '📅', title: '日程大盘', stroke: 'var(--accent)',
+    hero: { value: `${v.done.length}/${todayTotal}`, caption: '今日完成', delta: od ? `${od} 逾期` : '无逾期', deltaTone: od ? 'bad' : 'good' },
+    kpis: [
+      kpi('今日完成', `${v.done.length}/${todayTotal}`, '', 'accent'),
+      kpi('逾期未完成', od + '', '', od ? 'bad' : 'good'),
+      kpi(`近 ${days} 天完成`, recent + ' 件', ''),
+      kpi('累计完成', doneTotal + ' 件', ''),
+    ],
+    charts: [{ title: `近 ${days} 天每日完成`, kind: 'bars', values: series, single: 'var(--accent)', captionLeft: '每日完成的日程数' }],
+    forecast: { text: od ? `🔮 有 ${od} 项逾期，先清掉逾期再推进今天的安排` : '🔮 节奏不错，保持每天清空当日清单' },
+    insights: [],
+  };
+}
+
+function stocksBoard(get) {
+  const cache = get('stocks-watch-cache') || {};
+  const cfg = get('stocks-watch') || {};
+  const quotes = cache.quotes || [];
+  const symbols = cfg.symbols || [];
+  if (!quotes.length && !symbols.length) return null;
+  const ps = portfolioStats(quotes);
+  // 取涨幅最强的一只的走势作为时间维度展示
+  const withSeries = quotes.filter((q) => q && Array.isArray(q.series) && q.series.length > 1);
+  const pick = withSeries.sort((a, b) => (b.changePct || 0) - (a.changePct || 0))[0];
+  const charts = [];
+  if (pick) {
+    charts.push({ title: `${pick.symbol} 近期走势`, kind: 'line', values: pick.series, stroke: 'var(--accent)', captionLeft: '最近一次抓取的价格序列', captionRight: `${pick.changePct >= 0 ? '+' : ''}${(pick.changePct || 0).toFixed(2)}%` });
+  }
+  return {
+    icon: '📈', title: '股市大盘', stroke: 'var(--accent)',
+    hero: { value: symbols.length + '', unit: '只', caption: '自选股', delta: ps.count ? `均 ${ps.avgChangePct >= 0 ? '+' : ''}${ps.avgChangePct}%` : '未刷新', deltaTone: ps.avgChangePct >= 0 ? 'good' : 'bad' },
+    kpis: [
+      kpi('自选数', symbols.length + '', '', 'accent'),
+      kpi('上涨 / 下跌', `${ps.gainers} / ${ps.losers}`, '上次快照'),
+      kpi('最强', ps.top ? `${ps.top.symbol} ${ps.top.changePct >= 0 ? '+' : ''}${(ps.top.changePct || 0).toFixed(1)}%` : '—', '', 'good'),
+      kpi('最弱', ps.bottom ? `${ps.bottom.symbol} ${(ps.bottom.changePct || 0).toFixed(1)}%` : '—', '', 'bad'),
+    ],
+    charts,
+    forecast: { text: '🔮 进入「股市观测」点「🤖 AI 分析」，用你自己的 AI 解读组合（非投资建议）' },
+    insights: ps.count ? [] : ['进入模块刷新行情后，这里会显示涨跌分布与走势。'],
+    disclaimer: '行情可能延迟，数据来自上次抓取的本地快照，非投资建议。',
+  };
+}
+
 const BUILDERS = {
   wealth: financeBoard, cut: cutBoard, ledger: ledgerBoard, habits: habitsBoard,
   papers: papersBoard, goals: goalsBoard, learning: learningBoard,
-  fitness: fitnessBoard, project: projectBoard,
+  fitness: fitnessBoard, project: projectBoard, schedule: scheduleBoard, stocks: stocksBoard,
 };
 
 /** 模块是否有专属大盘。 */

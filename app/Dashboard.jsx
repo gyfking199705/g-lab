@@ -169,7 +169,7 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange }) {
 
                 {(scheduleTotal > 0 || sView.overdue.length > 0) && (
                   <div className="gx-card db-col">
-                    <div className="gx-sechead"><h3 className="db-h" onClick={() => onNavigate('schedule')}>📅 今日日程</h3><span className="gx-sub">{sView.done.length}/{scheduleTotal}</span></div>
+                    <div className="gx-sechead"><h3 className="db-h" onClick={() => open('schedule')}>📅 今日日程</h3><span className="gx-sub">{sView.done.length}/{scheduleTotal}</span></div>
                     {sView.overdue.length > 0 && <div className="gx-tag bad" style={{ marginBottom: 8 }}>⚠ {sView.overdue.length} 项逾期未完成</div>}
                     {scheduleTotal === 0 ? (
                       <Empty icon="🗓️" title="今天还没有安排" hint="去日程页添加" />
@@ -256,7 +256,7 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange }) {
                     footLeft={`待办 ${project.todo}`} footRight={`进行中 ${project.doing}`} />
                 )}
                 {stocks && (
-                  <ProgressCard icon="📈" title="股市观测" onNav={() => onNavigate('stocks')} sub="自选股"
+                  <ProgressCard icon="📈" title="股市观测" onNav={() => open('stocks')} sub="自选股"
                     big={stocks.count} bigUnit="只"
                     pct={null}
                     footLeft="点开查看行情" footRight="" />

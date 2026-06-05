@@ -82,7 +82,11 @@
   - 演示数据：确定性合成，离线兜底
 - **数据落点**：实时行情活在浏览器内存（React state），最近一次快照缓存到 localStorage（重开先秒显示）；自选清单/设置存 localStorage。**GitHub Pages 无后端、无数据库**，数据由浏览器直连 API；代理也只是无状态中转、不存数据。
 
-> 💡 由 `stocks/StockWatch.jsx`（UI）+ `stocks/api.js`（数据适配层）+ `stocks/proxy/worker.js`（可选代理）提供。
+- **🤖 AI 分析**：点「AI 分析」用你自己的 AI（全局 BYOK 配置）解读自选股的涨跌分布、个股表现与风险（纯函数 prompt 构造见 `stocks/analysis.js`，**非投资建议**）。
+
+> 💡 由 `stocks/StockWatch.jsx`（UI）+ `stocks/api.js`（数据适配层）+ `stocks/analysis.js`（AI 分析纯逻辑）+ `stocks/proxy/worker.js`（可选代理）提供。
+
+> 🗂 **首页看板大盘**：每个模块（含日程/股市/目标等）都可从看板卡片点进**大盘**——统一的炫酷分析视图，含**随时间变化的趋势图**与**预测**；右上可「📤 分享 / 🖼 导出」快照。引擎 `app/analytics.js`、渲染 `app/BigBoard.jsx`。
 
 ## 🏗️ 项目结构
 
