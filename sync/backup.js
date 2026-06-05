@@ -25,6 +25,7 @@ export const BACKUP_KEYS = [
   'papers-planner', // 论文阅读器（订阅设置 + 阅读清单/进度/AI总结）
   'ledger-planner', // 记账（收支流水 + 预算）
   'compare-planner', // 比价小助手（比价项）
+  'salary-planner', // 薪资到手评估（输入参数）
 ];
 
 /** 云端同步文件名（存放在 Drive 的 appDataFolder 隐藏目录内）。 */
@@ -127,6 +128,7 @@ export const FILE_MAP = [
   { key: 'papers-planner', file: '论文阅读.json' },
   { key: 'ledger-planner', file: '记账.json' },
   { key: 'compare-planner', file: '比价助手.json' },
+  { key: 'salary-planner', file: '薪资到手.json' },
 ];
 
 export function fileForKey(key) {

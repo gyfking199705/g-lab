@@ -1,0 +1,8 @@
+{
+  "name": "salary-estimator",
+  "version": "1.0.0",
+  "description": "薪资到手评估：五险一金 + 个税累计预扣预缴 + 年终奖单独计税（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": { "test": "node --test" }
+}

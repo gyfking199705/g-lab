@@ -24,6 +24,7 @@ import CutPlanner from '../cut/CutPlanner.jsx';
 import PapersReader from '../papers/PapersReader.jsx';
 import LedgerPlanner from '../ledger/LedgerPlanner.jsx';
 import CompareTool from '../compare/CompareTool.jsx';
+import SalaryEstimator from '../salary/SalaryEstimator.jsx';
 import { readModule } from '../core/store.js';
 import { AISettingsButton } from '../core/AISettings.jsx';
 import { seedDemo } from './seed.js';
@@ -67,6 +68,7 @@ const NAV_ITEMS = [
   { id: 'project', icon: '📋', label: '项目规划', kind: 'project', group: 'more' },
   { id: 'ledger', icon: '🧾', label: '记账', kind: 'ledger', group: 'more' },
   { id: 'compare', icon: '🧮', label: '比价助手', kind: 'compare', group: 'more' },
+  { id: 'salary', icon: '💵', label: '薪资到手', kind: 'salary', group: 'more' },
   { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth', group: 'more' },
   { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks', group: 'more' },
 ];
@@ -343,6 +345,8 @@ export default function App() {
             <LedgerPlanner storageKey="ledger-planner" onChange={bump} />
           ) : active === 'compare' ? (
             <CompareTool storageKey="compare-planner" onChange={bump} />
+          ) : active === 'salary' ? (
+            <SalaryEstimator storageKey="salary-planner" onChange={bump} />
           ) : active === 'wealth' ? (
             <WealthSection />
           ) : active === 'learning' ? (

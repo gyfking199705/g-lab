@@ -42,6 +42,7 @@ await build({ ...common, entryPoints: ['cut/bootstrap.jsx'], outfile: 'dist/cut.
 await build({ ...common, entryPoints: ['papers/bootstrap.jsx'], outfile: 'dist/papers.js' });
 await build({ ...common, entryPoints: ['ledger/bootstrap.jsx'], outfile: 'dist/ledger.js' });
 await build({ ...common, entryPoints: ['compare/bootstrap.jsx'], outfile: 'dist/compare.js' });
+await build({ ...common, entryPoints: ['salary/bootstrap.jsx'], outfile: 'dist/salary.js' });
 
 /* 缓存破坏：把每个 bundle 的内容哈希写进对应 index.html 的 <script src=...?v=hash>，
    这样内容一变 URL 就变，GitHub Pages / 浏览器一定会加载新版（解决"部署了却看不到变化"）。 */
@@ -54,7 +55,7 @@ function stamp(htmlPath, bundleRef, bundleFile) {
   if (next !== html) writeFileSync(htmlPath, next);
 }
 stamp('index.html', './dist/app.js', 'dist/app.js');
-for (const m of ['savings', 'learning', 'fitness', 'project', 'schedule', 'goals', 'habits', 'cut', 'papers', 'ledger', 'compare']) {
+for (const m of ['savings', 'learning', 'fitness', 'project', 'schedule', 'goals', 'habits', 'cut', 'papers', 'ledger', 'compare', 'salary']) {
   stamp(`${m}/index.html`, `../dist/${m}.js`, `dist/${m}.js`);
 }
 
