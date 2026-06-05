@@ -230,16 +230,52 @@ function badgeFor(kind, id) {
 
 const GROUP_LABEL = { core: '日常', more: '规划工具' };
 
+/* ----------------------------- URL hash 路由（静态托管用 hash 最稳） ----------------------------- */
+const NAV_IDS = new Set(['home', ...NAV_ITEMS.map((m) => m.id)]);
+function parseHash() {
+  let h = (typeof location !== 'undefined' ? location.hash : '') || '';
+  h = h.replace(/^#\/?/, '').trim();
+  if (h.startsWith('board/')) {
+    const id = h.slice(6);
+    return { active: 'home', board: hasBoard(id) ? id : null };
+  }
+  if (h && NAV_IDS.has(h)) return { active: h, board: null };
+  return { active: 'home', board: null };
+}
+function hashFor(active, board) {
+  return board ? `#/board/${board}` : `#/${active}`;
+}
+
 /* ============================ 主应用 ============================ */
 export default function App() {
-  const [active, setActive] = useState('home');
+  const _init = parseHash();
+  const [active, setActive] = useState(_init.active);
+  const [board, setBoard] = useState(_init.board);
   // 用一个计数器在数据变化后刷新侧边栏徽章
   const [tick, setTick] = useState(0);
   const bump = () => setTick((t) => t + 1);
-  const [board, setBoard] = useState(null); // 当前打开的「大盘」模块 id（null=不在大盘）
   const go = (id) => { setActive(id); setBoard(null); bump(); };
   // 看板卡片点击：有专属大盘则打开大盘，否则直接进模块
   const openBoard = (id) => { if (hasBoard(id)) setBoard(id); else go(id); bump(); };
+  const doSeed = () => {
+    if (!confirm('载入示例数据会覆盖当前所有模块数据（体重 85kg 起步的减脂记录、习惯、目标、记账、净资产、论文等）。确定继续吗？')) return;
+    seedDemo();
+    location.reload();
+  };
+
+  // 状态 → URL（用 replaceState 改 hash，不触发 hashchange，避免回环）
+  useEffect(() => {
+    const want = hashFor(active, board);
+    if (typeof location !== 'undefined' && location.hash !== want) {
+      try { history.replaceState(null, '', want); } catch (e) { location.hash = want; }
+    }
+  }, [active, board]);
+  // URL → 状态（用户手动改地址 / 前进后退）
+  useEffect(() => {
+    const onHash = () => { const s = parseHash(); setActive(s.active); setBoard(s.board); };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   // 按 group 分区渲染导航
   const groups = [];
@@ -292,7 +328,7 @@ export default function App() {
           {board ? (
             <BigBoard id={board} get={readModule} onBack={() => setBoard(null)} onEnter={() => go(board)} />
           ) : active === 'home' ? (
-            <Dashboard onNavigate={go} onOpenBoard={openBoard} onChange={bump} />
+            <Dashboard onNavigate={go} onOpenBoard={openBoard} onChange={bump} onSeed={doSeed} />
           ) : active === 'schedule' ? (
             <SchedulePlanner storageKey="schedule-planner" onChange={bump} />
           ) : active === 'goals' ? (

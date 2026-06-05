@@ -42,7 +42,7 @@ function greeting() {
   return '晚上好';
 }
 
-export default function Dashboard({ onNavigate, onOpenBoard, onChange }) {
+export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed }) {
   const open = onOpenBoard || onNavigate;
   const [tick, setTick] = useState(0);
   const today = todayStr();
@@ -89,6 +89,8 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange }) {
   const scheduleTotal = sView.pending.length + sView.done.length;
   const financeShow = finance && (finance.target || finance.latest);
   const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || financeShow || learn || papers || ledger || fitness || project || stocks;
+  // 已有数据的模块数量（少于 3 个时提示载入示例数据，方便预览完整看板）
+  const populated = [(goalsData.goals || []).length, (habitsData.habits || []).length, cut, financeShow, learn, papers, ledger, fitness, project, stocks].filter(Boolean).length;
 
   // chips（仅在有数据时显示）
   const chips = [];
@@ -105,6 +107,13 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange }) {
         <h2>🏠 {greeting()}</h2>
         <p>{fmtDate(today)} · 今天也朝着目标前进一点</p>
       </div>
+
+      {hasAny && populated < 3 && onSeed && (
+        <div className="gx-card" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14, background: 'var(--accent-soft)', borderColor: '#E6C8B9' }}>
+          <span style={{ fontSize: 13, color: 'var(--accent-2)', flex: 1 }}>✨ 想看看完整看板（各模块趋势 + 预测 + 大盘）的效果？一键载入示例数据预览。</span>
+          <button className="gx-btn gx-btn-primary gx-btn-sm" onClick={onSeed}>载入示例数据</button>
+        </div>
+      )}
 
       {!hasAny ? (
         <div className="gx-card">
