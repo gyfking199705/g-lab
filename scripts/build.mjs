@@ -41,6 +41,7 @@ await build({ ...common, entryPoints: ['habits/bootstrap.jsx'], outfile: 'dist/h
 await build({ ...common, entryPoints: ['cut/bootstrap.jsx'], outfile: 'dist/cut.js' });
 await build({ ...common, entryPoints: ['papers/bootstrap.jsx'], outfile: 'dist/papers.js' });
 await build({ ...common, entryPoints: ['ledger/bootstrap.jsx'], outfile: 'dist/ledger.js' });
+await build({ ...common, entryPoints: ['compare/bootstrap.jsx'], outfile: 'dist/compare.js' });
 
 /* 缓存破坏：把每个 bundle 的内容哈希写进对应 index.html 的 <script src=...?v=hash>，
    这样内容一变 URL 就变，GitHub Pages / 浏览器一定会加载新版（解决"部署了却看不到变化"）。 */
@@ -53,8 +54,8 @@ function stamp(htmlPath, bundleRef, bundleFile) {
   if (next !== html) writeFileSync(htmlPath, next);
 }
 stamp('index.html', './dist/app.js', 'dist/app.js');
-for (const m of ['savings', 'learning', 'fitness', 'project', 'schedule', 'goals', 'habits', 'cut', 'papers', 'ledger']) {
+for (const m of ['savings', 'learning', 'fitness', 'project', 'schedule', 'goals', 'habits', 'cut', 'papers', 'ledger', 'compare']) {
   stamp(`${m}/index.html`, `../dist/${m}.js`, `dist/${m}.js`);
 }
 
-console.log('✅ 打包完成 + 已写入缓存破坏版本号：dist/{app,savings,learning,fitness,project,schedule,goals,habits,cut,papers,ledger}.js');
+console.log('✅ 打包完成 + 已写入缓存破坏版本号：dist/{...,ledger,compare}.js');

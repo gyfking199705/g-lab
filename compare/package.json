@@ -1,0 +1,8 @@
+{
+  "name": "compare-tool",
+  "version": "1.0.0",
+  "description": "比价小助手：多规格商品单价归一与比较（纯函数计算 + React 组件）",
+  "type": "module",
+  "main": "calc.js",
+  "scripts": { "test": "node --test" }
+}
