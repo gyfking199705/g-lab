@@ -113,3 +113,11 @@ export function compare(items = []) {
 
   return { group, displayLabel, rows, bestId: best ? best.item.id : null, comparableCount: comparable.length };
 }
+
+/**
+ * 按商品分组比较：每个商品 { id, name, items[] } 各自独立比价。
+ * @returns {Array<{ id, name, result }>} result 即 compare(items) 的结果
+ */
+export function compareProducts(products = []) {
+  return (products || []).map((p) => ({ id: p.id, name: p.name, result: compare(p.items || []) }));
+}

@@ -60,3 +60,23 @@ test('unitOf', () => {
   assert.equal(unitOf('kg').group, 'weight');
   assert.equal(unitOf('zzz'), null);
 });
+
+import { compareProducts } from './calc.js';
+
+test('compareProducts 每个商品独立比价', () => {
+  const products = [
+    { id: 'p1', name: '可乐', items: [
+      { id: 'a', name: '罐', price: 3, size: 330, unit: 'ml', count: 1 },   // 9.09 元/L
+      { id: 'b', name: '大瓶', price: 6, size: 2, unit: 'L', count: 1 },    // 3 元/L ← 最划算
+    ] },
+    { id: 'p2', name: '纸巾', items: [
+      { id: 'c', name: '单包', price: 5, size: 100, unit: 'sheet', count: 1 }, // 0.05/张
+      { id: 'd', name: '整箱', price: 40, size: 100, unit: 'sheet', count: 12 }, // 0.033/张 ← 最划算
+    ] },
+  ];
+  const out = compareProducts(products);
+  assert.equal(out.length, 2);
+  assert.equal(out[0].name, '可乐');
+  assert.equal(out[0].result.bestId, 'b');
+  assert.equal(out[1].result.bestId, 'd');
+});
