@@ -25,6 +25,7 @@ import PapersReader from '../papers/PapersReader.jsx';
 import LedgerPlanner from '../ledger/LedgerPlanner.jsx';
 import { readModule } from '../core/store.js';
 import { AISettingsButton } from '../core/AISettings.jsx';
+import { seedDemo } from './seed.js';
 import { todayStr } from '../core/date.js';
 import { overdueCount, todayView } from '../schedule/calc.js';
 import { overallStats } from '../goals/calc.js';
@@ -277,6 +278,7 @@ export default function App() {
         </nav>
         <div className="app-foot">
           <AISettingsButton compact onSaved={bump} />
+          <SeedButton />
           <ExportButton />
           <ImportButton />
           <CloudSync />
@@ -459,6 +461,20 @@ const setLS = (k, v) => {
     /* 静默 */
   }
 };
+
+function SeedButton() {
+  const onSeed = () => {
+    if (!confirm('载入示例数据会覆盖当前所有模块数据（体重 85kg 起步的减脂记录、习惯、目标、记账、净资产、论文等）。确定继续吗？')) return;
+    seedDemo();
+    alert('已载入示例数据，即将刷新页面。');
+    location.reload();
+  };
+  return (
+    <button className="app-tool" onClick={onSeed} title="一键填充各模块示例数据，便于查看看板与大盘">
+      ✨ 载入示例数据
+    </button>
+  );
+}
 
 function ExportButton() {
   const onExport = () => {
