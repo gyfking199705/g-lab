@@ -10,13 +10,14 @@
  */
 import React, { useMemo, useState } from 'react';
 import { readModule, saveState } from '../core/store.js';
-import { SHARED_CSS, Progress, Empty, Sparkline } from '../core/ui.jsx';
-import { todayStr, fmtDate, fmtMD } from '../core/date.js';
+import { SHARED_CSS, Progress, Empty, LineChart, MiniBars } from '../core/ui.jsx';
+import { buildAnalytics } from './analytics.js';
+import { todayStr, fmtDate } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
-import { sortGoalsForBoard, overallStats as goalsOverall } from '../goals/calc.js';
+import { overallStats as goalsOverall } from '../goals/calc.js';
 import { todayBoard, currentStreak, fitnessWorkoutDates, toggleCheck, bumpCount } from '../habits/calc.js';
-import { summary as cutSummary, trendSeries as cutTrend } from '../cut/calc.js';
-import { financeForecast, formatMoney } from '../savings/calc.js';
+import { summary as cutSummary } from '../cut/calc.js';
+import { financeForecast } from '../savings/calc.js';
 import { overallStats as learningStats, computeStreak as learningStreak } from '../learning/calc.js';
 import { summary as papersSummary } from '../papers/calc.js';
 import { summary as ledgerSummary } from '../ledger/calc.js';
@@ -54,15 +55,9 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
 
   const sView = useMemo(() => todayView(schedule.items || [], today), [tick, today]);
   const hBoard = useMemo(() => todayBoard(habitsData.habits || [], habitsData.checkins || {}, today, fitDates), [tick, today, fitDates]);
-  const goals = useMemo(() => sortGoalsForBoard(goalsData.goals || [], today), [tick, today]);
   const gStats = useMemo(() => goalsOverall(goalsData.goals || []), [tick]);
 
   const cut = useMemo(() => { const d = readModule(CUT_KEY); return d && d.profile ? cutSummary(d.profile, d.logs || [], today) : null; }, [tick, today]);
-  const cutSpark = useMemo(() => {
-    const d = readModule(CUT_KEY);
-    if (!d || !d.profile) return null;
-    return cutTrend(d.logs || []).slice(-20).map((p) => p.trend);
-  }, [tick]);
   const finance = useMemo(() => financeForecast(readModule(SAVINGS_KEY)), [tick]);
   const ledger = useMemo(() => { const d = readModule(LEDGER_KEY); return d && (d.entries || []).length ? ledgerSummary(d.entries, d.budget || 0, today) : null; }, [tick, today]);
   const fitness = useMemo(() => { const d = readModule('fitness-planner'); const w = (d || {}).workouts || []; return w.length ? { week: workoutsThisWeek(w, today), streak: weekStreak(w, today), total: w.length } : null; }, [tick, today]);
@@ -91,6 +86,10 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
   const hasAny = (schedule.items || []).length || (goalsData.goals || []).length || (habitsData.habits || []).length || cut || financeShow || learn || papers || ledger || fitness || project || stocks;
   // 已有数据的模块数量（少于 3 个时提示载入示例数据，方便预览完整看板）
   const populated = [(goalsData.goals || []).length, (habitsData.habits || []).length, cut, financeShow, learn, papers, ledger, fitness, project, stocks].filter(Boolean).length;
+  // 进展卡：统一由大盘引擎驱动（与大盘同源、风格一致）。习惯/日程已在「今日行动」，此处不重复。
+  const boards = useMemo(() => ['wealth', 'cut', 'ledger', 'goals', 'learning', 'papers', 'fitness', 'project', 'stocks']
+    .map((id) => ({ id, a: buildAnalytics(id, readModule, today, { days: 30 }) }))
+    .filter((x) => x.a), [tick, today]);
 
   // chips（仅在有数据时显示）
   const chips = [];
@@ -202,74 +201,14 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
             </>
           )}
 
-          {/* 3) 进展（时间维度 + 趋势预测） */}
-          {(gStats.total || cut || financeShow || learn || papers || ledger) && (
+          {/* 3) 进展 · 趋势（统一「迷你大盘卡」，与大盘同源、风格一致；点卡进大盘） */}
+          {boards.length > 0 && (
             <>
               <div className="db-sectitle">进展 · 趋势</div>
-
-              {/* 理财趋势 + 预测（重点，整行强调） */}
-              {financeShow && <FinanceTrendCard f={finance} onNav={() => open('wealth')} />}
-
-              <div className="db-grid prog">
-                {gStats.total > 0 && (
-                  <ProgressCard icon="🎯" title="目标进度" onNav={() => open('goals')} sub="查看全部 ›"
-                    big={gStats.avgPercent} bigUnit="% 平均"
-                    rightStat={`${gStats.achieved}/${gStats.total} 达成`} rightColor="var(--success)"
-                    pct={gStats.avgPercent} good={gStats.total > 0 && gStats.achieved === gStats.total}
-                    footLeft={goals[0] ? '近期：' + goals[0].title : ''} footRight="" />
-                )}
-                {cut && (
-                  <ProgressCard icon="📉" title="减脂进度" onNav={() => open('cut')} sub={`${cut.startWeight}→${cut.goalWeight}kg`}
-                    big={cut.currentTrend} bigUnit="kg 趋势"
-                    rightStat={`已减 ${cut.lost}kg`} rightColor="var(--success)"
-                    pct={cut.progressPct} good={cut.progressPct >= 100}
-                    series={cutSpark} goal={cut.goalWeight} sparkStroke="var(--accent)"
-                    footLeft={cut.weeklyRate != null ? `本周 ${cut.weeklyRate > 0 ? '+' : ''}${cut.weeklyRate}kg` : '记录中'}
-                    footRight={cut.projectedDate ? `预计 ${cut.projectedDate.slice(5)}` : (cut.deficitStreak > 0 ? `🔥缺口${cut.deficitStreak}天` : '')} />
-                )}
-                {ledger && (
-                  <ProgressCard icon="🧾" title="本月记账" onNav={() => open('ledger')} sub={ledger.budget.set ? `预算 ${ledger.budget.pct}%` : '收支'}
-                    big={formatMoney(ledger.monthExpense)} bigUnit="支出"
-                    rightStat={`结余 ${ledger.monthNet >= 0 ? '+' : ''}${formatMoney(ledger.monthNet)}`}
-                    rightColor={ledger.monthNet >= 0 ? 'var(--success)' : 'var(--danger)'}
-                    pct={ledger.budget.set ? ledger.budget.pct : 0} good={ledger.budget.set && !ledger.budget.over}
-                    series={ledger.dailySeries} sparkStroke="var(--danger)"
-                    footLeft={`今日 ${formatMoney(ledger.today)}`} footRight={ledger.budget.set ? (ledger.budget.over ? '已超支' : `剩 ${formatMoney(ledger.budget.remaining)}`) : `${ledger.count} 笔`} />
-                )}
-                {learn && (
-                  <ProgressCard icon="📚" title="学习进度" onNav={() => open('learning')} sub={`掌握 ${learn.mastered}/${learn.total}`}
-                    big={Math.round(learn.pct * 100)} bigUnit="% 掌握"
-                    rightStat={learn.streak > 0 ? `🔥 ${learn.streak}天` : ''} rightColor="var(--accent-2)"
-                    pct={learn.pct * 100} good={learn.pct >= 1}
-                    footLeft={`学习中 ${learn.learning}`} footRight={`未开始 ${learn.todo}`} />
-                )}
-                {papers && (
-                  <ProgressCard icon="📄" title="论文阅读" onNav={() => open('papers')} sub={`已读 ${papers.done}/${papers.total}`}
-                    big={papers.progressPct} bigUnit="% 读完"
-                    rightStat={papers.streak > 0 ? `🔥 ${papers.streak}天` : ''} rightColor="var(--accent-2)"
-                    pct={papers.progressPct} good={papers.progressPct >= 100}
-                    footLeft={`在读 ${papers.reading} · 想读 ${papers.want}`} footRight={`近7天 ${papers.thisWeek}`} />
-                )}
-                {fitness && (
-                  <ProgressCard icon="💪" title="健身训练" onNav={() => open('fitness')} sub="本周"
-                    big={fitness.week} bigUnit="次/周"
-                    rightStat={`连续 ${fitness.streak} 周`} rightColor="var(--success)"
-                    pct={Math.min(100, (fitness.week / 3) * 100)} good={fitness.week >= 3}
-                    footLeft={`累计 ${fitness.total} 次`} footRight={fitness.week >= 3 ? '达标 👍' : `再练 ${3 - fitness.week} 次`} />
-                )}
-                {project && (
-                  <ProgressCard icon="📋" title="项目规划" onNav={() => open('project')} sub={`${project.done}/${project.total}`}
-                    big={project.donePct} bigUnit="% 完成"
-                    rightStat={project.doing ? `${project.doing} 进行中` : ''} rightColor="var(--accent-2)"
-                    pct={project.donePct} good={project.donePct >= 100}
-                    footLeft={`待办 ${project.todo}`} footRight={`进行中 ${project.doing}`} />
-                )}
-                {stocks && (
-                  <ProgressCard icon="📈" title="股市观测" onNav={() => open('stocks')} sub="自选股"
-                    big={stocks.count} bigUnit="只"
-                    pct={null}
-                    footLeft="点开查看行情" footRight="" />
-                )}
+              <div className="db-grid mboards">
+                {boards.map(({ id, a }) => (
+                  <MiniBoardCard key={id} a={a} wide={id === 'wealth'} onOpen={() => open(id)} />
+                ))}
               </div>
             </>
           )}
@@ -279,66 +218,48 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
   );
 }
 
-/* 统一进度卡：等高、底部脚注对齐；可选迷你趋势图（时间维度） */
-function ProgressCard({ icon, title, onNav, sub, big, bigUnit, rightStat, rightColor, pct, good, footLeft, footRight, note, series, goal, sparkStroke }) {
-  const hasSpark = Array.isArray(series) && series.filter((v) => isFinite(v)).length >= 2;
-  return (
-    <div className="gx-card db-col">
-      <div className="gx-sechead">
-        <h3 className="db-h" onClick={onNav}>{icon} {title}</h3>
-        {sub && <span className="gx-sub db-h" onClick={onNav}>{sub}</span>}
+/* 迷你大盘卡：与大盘同源（buildAnalytics 产出），渐变英雄区 + 交互趋势图 + 预测，点卡进大盘 */
+function MiniChart({ c, stroke, height = 54 }) {
+  if (!c) return null;
+  if (c.kind === 'line') return <LineChart values={c.values} projection={c.projection} goal={c.goal} labels={c.labels} fmt={c.fmt} stroke={stroke} height={height} />;
+  if (c.kind === 'fan') return <LineChart values={c.values} band={c.band} goal={c.goal} labels={c.labels} fmt={c.fmt} stroke={stroke} height={height} />;
+  if (c.kind === 'cross') return <LineChart values={c.passive} stroke={stroke} height={height} interactive={false} />;
+  if (c.kind === 'bars') return <MiniBars values={c.values} single={c.single || stroke} fmt={c.fmt} labels={c.labels} height={Math.max(40, height - 6)} />;
+  if (c.kind === 'goalbars') {
+    const gs = (c.goals || []).slice(0, 3);
+    if (!gs.length) return null;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {gs.map((g, i) => (
+          <div key={i}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 2 }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title}</span>
+              <span style={{ color: g.done ? 'var(--success)' : 'var(--accent-2)', fontVariantNumeric: 'tabular-nums' }}>{g.pct}%</span>
+            </div>
+            <Progress pct={g.pct} good={g.done} />
+          </div>
+        ))}
       </div>
-      <div className="db-hero">
-        <span className="db-big">{big}</span>
-        {bigUnit && <span className="db-unit">{bigUnit}</span>}
-        {rightStat && <span className="db-right" style={{ color: rightColor || 'var(--text-2)' }}>{rightStat}</span>}
-      </div>
-      {hasSpark ? (
-        <div style={{ margin: '2px 0 4px' }}><Sparkline values={series} goal={goal} stroke={sparkStroke || 'var(--accent)'} height={38} /></div>
-      ) : pct != null ? (
-        <Progress pct={pct} good={good} />
-      ) : null}
-      <div className="db-foot">
-        <span className="db-foot-l" title={footLeft}>{footLeft}</span>
-        <span>{footRight}</span>
-      </div>
-      {note && <div className="gx-disclaim" style={{ marginTop: 6 }}>{note}</div>}
-    </div>
-  );
+    );
+  }
+  return null;
 }
 
-/* 理财趋势 + 预测卡（重点强调，整行）：净资产历史(实线) + 线性预测(虚线) + 目标线 + 预计达成 */
-function FinanceTrendCard({ f, onNav }) {
-  const pctToTarget = f.target > 0 ? Math.max(0, Math.min(100, Math.round((f.latest / f.target) * 100))) : 0;
-  const delta = f.monthlyRate;
+function MiniBoardCard({ a, wide, onOpen }) {
+  const chart = (a.charts || []).find((c) => ['line', 'fan', 'bars', 'cross', 'goalbars'].includes(c.kind));
   return (
-    <div className="gx-card db-finance">
-      <div className="gx-sechead">
-        <h3 className="db-h" onClick={onNav}>💰 财富趋势 · 预测</h3>
-        <span className="gx-sub db-h" onClick={onNav}>净资产 / 目标 ›</span>
+    <div className={`gx-card db-mini${wide ? ' wide' : ''}`} style={{ '--bb': a.stroke || 'var(--accent)' }} onClick={onOpen} role="button" tabIndex={0}>
+      <div className="db-mini-head">
+        <h3>{a.icon} {a.title.replace('大盘', '').trim()}</h3>
+        <span className="db-mini-go">查看大盘 ›</span>
       </div>
-      <div className="db-fin-grid">
-        <div className="db-fin-left">
-          <div className="db-hero" style={{ marginBottom: 4 }}>
-            <span className="db-big" style={{ fontSize: 30 }}>{formatMoney(f.latest)}</span>
-            {delta != null && <span className="db-right" style={{ color: delta >= 0 ? 'var(--success)' : 'var(--danger)' }}>{delta >= 0 ? '↑' : '↓'} {formatMoney(Math.abs(Math.round(delta)))}/月</span>}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
-            {f.target > 0 ? <>目标 {formatMoney(f.target)} · {pctToTarget}% 达成</> : '未设目标'}
-          </div>
-          <div style={{ fontSize: 12.5, color: 'var(--accent-2)', marginTop: 6, fontWeight: 500 }}>🔮 {f.etaText}</div>
-          <Progress pct={pctToTarget} />
-        </div>
-        <div className="db-fin-right">
-          <Sparkline values={f.historyVals} projection={f.projection} goal={f.target || undefined} height={92} stroke="var(--accent)" />
-          <div className="db-fin-legend">
-            <span><i className="solid" /> 历史</span>
-            <span><i className="dash" /> 预测</span>
-            {f.target > 0 && <span><i className="goal" /> 目标</span>}
-          </div>
-        </div>
+      <div className="db-mini-hero">
+        <span className="db-mini-v">{a.hero.value}{a.hero.unit && <span className="db-mini-u">{a.hero.unit}</span>}</span>
+        {a.hero.delta && <span className={`db-mini-d ${a.hero.deltaTone || ''}`}>{a.hero.delta}</span>}
       </div>
-      <div className="gx-disclaim" style={{ marginTop: 8 }}>预测为按近期净资产速度的线性外推，仅供参考、实际会波动，非投资建议。</div>
+      {a.hero.caption && <div className="db-mini-c">{a.hero.caption}</div>}
+      {chart && <div className="db-mini-chart"><MiniChart c={chart} stroke={a.stroke || 'var(--accent)'} height={wide ? 78 : 54} /></div>}
+      {a.forecast && a.forecast.text && <div className="db-mini-fc">{a.forecast.text}</div>}
     </div>
   );
 }
@@ -355,26 +276,30 @@ const DASH_CSS = `
 .db-sectitle{font-size:10.5px;color:var(--text-3);letter-spacing:1.6px;text-transform:uppercase;margin:18px 2px 9px;}
 .db-grid{display:grid;gap:14px;}
 .db-grid.action{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));align-items:start;}
-.db-grid.prog{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));align-items:stretch;}
+.db-grid.mboards{grid-template-columns:repeat(auto-fill,minmax(272px,1fr));align-items:stretch;}
 .db-col{display:flex;flex-direction:column;}
 .db-h{cursor:pointer;}
-.db-hero{display:flex;align-items:baseline;gap:7px;margin-bottom:9px;}
-.db-big{font-family:var(--serif);font-size:27px;font-weight:500;line-height:1;letter-spacing:-.5px;color:var(--accent-2);font-variant-numeric:tabular-nums;}
-.db-unit{font-size:12px;color:var(--text-3);}
-.db-right{margin-left:auto;font-size:12px;white-space:nowrap;}
-.db-foot{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-3);margin-top:auto;padding-top:7px;}
-.db-foot-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.db-finance{margin-bottom:14px;background:linear-gradient(135deg,var(--accent-soft),var(--surface) 60%);}
-.db-fin-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:18px;align-items:center;}
-.db-fin-left{min-width:0;}
-.db-fin-right{min-width:0;}
-.db-fin-legend{display:flex;gap:14px;font-size:10.5px;color:var(--text-3);margin-top:4px;justify-content:flex-end;}
-.db-fin-legend i{display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);vertical-align:middle;margin-right:4px;}
-.db-fin-legend i.dash{border-top-style:dashed;opacity:.75;}
-.db-fin-legend i.goal{border-top-color:var(--danger);border-top-style:dashed;}
+
+/* 迷你大盘卡（与「财富趋势·预测」同款：渐变 + 趋势图 + 预测） */
+.db-mini{display:flex;flex-direction:column;cursor:pointer;background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 14%,var(--surface)),var(--surface) 66%);border-color:color-mix(in srgb,var(--bb) 20%,var(--bd));transition:box-shadow .18s,transform .12s,border-color .18s;}
+.db-mini:hover,.db-mini:focus-visible{box-shadow:0 8px 24px rgba(38,36,31,.09);transform:translateY(-2px);border-color:color-mix(in srgb,var(--bb) 40%,var(--bd));outline:none;}
+.db-mini.wide{grid-column:1/-1;}
+.db-mini-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+.db-mini-head h3{font-family:var(--serif);font-size:15px;font-weight:500;letter-spacing:-.2px;}
+.db-mini-go{font-size:11px;color:var(--bb);opacity:.85;white-space:nowrap;flex:none;}
+.db-mini-hero{display:flex;align-items:baseline;gap:8px;margin-top:10px;}
+.db-mini-v{font-family:var(--serif);font-size:26px;font-weight:500;line-height:1;letter-spacing:-.6px;color:var(--bb);font-variant-numeric:tabular-nums;}
+.db-mini-u{font-size:13px;color:var(--text-3);margin-left:2px;}
+.db-mini-d{margin-left:auto;font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--text-2);white-space:nowrap;flex:none;}
+.db-mini-d.good{color:var(--success);background:var(--success-soft);}
+.db-mini-d.bad{color:var(--danger);background:var(--danger-soft);}
+.db-mini-c{font-size:11.5px;color:var(--text-2);margin-top:5px;}
+.db-mini-chart{margin:11px 0 2px;}
+.db-mini-fc{margin-top:auto;padding-top:10px;font-size:11.5px;line-height:1.5;color:var(--accent-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.db-mini.wide{background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 18%,var(--surface)),var(--surface) 72%);}
+.db-mini.wide .db-mini-v{font-size:33px;}
+.db-mini.wide .db-mini-head h3{font-size:17px;}
 @media(max-width:560px){
-  .db-grid.prog{grid-template-columns:1fr 1fr;}
-  .db-fin-grid{grid-template-columns:1fr;gap:10px;}
-  .db-fin-legend{justify-content:flex-start;}
+  .db-grid.mboards{grid-template-columns:1fr;}
 }
 `;

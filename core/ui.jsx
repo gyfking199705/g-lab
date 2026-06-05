@@ -6,7 +6,7 @@
  *
  * 令牌作用在 .gx-root 上（独立页也能用）；在主应用里与根 :root 令牌一致，重复声明无害。
  */
-import React from 'react';
+import React, { useState, useRef } from 'react';
 
 export const SHARED_CSS = `
 .gx-root{
@@ -97,6 +97,12 @@ export const SHARED_CSS = `
 
 /* 免责声明 */
 .gx-disclaim{font-size:11px;color:var(--text-3);line-height:1.6;margin-top:10px;}
+
+/* 交互式折线图 tooltip */
+.gx-lc-tip{position:absolute;top:-6px;transform:translate(-50%,-100%);background:#33302A;color:#fff;border-radius:8px;
+  padding:4px 9px;font-size:11.5px;line-height:1.35;white-space:nowrap;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:0;box-shadow:0 2px 8px rgba(0,0,0,.16);z-index:5;}
+.gx-lc-tip strong{font-variant-numeric:tabular-nums;font-weight:600;}
+.gx-lc-tip span{font-size:10px;opacity:.75;}
 `;
 
 /** 进度条组件。pct 0–100；good=true 用绿色（如已达成）。 */
@@ -184,18 +190,125 @@ export function Sparkline({ values = [], projection = [], band = null, goal, wid
   );
 }
 
-/** 迷你柱状图（手写，无图表库）。values:number[]；正负用不同色。 */
-export function MiniBars({ values = [], height = 56, pos = 'var(--success)', neg = 'var(--danger)', single }) {
+/**
+ * 交互式折线图（手写 SVG，无图表库）：支持历史线 + 预测虚线 / 扇形带 + 目标线，
+ * 鼠标/手指悬停显示十字准星 + 数值气泡 tooltip。首页迷你卡与大盘复用同一组件。
+ * @param {number[]} values        历史值（实线）
+ * @param {number[]} [projection]  预测值（虚线，接续历史末点）
+ * @param {{upper,mid,lower}} [band] 扇形预测带（阴影=upper~lower，虚线=mid）
+ * @param {number} [goal]          目标参考线
+ * @param {string[]} [labels]      每个点的标签（长度=历史+预测点数），tooltip 显示
+ * @param {(v:number)=>string} [fmt] 数值格式化（tooltip 用）
+ * @param {boolean} [interactive=true]
+ */
+export function LineChart({ values = [], projection = [], band = null, goal, labels = null, fmt, stroke = 'var(--accent)', height = 110, fill = true, goalColor = 'var(--danger)', interactive = true }) {
+  const hist = values.filter((v) => isFinite(v));
+  const [hover, setHover] = useState(null);
+  const wrapRef = useRef(null);
+  if (hist.length < 2) return <div style={{ height, display: 'flex', alignItems: 'center', fontSize: 11, color: 'var(--text-3)' }}>数据不足，记录后显示趋势</div>;
+
+  const mid = band ? (band.mid || []).filter((v) => isFinite(v)) : (projection || []).filter((v) => isFinite(v));
+  const future = mid; // 接在历史之后的「主线」未来段
+  const bandVals = band ? [...(band.upper || []), ...(band.lower || []), ...mid] : [];
+  const all = [...hist, ...future, ...bandVals];
+  if (goal != null && isFinite(goal)) all.push(goal);
+  let min = Math.min(...all), max = Math.max(...all);
+  if (min === max) { min -= 1; max += 1; }
+  const pad = (max - min) * 0.12; min -= pad; max += pad;
+  const total = hist.length + future.length;
+  const W = 600, padX = 4, padT = 8, padB = 8;
+  const x = (i) => padX + (i / (total - 1)) * (W - padX * 2);
+  const y = (v) => padT + (1 - (v - min) / (max - min)) * (height - padT - padB);
+  const mainAt = (i) => (i < hist.length ? hist[i] : future[i - hist.length]);
+
+  const histPath = hist.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  let projPath = '';
+  if (future.length) {
+    const pts = [`${x(hist.length - 1).toFixed(1)},${y(hist[hist.length - 1]).toFixed(1)}`,
+      ...future.map((v, k) => `${x(hist.length + k).toFixed(1)},${y(v).toFixed(1)}`)];
+    projPath = 'M' + pts.join(' L');
+  }
+  const areaPath = `${histPath} L${x(hist.length - 1).toFixed(1)},${(height - padB).toFixed(1)} L${x(0).toFixed(1)},${(height - padB).toFixed(1)} Z`;
+  let bandArea = '';
+  if (band && (band.upper || []).length) {
+    const h0 = hist.length - 1, v0 = hist[hist.length - 1];
+    const up = [`${x(h0).toFixed(1)},${y(v0).toFixed(1)}`, ...band.upper.map((v, k) => `${x(hist.length + k).toFixed(1)},${y(v).toFixed(1)}`)];
+    const lo = [...band.lower.map((v, k) => `${x(hist.length + k).toFixed(1)},${y(v).toFixed(1)}`).reverse(), `${x(h0).toFixed(1)},${y(v0).toFixed(1)}`];
+    bandArea = 'M' + up.join(' L') + ' L' + lo.join(' L') + ' Z';
+  }
+  const gid = 'lc' + Math.random().toString(36).slice(2, 7);
+
+  const onMove = (e) => {
+    if (!interactive || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const frac = Math.max(0, Math.min(1, cx / rect.width));
+    setHover(Math.round(frac * (total - 1)));
+  };
+  const fmtV = (v) => (fmt ? fmt(v) : (Math.round(v * 100) / 100).toLocaleString('zh-CN'));
+  const hv = hover != null ? mainAt(hover) : null;
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', width: '100%' }}
+      onMouseMove={onMove} onMouseLeave={() => setHover(null)} onTouchStart={onMove} onTouchMove={onMove} onTouchEnd={() => setHover(null)}>
+      <svg viewBox={`0 0 ${W} ${height}`} width="100%" height={height} preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+        {bandArea && <path d={bandArea} fill={stroke} opacity="0.13" />}
+        {fill && (
+          <>
+            <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={stroke} stopOpacity="0.18" /><stop offset="100%" stopColor={stroke} stopOpacity="0" />
+            </linearGradient></defs>
+            <path d={areaPath} fill={`url(#${gid})`} />
+          </>
+        )}
+        {goal != null && isFinite(goal) && <line x1={padX} y1={y(goal)} x2={W - padX} y2={y(goal)} stroke={goalColor} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />}
+        <path d={histPath} fill="none" stroke={stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {projPath && <path d={projPath} fill="none" stroke={stroke} strokeWidth="1.6" strokeDasharray="3 3" opacity="0.75" />}
+        <circle cx={x(hist.length - 1)} cy={y(hist[hist.length - 1])} r="2.6" fill={stroke} />
+        {hover != null && (
+          <>
+            <line x1={x(hover)} y1={padT} x2={x(hover)} y2={height - padB} stroke="var(--text-3)" strokeWidth="1" strokeDasharray="2 2" opacity="0.6" />
+            <circle cx={x(hover)} cy={y(hv)} r="3.6" fill={stroke} stroke="#fff" strokeWidth="1.2" />
+          </>
+        )}
+      </svg>
+      {hover != null && (
+        <div className="gx-lc-tip" style={{ left: `${(hover / (total - 1)) * 100}%` }}>
+          <strong>{fmtV(hv)}</strong>
+          {labels && labels[hover] ? <span>{labels[hover]}</span> : (hover >= hist.length ? <span>预测</span> : null)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 迷你柱状图（手写，无图表库）。values:number[]；正负用不同色；悬停高亮 + 数值气泡。 */
+export function MiniBars({ values = [], height = 56, pos = 'var(--success)', neg = 'var(--danger)', single, labels = null, fmt, interactive = true }) {
   const vals = values.map((v) => (isFinite(v) ? v : 0));
+  const [hover, setHover] = useState(null);
   if (!vals.length) return null;
   const maxAbs = Math.max(1, ...vals.map((v) => Math.abs(v)));
+  const fmtV = (v) => (fmt ? fmt(v) : (Math.round(v * 100) / 100).toLocaleString('zh-CN'));
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height }}>
-      {vals.map((v, i) => {
-        const h = Math.max(2, (Math.abs(v) / maxAbs) * 100);
-        const color = single || (v >= 0 ? pos : neg);
-        return <div key={i} style={{ flex: 1, height: h + '%', background: color, borderRadius: '3px 3px 0 0', minWidth: 2, transition: 'height .3s' }} title={String(v)} />;
-      })}
+    <div style={{ position: 'relative', width: '100%' }} onMouseLeave={() => setHover(null)}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height }}>
+        {vals.map((v, i) => {
+          const h = Math.max(2, (Math.abs(v) / maxAbs) * 100);
+          const color = single || (v >= 0 ? pos : neg);
+          const dim = hover != null && hover !== i;
+          return (
+            <div key={i} onMouseEnter={interactive ? () => setHover(i) : undefined}
+              style={{ flex: 1, height: h + '%', background: color, borderRadius: '3px 3px 0 0', minWidth: 2,
+                transition: 'height .3s,opacity .15s', opacity: dim ? 0.35 : 1, cursor: interactive ? 'pointer' : 'default' }} />
+          );
+        })}
+      </div>
+      {hover != null && (
+        <div className="gx-lc-tip" style={{ left: `${((hover + 0.5) / vals.length) * 100}%`, top: -2 }}>
+          <strong>{fmtV(vals[hover])}</strong>
+          {labels && labels[hover] ? <span>{labels[hover]}</span> : null}
+        </div>
+      )}
     </div>
   );
 }

@@ -145,9 +145,9 @@ function financeBoard(get) {
   if (sc) {
     charts.push({ title: '净资产趋势 + 三情景预测（24 个月）', kind: 'fan', values: sc.history,
       band: { upper: sc.optimistic, mid: sc.neutral, lower: sc.conservative }, goal: f.target || undefined,
-      stroke: 'var(--accent)', captionLeft: '实线=历史 · 阴影带=保守～乐观 · 虚线=中性', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
+      stroke: 'var(--accent)', fmt: formatMoney, captionLeft: '实线=历史 · 阴影带=保守～乐观 · 虚线=中性', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
   } else {
-    charts.push({ title: '净资产趋势 + 预测', kind: 'line', values: f.historyVals, projection: f.projection, goal: f.target || undefined, stroke: 'var(--accent)', captionLeft: '实线=历史 · 虚线=预测', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
+    charts.push({ title: '净资产趋势 + 预测', kind: 'line', values: f.historyVals, projection: f.projection, goal: f.target || undefined, stroke: 'var(--accent)', fmt: formatMoney, captionLeft: '实线=历史 · 虚线=预测', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
   }
   // 被动收入 vs 主动收入交叉图
   let passiveKpi = kpi('被动超主动', '—', pp && !pp.ok ? '需收入数据' : '记录后预测');
@@ -201,8 +201,8 @@ function cutBoard(get, today, opts = {}) {
   const defs = deficitSeries(d.logs || [], tdee, Math.min(days, 21)).map((x) => (x.deficit == null ? 0 : x.deficit));
   const wf = weightForecast(s.currentTrend, s.weeklyRate, s.goalWeight, 28);
   const weightChart = wf
-    ? { title: '体重趋势 + 预测带（28 天）', kind: 'fan', values: trend, band: { upper: wf.upper, mid: wf.mid, lower: wf.lower }, goal: s.goalWeight, stroke: 'var(--accent)', captionLeft: '实线=趋势 · 阴影带=慢~快 · 虚线=中性预测', captionRight: `目标 ${s.goalWeight}kg` }
-    : { title: '体重趋势 + 目标', kind: 'line', values: trend, goal: s.goalWeight, stroke: 'var(--accent)', captionLeft: '趋势体重(EMA)', captionRight: `目标 ${s.goalWeight}kg` };
+    ? { title: '体重趋势 + 预测带（28 天）', kind: 'fan', values: trend, band: { upper: wf.upper, mid: wf.mid, lower: wf.lower }, goal: s.goalWeight, stroke: 'var(--accent)', fmt: (v) => v + 'kg', captionLeft: '实线=趋势 · 阴影带=慢~快 · 虚线=中性预测', captionRight: `目标 ${s.goalWeight}kg` }
+    : { title: '体重趋势 + 目标', kind: 'line', values: trend, goal: s.goalWeight, stroke: 'var(--accent)', fmt: (v) => v + 'kg', captionLeft: '趋势体重(EMA)', captionRight: `目标 ${s.goalWeight}kg` };
   return {
     icon: '📉', title: '减脂大盘', stroke: 'var(--accent)',
     hero: { value: s.currentTrend, unit: 'kg', caption: `${s.startWeight}→${s.goalWeight}kg · ${s.progressPct}% 完成`, delta: `已减 ${s.lost}kg`, deltaTone: 'good' },

@@ -8,7 +8,7 @@
  *   get(key) 读取模块数据；onBack 返回看板；onEnter 进入该模块编辑。
  */
 import React, { useMemo, useState } from 'react';
-import { SHARED_CSS, Sparkline, MiniBars, Progress, Empty, Segmented } from '../core/ui.jsx';
+import { SHARED_CSS, Sparkline, LineChart, MiniBars, Progress, Empty, Segmented } from '../core/ui.jsx';
 import { todayStr, fmtDate } from '../core/date.js';
 import { buildAnalytics, BOARD_RANGES, boardToText, boardToSVG } from './analytics.js';
 
@@ -125,15 +125,15 @@ function exportBoard(a, today) {
 }
 
 function ChartView({ c }) {
-  if (c.kind === 'line') return <Sparkline values={c.values} projection={c.projection} goal={c.goal} stroke={c.stroke} height={96} />;
+  if (c.kind === 'line') return <LineChart values={c.values} projection={c.projection} goal={c.goal} labels={c.labels} fmt={c.fmt} stroke={c.stroke} height={120} />;
   if (c.kind === 'fan') return (
     <>
-      <Sparkline values={c.values} band={c.band} goal={c.goal} stroke={c.stroke} height={110} />
+      <LineChart values={c.values} band={c.band} goal={c.goal} labels={c.labels} fmt={c.fmt} stroke={c.stroke} height={130} />
       <div className="bb-legend"><span><i className="solid" />历史</span><span><i className="band" />保守～乐观</span><span><i className="dash" />中性</span>{c.goal && <span><i className="goal" />目标</span>}</div>
     </>
   );
   if (c.kind === 'cross') return <CrossChart c={c} />;
-  if (c.kind === 'bars') return <MiniBars values={c.values} single={c.single} height={84} />;
+  if (c.kind === 'bars') return <MiniBars values={c.values} single={c.single} fmt={c.fmt} labels={c.labels} height={84} />;
   if (c.kind === 'goalbars') {
     if (!c.goals || !c.goals.length) return <Empty icon="🎯" title="还没有目标" />;
     return (
