@@ -16,6 +16,8 @@
  *   dist/habits.js   —— 习惯打卡独立页（habits/index.html 加载）
  */
 import { build } from 'esbuild';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const common = {
   bundle: true,
@@ -40,4 +42,19 @@ await build({ ...common, entryPoints: ['cut/bootstrap.jsx'], outfile: 'dist/cut.
 await build({ ...common, entryPoints: ['papers/bootstrap.jsx'], outfile: 'dist/papers.js' });
 await build({ ...common, entryPoints: ['ledger/bootstrap.jsx'], outfile: 'dist/ledger.js' });
 
-console.log('✅ 打包完成：dist/{app,savings,learning,fitness,project,schedule,goals,habits,cut,papers,ledger}.js');
+/* 缓存破坏：把每个 bundle 的内容哈希写进对应 index.html 的 <script src=...?v=hash>，
+   这样内容一变 URL 就变，GitHub Pages / 浏览器一定会加载新版（解决"部署了却看不到变化"）。 */
+function stamp(htmlPath, bundleRef, bundleFile) {
+  if (!existsSync(htmlPath) || !existsSync(bundleFile)) return;
+  const hash = createHash('sha1').update(readFileSync(bundleFile)).digest('hex').slice(0, 10);
+  const ref = bundleRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let html = readFileSync(htmlPath, 'utf8');
+  const next = html.replace(new RegExp(`src="${ref}(?:\\?v=[a-f0-9]+)?"`), `src="${bundleRef}?v=${hash}"`);
+  if (next !== html) writeFileSync(htmlPath, next);
+}
+stamp('index.html', './dist/app.js', 'dist/app.js');
+for (const m of ['savings', 'learning', 'fitness', 'project', 'schedule', 'goals', 'habits', 'cut', 'papers', 'ledger']) {
+  stamp(`${m}/index.html`, `../dist/${m}.js`, `dist/${m}.js`);
+}
+
+console.log('✅ 打包完成 + 已写入缓存破坏版本号：dist/{app,savings,learning,fitness,project,schedule,goals,habits,cut,papers,ledger}.js');
