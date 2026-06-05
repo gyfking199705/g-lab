@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { SHARED_CSS, Sparkline, MiniBars, Progress, Empty, Segmented } from '../core/ui.jsx';
 import { todayStr, fmtDate } from '../core/date.js';
-import { buildAnalytics, BOARD_RANGES } from './analytics.js';
+import { buildAnalytics, BOARD_RANGES, boardToText, boardToSVG } from './analytics.js';
 
 export default function BigBoard({ id, get, onBack, onEnter }) {
   const today = todayStr();
@@ -33,7 +33,8 @@ export default function BigBoard({ id, get, onBack, onEnter }) {
   return (
     <div className="gx-root">
       <style>{SHARED_CSS}{BOARD_CSS}</style>
-      <BoardHead title={`${a.icon} ${a.title}`} sub={fmtDate(today)} onBack={onBack} onEnter={onEnter} />
+      <BoardHead title={`${a.icon} ${a.title}`} sub={fmtDate(today)} onBack={onBack} onEnter={onEnter}
+        onShare={() => shareBoard(a, today)} onExport={() => exportBoard(a, today)} />
 
       {hasSeries && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
@@ -90,16 +91,37 @@ export default function BigBoard({ id, get, onBack, onEnter }) {
   );
 }
 
-function BoardHead({ title, sub, onBack, onEnter }) {
+function BoardHead({ title, sub, onBack, onEnter, onShare, onExport }) {
   return (
     <div className="gx-headrow">
       <div className="gx-head"><h2>{title}</h2>{sub && <p>{sub}</p>}</div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         <button className="gx-btn gx-btn-sm" onClick={onBack}>‹ 看板</button>
+        {onShare && <button className="gx-btn gx-btn-sm" onClick={onShare}>📤 分享</button>}
+        {onExport && <button className="gx-btn gx-btn-sm" onClick={onExport}>🖼 导出</button>}
         <button className="gx-btn gx-btn-sm" onClick={onEnter}>进入模块</button>
       </div>
     </div>
   );
+}
+
+async function shareBoard(a, today) {
+  const text = boardToText(a, today);
+  try { if (navigator.share) { await navigator.share({ title: a.title, text }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); alert('已复制大盘摘要到剪贴板 📋'); } catch (e) { window.prompt('复制下面的大盘摘要：', text); }
+}
+
+function exportBoard(a, today) {
+  try {
+    const svg = boardToSVG(a, today);
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${a.title}-${today}.svg`;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) { alert('导出失败：' + (e && e.message || e)); }
 }
 
 function ChartView({ c }) {
@@ -110,6 +132,7 @@ function ChartView({ c }) {
       <div className="bb-legend"><span><i className="solid" />历史</span><span><i className="band" />保守～乐观</span><span><i className="dash" />中性</span>{c.goal && <span><i className="goal" />目标</span>}</div>
     </>
   );
+  if (c.kind === 'cross') return <CrossChart c={c} />;
   if (c.kind === 'bars') return <MiniBars values={c.values} single={c.single} height={84} />;
   if (c.kind === 'goalbars') {
     if (!c.goals || !c.goals.length) return <Empty icon="🎯" title="还没有目标" />;
@@ -128,6 +151,39 @@ function ChartView({ c }) {
     );
   }
   return null;
+}
+
+/** 被动 vs 主动收入交叉图（手写 SVG）。 */
+function CrossChart({ c }) {
+  const passive = c.passive || [], active = c.active || [];
+  const n = Math.max(passive.length, active.length);
+  if (n < 2) return <div style={{ fontSize: 11, color: 'var(--text-3)', padding: '12px 0' }}>数据不足</div>;
+  const W = 600, H = 150, padL = 4, padR = 4, padT = 8, padB = 16;
+  const all = [...passive, ...active];
+  let min = Math.min(...all), max = Math.max(...all);
+  if (min === max) max = min + 1;
+  const pad = (max - min) * 0.1; min = Math.max(0, min - pad); max += pad;
+  const x = (i) => padL + (i / (n - 1)) * (W - padL - padR);
+  const y = (v) => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
+  const path = (arr) => arr.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const cm = c.crossMonth;
+  return (
+    <div style={{ width: '100%' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="150" preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+        {cm != null && cm > 0 && cm < n && (
+          <>
+            <line x1={x(cm)} y1={padT} x2={x(cm)} y2={H - padB} stroke="var(--success)" strokeWidth="1.2" strokeDasharray="3 3" />
+            <circle cx={x(cm)} cy={y(passive[cm])} r="3.5" fill="var(--success)" />
+            <text x={x(cm)} y={padT - 1} fontSize="10" fill="var(--success)" textAnchor="middle">{(cm / 12).toFixed(1)} 年</text>
+          </>
+        )}
+        <path d={path(active)} fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeDasharray="4 3" />
+        <path d={path(passive)} fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinejoin="round" />
+        <text x={padL} y={H - 3} fontSize="9" fill="var(--text-3)">现在</text>
+        <text x={W - padR} y={H - 3} fontSize="9" fill="var(--text-3)" textAnchor="end">{((n - 1) / 12).toFixed(0)} 年后</text>
+      </svg>
+    </div>
+  );
 }
 
 const BOARD_CSS = `

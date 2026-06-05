@@ -72,3 +72,23 @@ test('buildAnalytics 无数据返回 null；hasBoard', () => {
   assert.equal(hasBoard('cut'), true);
   assert.equal(hasBoard('stocks'), false);
 });
+
+import { boardToText, boardToSVG } from './analytics.js';
+
+test('boardToText 摘要含标题/KPI/预测', () => {
+  const a = { icon: '💰', title: '财富大盘', hero: { value: '¥42万', caption: '净资产' }, kpis: [{ label: '净资产', value: '¥42万' }], forecast: { text: '🔮 约 3 年达成' }, insights: ['保持储蓄'] };
+  const t = boardToText(a, '2026-06-10');
+  assert.match(t, /财富大盘/);
+  assert.match(t, /净资产：¥42万/);
+  assert.match(t, /约 3 年达成/);
+  assert.match(t, /成长规划/);
+});
+
+test('boardToSVG 生成合法 svg 字符串', () => {
+  const a = { icon: '📉', title: '减脂大盘', hero: { value: '82.9', unit: 'kg', caption: '85→70' }, kpis: [{ label: '趋势', value: '82.9kg', tone: 'good' }, { label: '本周', value: '-0.4kg' }], forecast: { text: '🔮 预计 9/30 达成' } };
+  const svg = boardToSVG(a, '2026-06-10');
+  assert.match(svg, /^<svg /);
+  assert.match(svg, /<\/svg>$/);
+  assert.match(svg, /减脂大盘/);
+  assert.ok(svg.includes('82.9'));
+});

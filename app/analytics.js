@@ -9,7 +9,7 @@
  * 可测试：node --test app/analytics.test.js
  */
 import { todayStr, addDays, dayDiff, lastNDays, fmtMD } from '../core/date.js';
-import { financeForecast, financeScenarios, formatMoney } from '../savings/calc.js';
+import { financeForecast, financeScenarios, passiveCrossover, formatMoney } from '../savings/calc.js';
 import { summary as cutSummary, trendSeries as cutTrend, deficitSeries, estimateTDEE, weightForecast } from '../cut/calc.js';
 import { monthTotals, byCategory, dailyExpense, balance } from '../ledger/calc.js';
 import { todayBoard, currentStreak, bestStreak, isDoneOn, fitnessWorkoutDates } from '../habits/calc.js';
@@ -74,12 +74,47 @@ const num = (v) => (v == null || !isFinite(v) ? '—' : v);
 
 /* ----------------------------- 各模块大盘 ----------------------------- */
 
+/** 从记账近 3 月推断每月「主动收入」(工资+兼职) 与「净储蓄」。 */
+const ACTIVE_INCOME_CATS = ['工资', '兼职'];
+function ledgerIncomeStats(lg, today) {
+  if (!lg || !(lg.entries || []).length) return null;
+  const base = new Date(today.slice(0, 7) + '-01');
+  let actSum = 0, netSum = 0, n = 0;
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+    const mk = d.toISOString().slice(0, 7);
+    const t = monthTotals(lg.entries, mk);
+    const inc = byCategory(lg.entries, mk, 'income').filter((c) => ACTIVE_INCOME_CATS.includes(c.category)).reduce((s, c) => s + c.amount, 0);
+    actSum += inc; netSum += (t.income - t.expense); n += 1;
+  }
+  return { activeMonthly: Math.round(actSum / n), netMonthly: Math.round(netSum / n) };
+}
+
+/** 被动收入 vs 主动收入交叉预测（财务自由临界点）。 */
+function passivePlan(get) {
+  const today = todayStr();
+  const sv = get('savings-planner');
+  const f = financeForecast(sv);
+  if (!f) return null;
+  const sc = financeScenarios(sv);
+  const annualReturn = sc ? sc.baseReturn : 0.05;
+  const netWorth = f.latest;
+  const li = ledgerIncomeStats(get('ledger-planner'), today);
+  const activeMonthly = li ? li.activeMonthly : 0;
+  const contribution = li && li.netMonthly != null ? Math.max(0, li.netMonthly) : Math.max(0, f.monthlyRate || 0);
+  if (!(activeMonthly > 0)) return { ok: false, reason: '在「记账」记录工资/兼职等主动收入后，可预测被动超过主动的时间' };
+  if (!(annualReturn > 0) || !(netWorth > 0)) return { ok: false, reason: '在「财富规划」记录净资产与资产配置后即可预测' };
+  const cross = passiveCrossover({ netWorth, annualReturn, monthlyContribution: contribution, activeMonthly });
+  return { ok: true, cross, netWorth, annualReturn, contribution, activeMonthly, currentPassive: Math.round(netWorth * annualReturn / 12) };
+}
+
 function financeBoard(get) {
   const s = get('savings-planner');
   const f = financeForecast(s);
   if (!f || (!f.target && !f.latest)) return null;
   const sc = financeScenarios(s, { horizon: 24 });
   const pct = f.target > 0 ? Math.round((f.latest / f.target) * 100) : 0;
+  const pp = passivePlan(get);
   const charts = [];
   if (sc) {
     charts.push({ title: '净资产趋势 + 三情景预测（24 个月）', kind: 'fan', values: sc.history,
@@ -87,6 +122,19 @@ function financeBoard(get) {
       stroke: 'var(--accent)', captionLeft: '实线=历史 · 阴影带=保守～乐观 · 虚线=中性', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
   } else {
     charts.push({ title: '净资产趋势 + 预测', kind: 'line', values: f.historyVals, projection: f.projection, goal: f.target || undefined, stroke: 'var(--accent)', captionLeft: '实线=历史 · 虚线=预测', captionRight: f.target ? `目标 ${formatMoney(f.target)}` : '' });
+  }
+  // 被动收入 vs 主动收入交叉图
+  let passiveKpi = kpi('被动超主动', '—', pp && !pp.ok ? '需收入数据' : '记录后预测');
+  let passiveLine = '';
+  if (pp && pp.ok) {
+    const cm = pp.cross.crossoverMonth;
+    passiveKpi = kpi('被动超主动', cm != null ? (cm === 0 ? '已实现 🎉' : `${(cm / 12).toFixed(1)} 年`) : '50 年内未达', cm != null ? '投资收益≥工资' : '需提高储蓄/收益', cm != null ? 'good' : undefined);
+    charts.push({ title: '被动收入 vs 主动收入（财务自由临界点）', kind: 'cross',
+      passive: pp.cross.passiveSeries, active: pp.cross.activeSeries, crossMonth: cm,
+      captionLeft: '虚线=主动(工资) · 实线=被动(投资收益) · 竖线=交叉点' });
+    passiveLine = cm != null
+      ? (cm === 0 ? '🎉 你的投资被动收入已超过主动收入！' : `🏝️ 按当前储蓄与年化 ${(pp.annualReturn * 100).toFixed(1)}%，约 ${(cm / 12).toFixed(1)} 年后被动收入(≈${formatMoney(pp.activeMonthly)}/月)将超过主动收入`)
+      : '被动收入 50 年内未超过主动，提高储蓄率或投资年化可加速';
   }
   return {
     icon: '💰', title: '财富大盘', stroke: 'var(--accent)',
@@ -97,11 +145,11 @@ function financeBoard(get) {
       kpi('距目标', f.target ? formatMoney(Math.max(0, f.target - f.latest)) : '—', `${pct}% 已达成`),
       kpi('综合年化', sc ? `${(sc.baseReturn * 100).toFixed(1)}%` : '—', '按资产配置'),
       kpi('中性预计', sc && sc.etaNeutralMonths ? `${(sc.etaNeutralMonths / 12).toFixed(1)} 年` : (f.etaMonths ? `${(f.etaMonths / 12).toFixed(1)} 年` : '—'), '达成目标', 'good'),
-      kpi('月均储蓄', sc ? formatMoney(Math.round(sc.contribution)) : '—', '近似'),
+      passiveKpi,
     ],
     charts,
-    forecast: { text: `🔮 ${sc ? sc.etaText : f.etaText}` },
-    insights: buildFinanceInsights(f, sc),
+    forecast: { text: passiveLine ? `🏝️ ${passiveLine.replace(/^🏝️ |^🎉 /, '')}` : `🔮 ${sc ? sc.etaText : f.etaText}` },
+    insights: [...buildFinanceInsights(f, sc), ...(passiveLine ? [passiveLine] : (pp && !pp.ok ? [pp.reason] : []))],
     disclaimer: '预测以近期储蓄速度 + 资产配置年化（±2% 不确定性带）复利估算，仅供参考、实际会波动，非投资建议。',
   };
 }
@@ -173,10 +221,29 @@ function ledgerBoard(get, _today, opts = {}) {
     ],
     charts: [
       { title: `近 ${daily.length} 天支出`, kind: 'bars', values: daily, single: 'var(--danger)', captionLeft: '每日支出' },
-      { title: '近 6 月支出', kind: 'bars', values: months.map((m) => m.expense), single: 'var(--accent)', captionLeft: months.map((m) => m.month.slice(5)).join(' · ') },
+      monthlyExpenseFan(months, d.budget),
     ],
     forecast: { text: `🔮 按当前节奏，本月预计支出约 ${formatMoney(proj)}` },
     insights: cats.length ? [`支出最多：${cats[0].category} ${formatMoney(cats[0].amount)}（${Math.round(cats[0].share * 100)}%）。`] : [],
+  };
+}
+
+/** 月支出趋势 + 未来 3 月预测带（±15%）+ 预算参考线。 */
+function monthlyExpenseFan(months, budget) {
+  const mexp = months.map((m) => m.expense);
+  const recent = mexp.slice(-3).filter((v) => v > 0);
+  const avg = recent.length ? recent.reduce((s, x) => s + x, 0) / recent.length : (mexp[mexp.length - 1] || 0);
+  if (avg <= 0 || mexp.length < 2) {
+    return { title: '近 6 月支出', kind: 'bars', values: mexp, single: 'var(--accent)', captionLeft: months.map((m) => m.month.slice(5)).join(' · ') };
+  }
+  const k = 3;
+  const mid = Array(k).fill(Math.round(avg));
+  const lower = mid.map((v) => Math.round(v * 0.85));
+  const upper = mid.map((v) => Math.round(v * 1.15));
+  return {
+    title: '月支出趋势 + 预测带（未来 3 月）', kind: 'fan', values: mexp,
+    band: { upper, mid, lower }, goal: budget > 0 ? budget : undefined, stroke: 'var(--accent)',
+    captionLeft: '实线=历史 · 阴影带=±15% 预测 · 虚线=预算', captionRight: budget > 0 ? `预算 ${formatMoney(budget)}/月` : '',
   };
 }
 
@@ -370,3 +437,52 @@ export const BOARD_RANGES = [
   { id: 90, label: '90 天' },
   { id: 365, label: '一年' },
 ];
+
+/* ----------------------------- 分享 / 导出（纯函数） ----------------------------- */
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function truncate(s, n) { s = String(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+/** 大盘的纯文本摘要（用于「分享/复制」）。 */
+export function boardToText(a, today = todayStr()) {
+  if (!a) return '';
+  const lines = [`${a.icon} ${a.title} · ${today}`];
+  lines.push(`${a.hero.value}${a.hero.unit || ''}${a.hero.caption ? ' — ' + a.hero.caption : ''}`);
+  for (const k of a.kpis || []) lines.push(`· ${k.label}：${k.value}${k.sub ? `（${k.sub}）` : ''}`);
+  if (a.forecast && a.forecast.text) lines.push(a.forecast.text);
+  for (const s of a.insights || []) lines.push('💡 ' + s);
+  lines.push('— 来自「成长规划」');
+  return lines.join('\n');
+}
+
+/** 大盘快照卡（自包含 SVG 字符串，可下载为图片，无需任何库）。 */
+export function boardToSVG(a, today = todayStr()) {
+  if (!a) return '';
+  const W = 480;
+  const kpis = (a.kpis || []).slice(0, 6);
+  const cols = 2;
+  const rows = Math.ceil(kpis.length / cols);
+  const kpiTop = 132, kpiH = 52, kpiGap = 8;
+  const fcY = kpiTop + rows * (kpiH + kpiGap) + 6;
+  const H = fcY + 64;
+  const C = { bg: '#FFFFFF', card: '#FBFAF6', bd: '#ECEAE2', text: '#26241F', sub: '#83827A', accent: '#B5654A', band: '#F5ECE5' };
+  const cellW = (W - 24 * 2 - 12) / cols;
+  let kpiSvg = '';
+  kpis.forEach((k, i) => {
+    const cx = 24 + (i % cols) * (cellW + 12);
+    const cy = kpiTop + Math.floor(i / cols) * (kpiH + kpiGap);
+    kpiSvg += `<rect x="${cx}" y="${cy}" width="${cellW}" height="${kpiH}" rx="10" fill="${C.card}" stroke="${C.bd}"/>` +
+      `<text x="${cx + 12}" y="${cy + 24}" font-family="Georgia,serif" font-size="19" font-weight="600" fill="${k.tone === 'good' ? '#6E9079' : k.tone === 'bad' ? '#BC6055' : C.accent}">${esc(truncate(k.value, 16))}</text>` +
+      `<text x="${cx + 12}" y="${cy + 41}" font-family="sans-serif" font-size="11" fill="${C.sub}">${esc(truncate(k.label + (k.sub ? ' · ' + k.sub : ''), 22))}</text>`;
+  });
+  const fc = a.forecast && a.forecast.text ? a.forecast.text : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+    `<rect width="${W}" height="${H}" rx="18" fill="${C.bg}"/>` +
+    `<text x="24" y="42" font-family="Georgia,serif" font-size="22" font-weight="600" fill="${C.text}">${esc(a.icon + ' ' + a.title)}</text>` +
+    `<text x="${W - 24}" y="42" font-family="sans-serif" font-size="12" fill="${C.sub}" text-anchor="end">${esc(today)}</text>` +
+    `<text x="24" y="92" font-family="Georgia,serif" font-size="40" font-weight="600" fill="${C.accent}">${esc(truncate(a.hero.value + (a.hero.unit || ''), 18))}</text>` +
+    `<text x="24" y="116" font-family="sans-serif" font-size="12.5" fill="${C.sub}">${esc(truncate(a.hero.caption || '', 46))}</text>` +
+    kpiSvg +
+    (fc ? `<rect x="24" y="${fcY}" width="${W - 48}" height="44" rx="10" fill="${C.band}"/><text x="36" y="${fcY + 27}" font-family="sans-serif" font-size="12.5" fill="${C.accent}">${esc(truncate(fc, 50))}</text>` : '') +
+    `<text x="${W - 24}" y="${H - 12}" font-family="sans-serif" font-size="10.5" fill="${C.sub}" text-anchor="end">成长规划 · Growth Planner</text>` +
+    `</svg>`;
+}

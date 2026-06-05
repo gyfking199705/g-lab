@@ -580,3 +580,39 @@ export function financeScenarios(state, opts = {}) {
   else etaText = `${horizon} 个月内暂未达成，可提高储蓄或收益`;
   return { history: f.historyVals, neutral, optimistic, conservative, target, latest, baseReturn: baseR, contribution, etaNeutralMonths: etaN, etaText, hasHistory: f.hasHistory };
 }
+
+/**
+ * 被动收入 vs 主动收入交叉预测（朴素 FIRE 模型，纯函数）。
+ * 逐月：净资产按年化复利 + 每月储蓄增长；被动收入(当月) = 净资产 × 年化/12；
+ * 主动收入按 activeGrowth 缓增。求被动 ≥ 主动的首月（"被动超过主动"的临界点）。
+ * @param {object} o
+ * @param {number} o.netWorth            当前净资产（可投资产）
+ * @param {number} o.annualReturn        投资综合年化(小数)
+ * @param {number} [o.monthlyContribution] 每月新增储蓄
+ * @param {number} o.activeMonthly        当前每月主动收入
+ * @param {number} [o.activeGrowth]       主动收入年增速(小数，默认 0)
+ * @param {number} [o.horizonMonths]      预测月数上限（默认 600=50 年）
+ * @returns {null|{crossoverMonth:number|null, passiveSeries:number[], activeSeries:number[], nwSeries:number[], months:number}}
+ */
+export function passiveCrossover({ netWorth, annualReturn, monthlyContribution = 0, activeMonthly, activeGrowth = 0, horizonMonths = 600 }) {
+  if (!(activeMonthly > 0) || !(annualReturn > 0) || !(netWorth >= 0)) return null;
+  const mr = annualReturn / 12;
+  const ag = activeGrowth / 12;
+  let nw = netWorth;
+  let active = activeMonthly;
+  const passiveSeries = [];
+  const activeSeries = [];
+  const nwSeries = [];
+  let crossoverMonth = null;
+  for (let m = 0; m <= horizonMonths; m++) {
+    const passive = nw * mr;
+    passiveSeries.push(Math.round(passive));
+    activeSeries.push(Math.round(active));
+    nwSeries.push(Math.round(nw));
+    if (crossoverMonth == null && passive >= active) crossoverMonth = m;
+    if (crossoverMonth != null && m >= crossoverMonth + 6) break; // 交叉后多画几个月即可
+    nw = nw * (1 + mr) + monthlyContribution;
+    active = active * (1 + ag);
+  }
+  return { crossoverMonth, passiveSeries, activeSeries, nwSeries, months: passiveSeries.length };
+}

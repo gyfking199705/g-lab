@@ -354,3 +354,27 @@ test('financeScenarios：已达成 / 空', () => {
   assert.match(done.etaText, /已达成/);
   assert.equal(financeScenarios(null), null);
 });
+
+import { passiveCrossover } from './calc.js';
+
+test('passiveCrossover：被动随复利上升并交叉主动', () => {
+  // 净资产 100万，年化 6%→月被动 5000；主动 2万/月；每月存 1万
+  const r = passiveCrossover({ netWorth: 1000000, annualReturn: 0.06, monthlyContribution: 10000, activeMonthly: 20000 });
+  assert.ok(r);
+  assert.ok(r.crossoverMonth > 0, '应在若干年后交叉');
+  // 交叉点：被动 ≥ 主动
+  const m = r.crossoverMonth;
+  assert.ok(r.passiveSeries[m] >= r.activeSeries[m]);
+  // 交叉前一月：被动 < 主动
+  assert.ok(r.passiveSeries[m - 1] < r.activeSeries[m - 1]);
+});
+
+test('passiveCrossover：已经被动>主动 → 第 0 月', () => {
+  const r = passiveCrossover({ netWorth: 10000000, annualReturn: 0.06, activeMonthly: 10000 });
+  assert.equal(r.crossoverMonth, 0);
+});
+
+test('passiveCrossover：缺输入返回 null', () => {
+  assert.equal(passiveCrossover({ netWorth: 100, annualReturn: 0, activeMonthly: 100 }), null);
+  assert.equal(passiveCrossover({ netWorth: 100, annualReturn: 0.06, activeMonthly: 0 }), null);
+});
