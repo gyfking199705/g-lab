@@ -7,14 +7,16 @@
  * props：{ id, get, onBack, onEnter }
  *   get(key) 读取模块数据；onBack 返回看板；onEnter 进入该模块编辑。
  */
-import React, { useMemo } from 'react';
-import { SHARED_CSS, Sparkline, MiniBars, Progress, Empty } from '../core/ui.jsx';
+import React, { useMemo, useState } from 'react';
+import { SHARED_CSS, Sparkline, MiniBars, Progress, Empty, Segmented } from '../core/ui.jsx';
 import { todayStr, fmtDate } from '../core/date.js';
-import { buildAnalytics } from './analytics.js';
+import { buildAnalytics, BOARD_RANGES } from './analytics.js';
 
 export default function BigBoard({ id, get, onBack, onEnter }) {
   const today = todayStr();
-  const a = useMemo(() => buildAnalytics(id, get, today), [id, today]);
+  const [range, setRange] = useState(30);
+  const a = useMemo(() => buildAnalytics(id, get, today, { days: range }), [id, today, range]);
+  const hasSeries = a && (a.charts || []).some((c) => c.kind === 'line' || c.kind === 'bars' || c.kind === 'fan');
 
   if (!a) {
     return (
@@ -32,6 +34,12 @@ export default function BigBoard({ id, get, onBack, onEnter }) {
     <div className="gx-root">
       <style>{SHARED_CSS}{BOARD_CSS}</style>
       <BoardHead title={`${a.icon} ${a.title}`} sub={fmtDate(today)} onBack={onBack} onEnter={onEnter} />
+
+      {hasSeries && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <Segmented tabs={BOARD_RANGES.map((r) => ({ id: r.id, label: r.label }))} value={range} onChange={setRange} />
+        </div>
+      )}
 
       {/* 英雄区 */}
       <div className="bb-hero" style={{ '--bb': a.stroke || 'var(--accent)' }}>

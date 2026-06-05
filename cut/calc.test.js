@@ -161,3 +161,28 @@ test('summary 综合', () => {
 });
 
 function round(x) { return Math.round(x * 10) / 10; }
+
+import { weightForecast } from './calc.js';
+
+test('weightForecast 减重带：方向与收敛', () => {
+  const f = weightForecast(84, -0.7, 70, 28);
+  assert.ok(f);
+  assert.equal(f.mid.length, 28);
+  // 末值都比当前低（在减）
+  assert.ok(f.mid[27] < 84);
+  // 乐观掉得更快 → 末值更低；保守更高
+  assert.ok(f.optimistic[27] <= f.mid[27]);
+  assert.ok(f.conservative[27] >= f.mid[27]);
+  // upper=conservative(更高), lower=optimistic(更低)
+  assert.ok(f.upper[27] >= f.lower[27]);
+});
+
+test('weightForecast 不收敛过冲目标', () => {
+  const f = weightForecast(70.5, -1.4, 70, 28); // 很快到 70
+  assert.ok(f.optimistic.every((v) => v >= 70));
+});
+
+test('weightForecast 非减重返回 null', () => {
+  assert.equal(weightForecast(84, 0.2, 70), null);
+  assert.equal(weightForecast(84, null, 70), null);
+});

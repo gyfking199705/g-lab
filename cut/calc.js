@@ -256,3 +256,27 @@ function isNum(v) { return v != null && v !== '' && isFinite(Number(v)); }
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 function round1(x) { return Math.round(x * 10) / 10; }
 function round2(x) { return Math.round(x * 100) / 100; }
+
+/**
+ * 体重预测带（乐观/中性/保守）：从当前趋势体重按每周速度向前外推 days 天，
+ * 减重场景下乐观=掉得更快(更低)，保守=更慢(更高)，遇目标体重则收敛不过冲。
+ * 仅当朝目标方向（减重 rate<0）时返回，否则 null。返回每日数组（band 给 Sparkline）。
+ * @returns {null|{ mid:number[], optimistic:number[], conservative:number[], upper:number[], lower:number[] }}
+ */
+export function weightForecast(currentTrend, weeklyRate, goalWeight, days = 28) {
+  if (currentTrend == null || weeklyRate == null || weeklyRate >= 0) return null; // 仅减重趋势
+  const base = weeklyRate / 7; // 每日变化（负）
+  const mk = (factor) => {
+    const arr = [];
+    for (let i = 1; i <= days; i++) {
+      let v = currentTrend + base * factor * i;
+      if (v < goalWeight) v = goalWeight; // 不过冲目标
+      arr.push(round1(v));
+    }
+    return arr;
+  };
+  const mid = mk(1);
+  const optimistic = mk(1.4);   // 掉得更快 → 更低
+  const conservative = mk(0.6); // 更慢 → 更高
+  return { mid, optimistic, conservative, upper: conservative, lower: optimistic };
+}
