@@ -32,7 +32,7 @@ export async function fetchGold() {
   return { ...s, fxFallback, at: new Date().toISOString() };
 }
 
-export default function MarketCards({ onOpenStocks }) {
+export default function MarketCards({ onOpenStocks, onOpenGold }) {
   const [gold, setGold] = useState(() => readModule(GOLD_CACHE));
   const [goldErr, setGoldErr] = useState('');
   const [goldBusy, setGoldBusy] = useState(false);
@@ -74,11 +74,12 @@ export default function MarketCards({ onOpenStocks }) {
     <>
       <div className="db-sectitle">行情 · 实时</div>
       <div className="mk-grid">
-        {/* 金价卡 */}
-        <div className="mk-card" style={{ '--mk': 'var(--warn)' }}>
+        {/* 金价卡（点卡进金价大盘） */}
+        <div className={`mk-card${gold && onOpenGold ? ' mk-click' : ''}`} style={{ '--mk': 'var(--warn)' }}
+          onClick={gold && onOpenGold ? onOpenGold : undefined} role={gold && onOpenGold ? 'button' : undefined} tabIndex={gold && onOpenGold ? 0 : undefined}>
           <div className="mk-head">
             <h3>🪙 金价 · 人民币/克</h3>
-            <button className="mk-refresh" onClick={refreshGold} disabled={goldBusy} title="刷新金价">{goldBusy ? '…' : '↻'}</button>
+            <button className="mk-refresh" onClick={(e) => { e.stopPropagation(); refreshGold(); }} disabled={goldBusy} title="刷新金价">{goldBusy ? '…' : '↻'}</button>
           </div>
           {gold ? (
             <>
@@ -89,7 +90,7 @@ export default function MarketCards({ onOpenStocks }) {
               </div>
               {gold.series && gold.series.length > 1 && <div className="mk-chart"><LineChart values={gold.series} height={64} stroke="var(--warn)" /></div>}
               <div className="mk-note">国际金价 ${gold.usdPerOz != null ? gold.usdPerOz.toLocaleString('en-US') : '—'}/oz × 汇率 {gold.usdCny ? gold.usdCny.toFixed(2) : '—'} 折算 · ≈工行积存金{gold.fxFallback ? ' · 汇率近似' : ''}</div>
-              <div className="mk-foot"><span>{goldErr ? '⚠ ' + goldErr : '更新于 ' + fmtTime(gold.at)}</span></div>
+              <div className="mk-foot"><span>{goldErr ? '⚠ ' + goldErr : '更新于 ' + fmtTime(gold.at)}</span>{onOpenGold && <span className="mk-go">查看大盘 ›</span>}</div>
             </>
           ) : goldErr ? (
             <Empty icon="🪙" title="金价暂时获取失败" hint={goldErr} />

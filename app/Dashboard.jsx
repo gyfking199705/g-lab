@@ -85,7 +85,8 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
   // 已有数据的模块数量（少于 3 个时提示载入示例数据，方便预览完整看板）
   const populated = [(goalsData.goals || []).length, (habitsData.habits || []).length, cut, financeShow, learn, papers, ledger, fitness, project, stocks].filter(Boolean).length;
   // 进展卡：统一由大盘引擎驱动（与大盘同源、风格一致）。习惯/日程已在「今日行动」，此处不重复。
-  const boards = useMemo(() => BOARD_ORDER
+  // 进展卡列表：排除 gold（已在「行情」区单独呈现，避免重复），其余统一由大盘引擎驱动
+  const boards = useMemo(() => BOARD_ORDER.filter((id) => id !== 'gold')
     .map((id) => ({ id, a: buildAnalytics(id, readModule, today, { days: 30 }) }))
     .filter((x) => x.a), [tick, today]);
 
@@ -181,7 +182,7 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
           )}
 
           {/* 行情 · 实时（金价 + 股市，浏览器直连取数） */}
-          <MarketCards onOpenStocks={() => open('stocks')} />
+          <MarketCards onOpenStocks={() => open('stocks')} onOpenGold={() => open('gold')} />
 
           {/* 进展 · 趋势（统一「迷你大盘卡」，与大盘同源、风格一致；点卡进大盘） */}
           {boards.length > 0 && (

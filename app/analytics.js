@@ -20,6 +20,7 @@ import { workoutsThisWeek, weekStreak, totalVolume, activitySeries as fitActivit
 import { taskStats, totalFocusMinutes, focusStreak, lastNDays as projLastDays } from '../project/calc.js';
 import { todayView, overdueCount } from '../schedule/calc.js';
 import { portfolioStats, seriesChangePct } from '../stocks/analysis.js';
+import { formatGram } from '../gold/calc.js';
 
 /* ----------------------------- 时间序列 / 预测辅助（纯，已测） ----------------------------- */
 
@@ -141,6 +142,11 @@ function financeBoard(get) {
   const sc = financeScenarios(s, { horizon: 24 });
   const pct = f.target > 0 ? Math.round((f.latest / f.target) * 100) : 0;
   const pp = passivePlan(get);
+  // 金价作为财富的子项：若首页「行情」已抓到金价，则在财富大盘里带一个 KPI
+  const gold = get('gold-cache');
+  const goldKpi = gold && isFinite(gold.pricePerGram)
+    ? kpi('金价(积存金)', formatGram(gold.pricePerGram) + ' 元/克', `${gold.changePct >= 0 ? '↑' : '↓'}${Math.abs(gold.changePct || 0).toFixed(2)}% · ≈工行`, gold.change >= 0 ? 'bad' : 'good')
+    : null;
   const charts = [];
   if (sc) {
     charts.push({ title: '净资产趋势 + 三情景预测（24 个月）', kind: 'fan', values: sc.history,
@@ -172,6 +178,7 @@ function financeBoard(get) {
       kpi('综合年化', sc ? `${(sc.baseReturn * 100).toFixed(1)}%` : '—', '按资产配置'),
       kpi('中性预计', sc && sc.etaNeutralMonths ? `${(sc.etaNeutralMonths / 12).toFixed(1)} 年` : (f.etaMonths ? `${(f.etaMonths / 12).toFixed(1)} 年` : '—'), '达成目标', 'good'),
       passiveKpi,
+      ...(goldKpi ? [goldKpi] : []),
     ],
     charts,
     forecast: { text: passiveLine ? `🏝️ ${passiveLine.replace(/^🏝️ |^🎉 /, '')}` : `🔮 ${sc ? sc.etaText : f.etaText}` },
@@ -499,8 +506,37 @@ function stocksBoard(get) {
   };
 }
 
+/** 金价大盘 —— 财富的子项；读 gold-cache（由首页「行情」卡抓取写入）。涨=红（中国市场惯例）。 */
+function goldBoard(get) {
+  const g = get('gold-cache');
+  if (!g || !isFinite(g.pricePerGram)) return null;
+  const up = (g.change || 0) >= 0;
+  const series = Array.isArray(g.series) ? g.series.filter((v) => isFinite(v)) : [];
+  const pct = `${g.changePct >= 0 ? '+' : ''}${(g.changePct || 0).toFixed(2)}%`;
+  return {
+    icon: '🪙', title: '金价大盘', stroke: 'var(--warn)',
+    hero: {
+      value: formatGram(g.pricePerGram), unit: '元/克',
+      caption: `国际金价 $${g.usdPerOz != null ? g.usdPerOz.toLocaleString('en-US') : '—'}/oz × 汇率 ${g.usdCny ? g.usdCny.toFixed(2) : '—'} 折算 · ≈工行积存金`,
+      delta: `${up ? '↑' : '↓'} ${formatGram(Math.abs(g.change || 0))} (${pct})`, deltaTone: up ? 'bad' : 'good',
+    },
+    kpis: [
+      kpi('人民币金价', formatGram(g.pricePerGram) + ' 元/克', '≈工行积存金', 'accent'),
+      kpi('国际金价', '$' + (g.usdPerOz != null ? g.usdPerOz.toLocaleString('en-US') : '—'), 'COMEX 期货/盎司'),
+      kpi('美元兑人民币', g.usdCny ? g.usdCny.toFixed(3) : '—', g.fxFallback ? '近似汇率' : '实时'),
+      kpi('日涨跌', pct, up ? '涨' : '跌', up ? 'bad' : 'good'),
+    ],
+    charts: series.length > 1
+      ? [{ title: '人民币金价走势（元/克）', kind: 'line', values: series, stroke: 'var(--warn)', fmt: (v) => formatGram(v) + '元', captionLeft: '国际金价折算 · 仅供参考', captionRight: '≈工行积存金' }]
+      : [],
+    forecast: { text: '🔮 金价随国际行情与汇率波动，长期常作为抗通胀/分散配置的一部分（非投资建议）' },
+    insights: [g.fxFallback ? '当前用兜底汇率折算，联网刷新后更准。' : '走势与工行积存金基本一致，绝对值因无银行点差可能差几元。'],
+    disclaimer: '人民币金价由国际金价×汇率折算（≈工行积存金），行情可能延迟，非投资/购买建议。',
+  };
+}
+
 const BUILDERS = {
-  wealth: financeBoard, cut: cutBoard, ledger: ledgerBoard, habits: habitsBoard,
+  wealth: financeBoard, gold: goldBoard, cut: cutBoard, ledger: ledgerBoard, habits: habitsBoard,
   papers: papersBoard, goals: goalsBoard, learning: learningBoard,
   fitness: fitnessBoard, project: projectBoard, schedule: scheduleBoard, stocks: stocksBoard,
 };
@@ -509,7 +545,7 @@ const BUILDERS = {
 export function hasBoard(id) { return !!BUILDERS[id]; }
 
 /** 大盘的推荐展示顺序（首页卡片 / 详情轮播共用）。 */
-export const BOARD_ORDER = ['wealth', 'cut', 'ledger', 'goals', 'learning', 'papers', 'fitness', 'project', 'stocks', 'habits', 'schedule'];
+export const BOARD_ORDER = ['wealth', 'gold', 'cut', 'ledger', 'goals', 'learning', 'papers', 'fitness', 'project', 'stocks', 'habits', 'schedule'];
 
 /**
  * 构造某模块的大盘数据；无数据/无专属分析返回 null。

@@ -66,6 +66,32 @@ test('buildAnalytics finance：注入 get', () => {
   assert.match(a.forecast.text, /达成|预测|增长|情景/);
 });
 
+test('buildAnalytics gold：读 gold-cache 产出金价大盘', () => {
+  const map = { 'gold-cache': { pricePerGram: 565.3, change: 2.1, changePct: 0.37, series: [560, 562, 563, 565.3], usdPerOz: 2450, usdCny: 7.18, fxFallback: false } };
+  const a = buildAnalytics('gold', (k) => map[k] || null);
+  assert.ok(a);
+  assert.equal(a.title, '金价大盘');
+  assert.ok(a.kpis.length >= 4);
+  assert.equal(a.charts[0].kind, 'line');
+  assert.ok(a.charts[0].values.length === 4);
+  assert.equal(hasBoard('gold'), true);
+});
+
+test('gold 无缓存返回 null', () => {
+  assert.equal(buildAnalytics('gold', () => null), null);
+});
+
+test('财富大盘把金价作为子项 KPI 纳入（有 gold-cache 时）', () => {
+  const map = {
+    'savings-planner': { forecast: { target: 1000000 }, netWorth: { accounts: [{ id: 'a', type: 'asset', category: '流动' }], snapshots: [
+      { date: '2026-05-01', values: { a: 300000 } }, { date: '2026-06-01', values: { a: 420000 } },
+    ] } },
+    'gold-cache': { pricePerGram: 565.3, change: 2.1, changePct: 0.37, series: [560, 565.3], usdPerOz: 2450, usdCny: 7.18 },
+  };
+  const a = buildAnalytics('wealth', (k) => map[k] || null, '2026-06-10');
+  assert.ok(a.kpis.some((k) => /金价/.test(k.label)), '财富大盘应含金价 KPI');
+});
+
 test('buildAnalytics 无数据返回 null；hasBoard', () => {
   assert.equal(buildAnalytics('wealth', () => null), null);
   assert.equal(buildAnalytics('stocks', () => null), null); // 无数据
