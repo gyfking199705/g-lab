@@ -41,3 +41,23 @@ export function formatGram(v) {
   if (v == null || !isFinite(v)) return '—';
   return v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+/**
+ * 由财富状态的积存金持仓克数 + 金价缓存，算出当前折算价值（计入净资产用）。
+ * @param {object} savingsState savings-planner（取 goldGrams）
+ * @param {object} goldCache    gold-cache（取 pricePerGram / change / changePct）
+ * @returns {{grams:number, price:number, value:number, change:number, changePct:number}}
+ */
+export function goldValueOf(savingsState, goldCache) {
+  const grams = Math.max(0, Number(savingsState && savingsState.goldGrams) || 0);
+  const g = goldCache || {};
+  const price = isFinite(g.pricePerGram) && g.pricePerGram > 0 ? g.pricePerGram : 0;
+  return {
+    grams,
+    price,
+    value: grams > 0 && price > 0 ? Math.round(grams * price) : 0,
+    change: Number(g.change) || 0,
+    changePct: Number(g.changePct) || 0,
+  };
+}
+

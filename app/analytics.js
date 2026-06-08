@@ -20,7 +20,7 @@ import { workoutsThisWeek, weekStreak, totalVolume, activitySeries as fitActivit
 import { taskStats, totalFocusMinutes, focusStreak, lastNDays as projLastDays } from '../project/calc.js';
 import { todayView, overdueCount } from '../schedule/calc.js';
 import { portfolioStats, seriesChangePct } from '../stocks/analysis.js';
-import { formatGram } from '../gold/calc.js';
+import { formatGram, goldValueOf } from '../gold/calc.js';
 
 /* ----------------------------- 时间序列 / 预测辅助（纯，已测） ----------------------------- */
 
@@ -137,16 +137,17 @@ function passivePlan(get) {
 
 function financeBoard(get) {
   const s = get('savings-planner');
-  const f = financeForecast(s);
+  // 积存金自动计入净资产：持有克数 × 实时金价（来自首页「行情」抓取的 gold-cache）
+  const gv = goldValueOf(s, get('gold-cache'));
+  const f = financeForecast(s, { extraAssets: gv.value });
   if (!f || (!f.target && !f.latest)) return null;
-  const sc = financeScenarios(s, { horizon: 24 });
+  const sc = financeScenarios(s, { horizon: 24, extraAssets: gv.value });
   const pct = f.target > 0 ? Math.round((f.latest / f.target) * 100) : 0;
   const pp = passivePlan(get);
-  // 金价作为财富的子项：若首页「行情」已抓到金价，则在财富大盘里带一个 KPI
-  const gold = get('gold-cache');
-  const goldKpi = gold && isFinite(gold.pricePerGram)
-    ? kpi('金价(积存金)', formatGram(gold.pricePerGram) + ' 元/克', `${gold.changePct >= 0 ? '↑' : '↓'}${Math.abs(gold.changePct || 0).toFixed(2)}% · ≈工行`, gold.change >= 0 ? 'bad' : 'good')
-    : null;
+  // 金价作为财富的子项 KPI：有持仓→显示已计入的折算金额；否则只显示金价
+  let goldKpi = null;
+  if (gv.value > 0) goldKpi = kpi('积存金', formatMoney(gv.value), `${gv.grams}g × ${formatGram(gv.price)} 已计入`, 'accent');
+  else if (gv.price > 0) goldKpi = kpi('金价(积存金)', formatGram(gv.price) + ' 元/克', `${gv.changePct >= 0 ? '↑' : '↓'}${Math.abs(gv.changePct).toFixed(2)}% · ≈工行`, gv.change >= 0 ? 'bad' : 'good');
   const charts = [];
   if (sc) {
     charts.push({ title: '净资产趋势 + 三情景预测（24 个月）', kind: 'fan', values: sc.history,

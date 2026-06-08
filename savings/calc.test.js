@@ -300,6 +300,25 @@ test('financeForecast：净资产线性预测 + 达成时间', () => {
   assert.match(f.etaText, /年达成/);
 });
 
+test('financeForecast：extraAssets（积存金）作为常量计入净资产，斜率不变', () => {
+  const accounts = [{ id: 'a', type: 'asset', category: '流动' }];
+  const state = {
+    forecast: { target: 1000000 },
+    netWorth: { accounts, snapshots: [
+      { date: '2026-01-01', values: { a: 100000 } },
+      { date: '2026-02-01', values: { a: 150000 } },
+      { date: '2026-03-01', values: { a: 200000 } },
+    ] },
+  };
+  const base = financeForecast(state, { horizon: 6 });
+  const f = financeForecast(state, { horizon: 6, extraAssets: 60000 });
+  assert.equal(f.latest, base.latest + 60000); // 总额 + 积存金
+  assert.deepEqual(f.historyVals, base.historyVals.map((v) => v + 60000)); // 整条曲线上移
+  assert.ok(Math.abs(f.monthlyRate - base.monthlyRate) < 1e-6); // 斜率不变
+  assert.equal(f.extraAssets, 60000);
+  assert.ok(f.etaMonths < base.etaMonths); // 离目标更近
+});
+
 test('financeForecast：已达成 / 无历史 / 无目标', () => {
   const accounts = [{ id: 'a', type: 'asset', category: '流动' }];
   assert.equal(financeForecast({ forecast: { target: 0 }, netWorth: { accounts, snapshots: [] } }).etaText, '设个目标，看预计达成');

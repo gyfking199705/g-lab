@@ -508,9 +508,11 @@ export function financeForecast(state, opts = {}) {
   const forecast = state.forecast || {};
   const target = Number(forecast.target) || 0;
   const nw = state.netWorth || {};
+  // 额外资产（如积存金按实时金价折算）：作为常量加到净资产上，保留趋势斜率不变
+  const extra = Number(opts.extraAssets) || 0;
   const series = netWorthSeries(nw.snapshots || [], nw.accounts || []);
   const hasHistory = series.length >= 2;
-  const latest = series.length ? series[series.length - 1].net : (Number(forecast.currentAssets) || 0);
+  const latest = (series.length ? series[series.length - 1].net : (Number(forecast.currentAssets) || 0)) + extra;
 
   let monthlyRate = null;
   const projection = [];
@@ -532,7 +534,7 @@ export function financeForecast(state, opts = {}) {
   else if (monthlyRate == null || monthlyRate <= 0) etaText = '近期未增长，暂无法预测';
   else etaText = `按近期速度约 ${(etaMonths / 12).toFixed(1)} 年达成`;
 
-  return { historyVals: series.map((s) => s.net), projection, target, latest, monthlyRate, etaMonths, etaText, hasHistory };
+  return { historyVals: series.map((s) => s.net + extra), projection, target, latest, monthlyRate, etaMonths, etaText, hasHistory, extraAssets: extra };
 }
 
 /** 从资产配置估算综合年化（小数）。读 ret(百分比) 或 expectedReturn；缺省 5%。 */
@@ -554,7 +556,7 @@ function allocAnnualReturn(allocations) {
  *   target:number,latest:number,baseReturn:number,contribution:number,etaNeutralMonths:number|null,etaText:string,hasHistory:boolean}}
  */
 export function financeScenarios(state, opts = {}) {
-  const f = financeForecast(state);
+  const f = financeForecast(state, { extraAssets: opts.extraAssets });
   if (!f) return null;
   const horizon = opts.horizon || 24;
   const latest = f.latest;

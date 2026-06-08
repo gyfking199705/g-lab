@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { rmbPerGram, goldSummary, OZ_TO_GRAM, formatGram } from './calc.js';
+import { rmbPerGram, goldSummary, OZ_TO_GRAM, formatGram, goldValueOf } from './calc.js';
 
 test('rmbPerGram：金价折算人民币/克', () => {
   // 2000 美元/盎司 × 7.2 ÷ 31.1035 ≈ 463.0 元/克
@@ -39,4 +39,17 @@ test('goldSummary：非法返回 null', () => {
 test('formatGram：两位小数 / 空值', () => {
   assert.equal(formatGram(null), '—');
   assert.ok(/\d/.test(formatGram(463.2)));
+});
+
+test('goldValueOf：克数 × 实时金价 = 计入净资产的金额', () => {
+  const v = goldValueOf({ goldGrams: 38 }, { pricePerGram: 565.3, change: 2, changePct: 0.4 });
+  assert.equal(v.grams, 38);
+  assert.equal(v.price, 565.3);
+  assert.equal(v.value, Math.round(38 * 565.3));
+});
+
+test('goldValueOf：无持仓或无价 → value 0', () => {
+  assert.equal(goldValueOf({ goldGrams: 0 }, { pricePerGram: 565 }).value, 0);
+  assert.equal(goldValueOf({ goldGrams: 38 }, null).value, 0);
+  assert.equal(goldValueOf(null, null).value, 0);
 });

@@ -58,6 +58,8 @@ export const DEFAULT_STATE = {
   },
   // 净资产追踪：账户定义 + 各期快照
   netWorth: { accounts: DEFAULT_ACCOUNTS, snapshots: [] },
+  // 积存金持仓（克）：按首页「行情」抓取的实时金价自动折算，计入净资产
+  goldGrams: 0,
 };
 
 function emptySpecials() {
@@ -120,6 +122,10 @@ function loadInitial(initialState, storageKey) {
 /* ============================ 主组件 ============================ */
 export default function SavingsPlanner({ initialState, onChange, storageKey = 'savings-planner', initialTab = 'plan' }) {
   const [state, setState] = useState(() => loadInitial(initialState, storageKey));
+  // 实时金价（元/克）：由首页「行情」抓取后写入 gold-cache，这里只读用于积存金折算
+  const goldPrice = useMemo(() => {
+    try { const g = JSON.parse(localStorage.getItem('gold-cache') || 'null'); return g && isFinite(g.pricePerGram) ? g.pricePerGram : 0; } catch (e) { return 0; }
+  }, [state]);
 
   // 把每个人的专项附加扣除明细同步成总额，喂给 calc
   const planInput = useMemo(() => {
@@ -391,7 +397,7 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
         </>
       )}
 
-      {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} />}
+      {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} goldGrams={Number(state.goldGrams) || 0} onGoldGrams={(v) => update(['goldGrams'], v)} goldPrice={goldPrice} />}
       {tab === 'health' && <HealthTab netWorth={state.netWorth} budget={budget} />}
       {tab === 'mc' && <MonteCarloTab forecast={state.forecast} budget={budget} investment={investment} />}
     </div>
@@ -629,9 +635,10 @@ function WealthChart({ series, target, years }) {
 /* ============================ 净资产追踪 ============================ */
 const NW_CATEGORIES = ['流动', '投资', '固定', '其他'];
 
-function NetWorthTab({ netWorth, setNW }) {
+function NetWorthTab({ netWorth, setNW, goldGrams = 0, onGoldGrams, goldPrice = 0 }) {
   const accounts = netWorth.accounts || [];
   const snapshots = netWorth.snapshots || [];
+  const goldValue = goldGrams > 0 && goldPrice > 0 ? Math.round(goldGrams * goldPrice) : 0;
   const series = useMemo(() => netWorthSeries(snapshots, accounts), [snapshots, accounts]);
   const change = useMemo(() => netWorthChange(series), [series]);
   const [manageOpen, setManageOpen] = useState(false);
@@ -680,8 +687,8 @@ function NetWorthTab({ netWorth, setNW }) {
   return (
     <div className="sp-nw">
       <div className="sp-kpis sp-kpis-4">
-        <Kpi label="当前净资产" value={formatMoney(totals.net)} tone="hero" />
-        <Kpi label="总资产" value={formatMoney(totals.assets)} tone="calc" />
+        <Kpi label="当前净资产" value={formatMoney(totals.net + goldValue)} tone="hero" />
+        <Kpi label="总资产" value={formatMoney(totals.assets + goldValue)} tone="calc" />
         <Kpi label="总负债" value={formatMoney(totals.liabilities)} tone="bad" />
         <Kpi
           label="较上期"
@@ -689,6 +696,24 @@ function NetWorthTab({ netWorth, setNW }) {
           tone={change && change.abs >= 0 ? 'good' : change ? 'bad' : 'calc'}
         />
       </div>
+
+      <Section title="积存金（自动计入净资产）" badge="子项">
+        <div className="sp-gold">
+          <div className="sp-gold-in">
+            <NumberField label="积存金持有" value={goldGrams} onChange={(v) => onGoldGrams && onGoldGrams(Math.max(0, v))} unit="克" step={1} />
+          </div>
+          <div className="sp-gold-out">
+            {goldPrice > 0 ? (
+              <>
+                <div className="sp-gold-v">{formatMoney(goldValue)}</div>
+                <div className="sp-gold-sub">{goldGrams} 克 × {goldPrice.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元/克 · 已计入上方净资产</div>
+              </>
+            ) : (
+              <div className="sp-gold-sub">去首页「行情」刷新一次金价后，这里会按实时金价自动折算（≈工行积存金）。</div>
+            )}
+          </div>
+        </div>
+      </Section>
 
       <Section title="净资产走势" badge="结果">
         <NetWorthChart series={series} />
@@ -1304,6 +1329,11 @@ const CSS = `
 
 /* ===== 净资产 ===== */
 .sp-nw{display:flex;flex-direction:column;gap:14px;}
+.sp-gold{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+.sp-gold-in{min-width:180px;flex:none;}
+.sp-gold-out{flex:1;min-width:160px;}
+.sp-gold-v{font-family:var(--serif);font-size:24px;font-weight:500;color:var(--accent-2);letter-spacing:-.5px;line-height:1.1;}
+.sp-gold-sub{font-size:11.5px;color:var(--t3);margin-top:3px;line-height:1.5;}
 .sp-nw-empty{text-align:center;padding:34px 16px;color:var(--t2);}
 .sp-nw-empty-ic{font-size:34px;margin-bottom:10px;}
 .sp-nw-empty p{font-size:12.5px;max-width:420px;margin:0 auto 16px;line-height:1.7;}
