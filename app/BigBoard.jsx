@@ -7,16 +7,27 @@
  * props：{ id, get, onBack, onEnter }
  *   get(key) 读取模块数据；onBack 返回看板；onEnter 进入该模块编辑。
  */
-import React, { useMemo, useState } from 'react';
-import { SHARED_CSS, Sparkline, LineChart, MiniBars, Progress, Empty, Segmented } from '../core/ui.jsx';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { SHARED_CSS, Sparkline, LineChart, MiniBars, Progress, Empty, Segmented, Ring } from '../core/ui.jsx';
 import { todayStr, fmtDate } from '../core/date.js';
 import { buildAnalytics, BOARD_RANGES, boardToText, boardToSVG } from './analytics.js';
 
-export default function BigBoard({ id, get, onBack, onEnter }) {
+export default function BigBoard({ id, get, onBack, onEnter, boards = [], onNavBoard }) {
   const today = todayStr();
   const [range, setRange] = useState(30);
+  const [activeKpi, setActiveKpi] = useState(null);
   const a = useMemo(() => buildAnalytics(id, get, today, { days: range }), [id, today, range]);
   const hasSeries = a && (a.charts || []).some((c) => c.kind === 'line' || c.kind === 'bars' || c.kind === 'fan');
+  const chartsRef = useRef(null);
+  useEffect(() => { setActiveKpi(null); }, [id]);
+
+  // 大盘轮播：在所有「有数据」的大盘间前后切换
+  const list = boards && boards.length ? boards : [id];
+  const pos = Math.max(0, list.indexOf(id));
+  const prev = list.length > 1 ? list[(pos - 1 + list.length) % list.length] : null;
+  const next = list.length > 1 ? list[(pos + 1) % list.length] : null;
+  const goPrev = prev && onNavBoard ? () => onNavBoard(prev) : null;
+  const goNext = next && onNavBoard ? () => onNavBoard(next) : null;
 
   if (!a) {
     return (
@@ -30,11 +41,15 @@ export default function BigBoard({ id, get, onBack, onEnter }) {
     );
   }
 
+  const scrollToCharts = () => { if (chartsRef.current) chartsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const stroke = a.stroke || 'var(--accent)';
+
   return (
     <div className="gx-root">
       <style>{SHARED_CSS}{BOARD_CSS}</style>
       <BoardHead title={`${a.icon} ${a.title}`} sub={fmtDate(today)} onBack={onBack} onEnter={onEnter}
-        onShare={() => shareBoard(a, today)} onExport={() => exportBoard(a, today)} />
+        onShare={() => shareBoard(a, today)} onExport={() => exportBoard(a, today)}
+        onPrev={goPrev} onNext={goNext} pos={pos} count={list.length} />
 
       {hasSeries && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
@@ -42,34 +57,43 @@ export default function BigBoard({ id, get, onBack, onEnter }) {
         </div>
       )}
 
-      {/* 英雄区 */}
-      <div className="bb-hero" style={{ '--bb': a.stroke || 'var(--accent)' }}>
-        <div className="bb-hero-main">
-          <span className="bb-hero-v">{a.hero.value}{a.hero.unit && <span className="bb-hero-u">{a.hero.unit}</span>}</span>
-          {a.hero.delta && <span className={`bb-hero-d ${a.hero.deltaTone || ''}`}>{a.hero.delta}</span>}
+      {/* 英雄区（大号环形进度 + 数值 + 涨跌） */}
+      <div className="bb-hero" key={id} style={{ '--bb': stroke }}>
+        {a.hero.progress != null && isFinite(a.hero.progress) && (
+          <Ring pct={a.hero.progress} stroke={a.hero.progressTone === 'bad' ? 'var(--danger)' : stroke}
+            size={92} width={9} label={a.hero.progressLabel} sub={a.hero.progressSub} />
+        )}
+        <div className="bb-hero-body">
+          <div className="bb-hero-main">
+            <span className="bb-hero-v">{a.hero.value}{a.hero.unit && <span className="bb-hero-u">{a.hero.unit}</span>}</span>
+            {a.hero.delta && <span className={`bb-hero-d ${a.hero.deltaTone || ''}`}>{a.hero.delta}</span>}
+          </div>
+          {a.hero.caption && <div className="bb-hero-c">{a.hero.caption}</div>}
         </div>
-        {a.hero.caption && <div className="bb-hero-c">{a.hero.caption}</div>}
       </div>
 
-      {/* KPI 网格 */}
+      {/* KPI 网格（可点击：高亮并跳到趋势图） */}
       <div className="bb-kpis">
         {a.kpis.map((k, i) => (
-          <div className="bb-kpi" key={i}>
+          <button className={`bb-kpi${activeKpi === i ? ' active' : ''}`} key={i} style={{ '--bb': stroke, animationDelay: `${i * 55}ms` }}
+            onClick={() => { setActiveKpi(activeKpi === i ? null : i); scrollToCharts(); }}>
             <div className={`bb-kpi-v ${k.tone || ''}`}>{k.value}</div>
             <div className="bb-kpi-l">{k.label}</div>
             {k.sub && <div className="bb-kpi-s">{k.sub}</div>}
-          </div>
+          </button>
         ))}
       </div>
 
       {/* 图表 */}
+      <div ref={chartsRef}>
       {a.charts.map((c, i) => (
-        <div className="gx-card" key={i} style={{ marginTop: 12 }}>
+        <div className={`gx-card${activeKpi != null && i === 0 ? ' bb-flash' : ''}`} key={`${id}-${i}`} style={{ marginTop: 12 }}>
           <div className="gx-sechead"><h3>{c.title}</h3>{c.captionRight && <span className="gx-sub">{c.captionRight}</span>}</div>
           <ChartView c={c} />
           {c.captionLeft && <div className="bb-cap">{c.captionLeft}</div>}
         </div>
       ))}
+      </div>
 
       {/* 预测 */}
       {a.forecast && <div className="bb-forecast">{a.forecast.text}</div>}
@@ -84,19 +108,31 @@ export default function BigBoard({ id, get, onBack, onEnter }) {
 
       {a.disclaimer && <p className="gx-disclaim">{a.disclaimer}</p>}
 
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+      <div className="bb-footnav">
+        {goPrev && <button className="gx-btn gx-btn-sm" onClick={goPrev}>‹ 上一个</button>}
         <button className="gx-btn gx-btn-primary" onClick={onEnter}>进入「{a.title.replace('大盘', '')}」模块 →</button>
+        {goNext && <button className="gx-btn gx-btn-sm" onClick={goNext}>下一个 ›</button>}
       </div>
     </div>
   );
 }
 
-function BoardHead({ title, sub, onBack, onEnter, onShare, onExport }) {
+function BoardHead({ title, sub, onBack, onEnter, onShare, onExport, onPrev, onNext, pos, count }) {
   return (
     <div className="gx-headrow">
-      <div className="gx-head"><h2>{title}</h2>{sub && <p>{sub}</p>}</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <button className="gx-btn gx-btn-sm" onClick={onBack}>‹ 看板</button>
+      <div className="gx-head">
+        <h2>{title}</h2>
+        {sub && <p>{sub}{count > 1 ? ` · 大盘 ${pos + 1}/${count}` : ''}</p>}
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        {count > 1 && (
+          <div className="bb-carousel">
+            <button className="bb-cbtn" onClick={onPrev} title="上一个大盘" aria-label="上一个大盘">‹</button>
+            <span className="bb-cdot">{pos + 1}/{count}</span>
+            <button className="bb-cbtn" onClick={onNext} title="下一个大盘" aria-label="下一个大盘">›</button>
+          </div>
+        )}
+        <button className="gx-btn gx-btn-sm" onClick={onBack}>看板</button>
         {onShare && <button className="gx-btn gx-btn-sm" onClick={onShare}>📤 分享</button>}
         {onExport && <button className="gx-btn gx-btn-sm" onClick={onExport}>🖼 导出</button>}
         <button className="gx-btn gx-btn-sm" onClick={onEnter}>进入模块</button>
@@ -187,22 +223,29 @@ function CrossChart({ c }) {
 }
 
 const BOARD_CSS = `
-.bb-hero{background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 16%,var(--surface)),var(--surface) 70%);border:1px solid var(--bd);border-radius:16px;padding:20px 22px;}
+@keyframes bbRise{from{opacity:0;translate:0 14px;}to{opacity:1;translate:0 0;}}
+@keyframes bbFlash{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bb,var(--accent)) 45%,transparent);}100%{box-shadow:0 0 0 8px transparent;}}
+.bb-hero{display:flex;align-items:center;gap:20px;background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 16%,var(--surface)),var(--surface) 70%);border:1px solid color-mix(in srgb,var(--bb) 22%,var(--bd));border-radius:16px;padding:20px 24px;position:relative;overflow:hidden;animation:bbRise .5s cubic-bezier(.22,1,.36,1) both;}
+.bb-hero::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--bb);opacity:.85;}
+.bb-hero-body{min-width:0;flex:1;}
 .bb-hero-main{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
-.bb-hero-v{font-family:var(--serif);font-size:40px;font-weight:500;letter-spacing:-1px;line-height:1;color:var(--bb);}
+.bb-hero-v{font-family:var(--serif);font-size:40px;font-weight:500;letter-spacing:-1px;line-height:1;color:var(--bb);font-variant-numeric:tabular-nums;}
 .bb-hero-u{font-size:18px;color:var(--text-3);margin-left:3px;}
 .bb-hero-d{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--text-2);}
 .bb-hero-d.good{color:var(--success);background:var(--success-soft);}
 .bb-hero-d.bad{color:var(--danger);background:var(--danger-soft);}
 .bb-hero-c{font-size:13px;color:var(--text-2);margin-top:8px;}
 .bb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:10px;margin-top:14px;}
-.bb-kpi{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;}
+.bb-kpi{text-align:left;font-family:var(--sans);background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .14s,box-shadow .18s,border-color .18s;animation:bbRise .5s cubic-bezier(.22,1,.36,1) both;position:relative;}
+.bb-kpi:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(38,36,31,.08);border-color:color-mix(in srgb,var(--bb) 35%,var(--bd));}
+.bb-kpi.active{border-color:var(--bb);box-shadow:0 0 0 2px color-mix(in srgb,var(--bb) 22%,transparent);background:color-mix(in srgb,var(--bb) 7%,var(--surface));}
 .bb-kpi-v{font-family:var(--serif);font-size:21px;font-weight:500;letter-spacing:-.3px;font-variant-numeric:tabular-nums;line-height:1.1;}
 .bb-kpi-v.accent{color:var(--accent-2);}
 .bb-kpi-v.good{color:var(--success);}
 .bb-kpi-v.bad{color:var(--danger);}
 .bb-kpi-l{font-size:11.5px;color:var(--text-2);margin-top:4px;}
 .bb-kpi-s{font-size:10.5px;color:var(--text-3);margin-top:1px;}
+.bb-flash{animation:bbFlash .9s ease-out;}
 .bb-cap{font-size:10.5px;color:var(--text-3);margin-top:7px;text-align:center;}
 .bb-forecast{margin-top:12px;background:var(--accent-soft);border:1px solid #E6C8B9;color:var(--accent-2);border-radius:12px;padding:12px 15px;font-size:13.5px;line-height:1.6;}
 .bb-ins{margin:0;padding-left:18px;color:var(--text-2);font-size:13px;line-height:1.8;}
@@ -212,5 +255,11 @@ const BOARD_CSS = `
 .bb-legend i.dash{height:0;border-top:2px dashed var(--accent);opacity:.75;}
 .bb-legend i.band{background:var(--accent);opacity:.13;border-radius:2px;}
 .bb-legend i.goal{height:0;border-top:2px dashed var(--danger);}
-@media(max-width:560px){ .bb-hero-v{font-size:33px;} }
+.bb-carousel{display:flex;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--bd);border-radius:999px;padding:2px;}
+.bb-cbtn{border:none;background:none;cursor:pointer;font-size:18px;line-height:1;color:var(--text-2);width:28px;height:26px;border-radius:999px;transition:.15s;font-family:var(--serif);}
+.bb-cbtn:hover{background:var(--accent-soft);color:var(--accent-2);}
+.bb-cdot{font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums;min-width:30px;text-align:center;}
+.bb-footnav{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:18px;flex-wrap:wrap;}
+@media(prefers-reduced-motion:reduce){.bb-hero,.bb-kpi{animation:none;}.bb-flash{animation:none;}.bb-kpi:hover{transform:none;}}
+@media(max-width:560px){ .bb-hero-v{font-size:33px;} .bb-hero{gap:14px;padding:16px;} }
 `;

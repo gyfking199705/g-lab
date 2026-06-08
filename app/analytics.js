@@ -508,6 +508,9 @@ const BUILDERS = {
 /** 模块是否有专属大盘。 */
 export function hasBoard(id) { return !!BUILDERS[id]; }
 
+/** 大盘的推荐展示顺序（首页卡片 / 详情轮播共用）。 */
+export const BOARD_ORDER = ['wealth', 'cut', 'ledger', 'goals', 'learning', 'papers', 'fitness', 'project', 'stocks', 'habits', 'schedule'];
+
 /**
  * 构造某模块的大盘数据；无数据/无专属分析返回 null。
  * @param {string} id 模块 id

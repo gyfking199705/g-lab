@@ -16,7 +16,7 @@ import ProjectPlanner from '../project/ProjectPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
 import Dashboard from './Dashboard.jsx';
 import BigBoard from './BigBoard.jsx';
-import { hasBoard } from './analytics.js';
+import { hasBoard, BOARD_ORDER, buildAnalytics } from './analytics.js';
 import SchedulePlanner from '../schedule/SchedulePlanner.jsx';
 import GoalsPlanner from '../goals/GoalsPlanner.jsx';
 import HabitsPlanner from '../habits/HabitsPlanner.jsx';
@@ -328,7 +328,8 @@ export default function App() {
       <main className="app-main">
         <div className="app-mainpad">
           {board ? (
-            <BigBoard id={board} get={readModule} onBack={() => setBoard(null)} onEnter={() => go(board)} />
+            <BigBoard id={board} get={readModule} boards={BOARD_ORDER.filter((bid) => buildAnalytics(bid, readModule))}
+              onNavBoard={openBoard} onBack={() => setBoard(null)} onEnter={() => go(board)} />
           ) : active === 'home' ? (
             <Dashboard onNavigate={go} onOpenBoard={openBoard} onChange={bump} onSeed={doSeed} />
           ) : active === 'schedule' ? (

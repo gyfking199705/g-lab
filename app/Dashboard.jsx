@@ -11,7 +11,7 @@
 import React, { useMemo, useState } from 'react';
 import { readModule, saveState } from '../core/store.js';
 import { SHARED_CSS, Progress, Empty, LineChart, MiniBars, Ring } from '../core/ui.jsx';
-import { buildAnalytics } from './analytics.js';
+import { buildAnalytics, BOARD_ORDER } from './analytics.js';
 import { todayStr, fmtDate } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
 import { overallStats as goalsOverall } from '../goals/calc.js';
@@ -87,7 +87,7 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
   // 已有数据的模块数量（少于 3 个时提示载入示例数据，方便预览完整看板）
   const populated = [(goalsData.goals || []).length, (habitsData.habits || []).length, cut, financeShow, learn, papers, ledger, fitness, project, stocks].filter(Boolean).length;
   // 进展卡：统一由大盘引擎驱动（与大盘同源、风格一致）。习惯/日程已在「今日行动」，此处不重复。
-  const boards = useMemo(() => ['wealth', 'cut', 'ledger', 'goals', 'learning', 'papers', 'fitness', 'project', 'stocks']
+  const boards = useMemo(() => BOARD_ORDER
     .map((id) => ({ id, a: buildAnalytics(id, readModule, today, { days: 30 }) }))
     .filter((x) => x.a), [tick, today]);
 
