@@ -11,6 +11,7 @@ import React, { useMemo, useState } from 'react';
 import { readModule, saveState } from '../core/store.js';
 import { SHARED_CSS, Progress, Empty, LineChart, MiniBars, Ring } from '../core/ui.jsx';
 import { buildAnalytics, BOARD_ORDER } from './analytics.js';
+import MarketCards, { MARKET_CSS } from './MarketCards.jsx';
 import { todayStr, fmtDate } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
 import { todayBoard, currentStreak, fitnessWorkoutDates, toggleCheck, bumpCount } from '../habits/calc.js';
@@ -91,7 +92,7 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
 
   return (
     <div className="gx-root">
-      <style>{SHARED_CSS}{DASH_CSS}</style>
+      <style>{SHARED_CSS}{DASH_CSS}{MARKET_CSS}</style>
 
       <div className="gx-head">
         <h2>🏠 {greeting()}</h2>
@@ -179,7 +180,10 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
             </>
           )}
 
-          {/* 3) 进展 · 趋势（统一「迷你大盘卡」，与大盘同源、风格一致；点卡进大盘） */}
+          {/* 行情 · 实时（金价 + 股市，浏览器直连取数） */}
+          <MarketCards onOpenStocks={() => open('stocks')} />
+
+          {/* 进展 · 趋势（统一「迷你大盘卡」，与大盘同源、风格一致；点卡进大盘） */}
           {boards.length > 0 && (
             <>
               <div className="db-sectitle">进展 · 趋势</div>
