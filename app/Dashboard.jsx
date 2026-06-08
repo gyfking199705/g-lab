@@ -247,19 +247,43 @@ function MiniChart({ c, stroke, height = 54 }) {
 
 function MiniBoardCard({ a, wide, onOpen }) {
   const chart = (a.charts || []).find((c) => ['line', 'fan', 'bars', 'cross', 'goalbars'].includes(c.kind));
+  const kpis = (a.kpis || []).slice(0, 4);
+  const stroke = a.stroke || 'var(--accent)';
   return (
-    <div className={`gx-card db-mini${wide ? ' wide' : ''}`} style={{ '--bb': a.stroke || 'var(--accent)' }} onClick={onOpen} role="button" tabIndex={0}>
-      <div className="db-mini-head">
+    <div className={`gx-card db-board${wide ? ' wide' : ''}`} style={{ '--bb': stroke }} onClick={onOpen} role="button" tabIndex={0}>
+      <div className="db-board-head">
         <h3>{a.icon} {a.title.replace('大盘', '').trim()}</h3>
-        <span className="db-mini-go">查看大盘 ›</span>
+        <span className="db-board-go">查看大盘 ›</span>
       </div>
-      <div className="db-mini-hero">
-        <span className="db-mini-v">{a.hero.value}{a.hero.unit && <span className="db-mini-u">{a.hero.unit}</span>}</span>
-        {a.hero.delta && <span className={`db-mini-d ${a.hero.deltaTone || ''}`}>{a.hero.delta}</span>}
+
+      <div className="db-board-top">
+        <div className="db-board-hero">
+          <div className="db-board-vrow">
+            <span className="db-board-v">{a.hero.value}{a.hero.unit && <span className="db-board-u">{a.hero.unit}</span>}</span>
+            {a.hero.delta && <span className={`db-board-d ${a.hero.deltaTone || ''}`}>{a.hero.delta}</span>}
+          </div>
+          {a.hero.caption && <div className="db-board-c">{a.hero.caption}</div>}
+          {kpis.length > 0 && (
+            <div className="db-board-kpis">
+              {kpis.map((k, i) => (
+                <div className="db-board-kpi" key={i}>
+                  <div className={`db-board-kv ${k.tone || ''}`}>{k.value}</div>
+                  <div className="db-board-kl">{k.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {chart && (
+          <div className="db-board-chart">
+            {chart.title && <div className="db-board-ctitle">{chart.title}</div>}
+            <MiniChart c={chart} stroke={stroke} height={wide ? 120 : 96} />
+            {chart.captionLeft && <div className="db-board-ccap">{chart.captionLeft}</div>}
+          </div>
+        )}
       </div>
-      {a.hero.caption && <div className="db-mini-c">{a.hero.caption}</div>}
-      {chart && <div className="db-mini-chart"><MiniChart c={chart} stroke={a.stroke || 'var(--accent)'} height={wide ? 78 : 54} /></div>}
-      {a.forecast && a.forecast.text && <div className="db-mini-fc">{a.forecast.text}</div>}
+
+      {a.forecast && a.forecast.text && <div className="db-board-fc">{a.forecast.text}</div>}
     </div>
   );
 }
@@ -276,29 +300,48 @@ const DASH_CSS = `
 .db-sectitle{font-size:10.5px;color:var(--text-3);letter-spacing:1.6px;text-transform:uppercase;margin:18px 2px 9px;}
 .db-grid{display:grid;gap:14px;}
 .db-grid.action{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));align-items:start;}
-.db-grid.mboards{grid-template-columns:repeat(auto-fill,minmax(272px,1fr));align-items:stretch;}
+.db-grid.mboards{grid-template-columns:repeat(auto-fill,minmax(420px,1fr));align-items:stretch;}
 .db-col{display:flex;flex-direction:column;}
 .db-h{cursor:pointer;}
 
-/* 迷你大盘卡（与「财富趋势·预测」同款：渐变 + 趋势图 + 预测） */
-.db-mini{display:flex;flex-direction:column;cursor:pointer;background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 14%,var(--surface)),var(--surface) 66%);border-color:color-mix(in srgb,var(--bb) 20%,var(--bd));transition:box-shadow .18s,transform .12s,border-color .18s;}
-.db-mini:hover,.db-mini:focus-visible{box-shadow:0 8px 24px rgba(38,36,31,.09);transform:translateY(-2px);border-color:color-mix(in srgb,var(--bb) 40%,var(--bd));outline:none;}
-.db-mini.wide{grid-column:1/-1;}
-.db-mini-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
-.db-mini-head h3{font-family:var(--serif);font-size:15px;font-weight:500;letter-spacing:-.2px;}
-.db-mini-go{font-size:11px;color:var(--bb);opacity:.85;white-space:nowrap;flex:none;}
-.db-mini-hero{display:flex;align-items:baseline;gap:8px;margin-top:10px;}
-.db-mini-v{font-family:var(--serif);font-size:26px;font-weight:500;line-height:1;letter-spacing:-.6px;color:var(--bb);font-variant-numeric:tabular-nums;}
-.db-mini-u{font-size:13px;color:var(--text-3);margin-left:2px;}
-.db-mini-d{margin-left:auto;font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--text-2);white-space:nowrap;flex:none;}
-.db-mini-d.good{color:var(--success);background:var(--success-soft);}
-.db-mini-d.bad{color:var(--danger);background:var(--danger-soft);}
-.db-mini-c{font-size:11.5px;color:var(--text-2);margin-top:5px;}
-.db-mini-chart{margin:11px 0 2px;}
-.db-mini-fc{margin-top:auto;padding-top:10px;font-size:11.5px;line-height:1.5;color:var(--accent-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.db-mini.wide{background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 18%,var(--surface)),var(--surface) 72%);}
-.db-mini.wide .db-mini-v{font-size:33px;}
-.db-mini.wide .db-mini-head h3{font-size:17px;}
+/* 大盘预览卡（每张都是大卡：渐变英雄 + KPI + 趋势/预测图 + 预测语；点卡进详情大盘） */
+.db-board{display:flex;flex-direction:column;cursor:pointer;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 15%,var(--surface)),var(--surface) 62%);
+  border-color:color-mix(in srgb,var(--bb) 22%,var(--bd));transition:box-shadow .2s,transform .14s,border-color .2s;}
+.db-board::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--bb);opacity:.85;}
+.db-board:hover,.db-board:focus-visible{box-shadow:0 12px 30px rgba(38,36,31,.11);transform:translateY(-3px);border-color:color-mix(in srgb,var(--bb) 45%,var(--bd));outline:none;}
+.db-board.wide{grid-column:1/-1;background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 19%,var(--surface)),var(--surface) 70%);}
+.db-board-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:14px;}
+.db-board-head h3{font-family:var(--serif);font-size:17px;font-weight:500;letter-spacing:-.2px;}
+.db-board-go{font-size:11.5px;color:var(--bb);opacity:.9;white-space:nowrap;flex:none;font-weight:500;}
+.db-board-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:20px;align-items:center;}
+.db-board.wide .db-board-top{grid-template-columns:minmax(0,1fr) minmax(0,1.9fr);}
+.db-board-hero{min-width:0;}
+.db-board-vrow{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
+.db-board-v{font-family:var(--serif);font-size:34px;font-weight:500;line-height:1;letter-spacing:-1px;color:var(--bb);font-variant-numeric:tabular-nums;}
+.db-board.wide .db-board-v{font-size:40px;}
+.db-board-u{font-size:15px;color:var(--text-3);margin-left:2px;}
+.db-board-d{font-size:11.5px;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--text-2);white-space:nowrap;}
+.db-board-d.good{color:var(--success);background:var(--success-soft);}
+.db-board-d.bad{color:var(--danger);background:var(--danger-soft);}
+.db-board-c{font-size:12px;color:var(--text-2);margin-top:7px;}
+.db-board-kpis{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:13px;}
+.db-board-kpi{background:color-mix(in srgb,var(--surface) 78%,transparent);border:1px solid color-mix(in srgb,var(--bb) 14%,var(--bd));border-radius:10px;padding:8px 10px;}
+.db-board-kv{font-family:var(--serif);font-size:16px;font-weight:500;letter-spacing:-.2px;font-variant-numeric:tabular-nums;line-height:1.15;}
+.db-board-kv.accent{color:var(--accent-2);}
+.db-board-kv.good{color:var(--success);}
+.db-board-kv.bad{color:var(--danger);}
+.db-board-kl{font-size:10.5px;color:var(--text-3);margin-top:2px;}
+.db-board-chart{min-width:0;}
+.db-board-ctitle{font-size:11px;color:var(--text-2);margin-bottom:7px;font-weight:500;}
+.db-board-ccap{font-size:10px;color:var(--text-3);margin-top:6px;}
+.db-board-fc{margin-top:14px;background:color-mix(in srgb,var(--bb) 11%,var(--surface));border:1px solid color-mix(in srgb,var(--bb) 22%,var(--bd));color:var(--accent-2);border-radius:11px;padding:10px 13px;font-size:12px;line-height:1.55;}
+@media(max-width:680px){
+  .db-grid.mboards{grid-template-columns:1fr;}
+  .db-board-top{grid-template-columns:1fr;gap:14px;}
+  .db-board.wide .db-board-top{grid-template-columns:1fr;}
+  .db-board-v{font-size:30px;}
+}
 @media(max-width:560px){
   .db-grid.mboards{grid-template-columns:1fr;}
 }
