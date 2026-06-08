@@ -175,3 +175,47 @@ export function seedDemo() {
   }
   return n;
 }
+
+/** 判断某模块当前是否已有「真实内容」（用于决定是否跳过示例填充，避免覆盖用户数据）。 */
+export function hasModuleContent(key, o) {
+  if (!o || typeof o !== 'object') return false;
+  const len = (a) => (Array.isArray(a) ? a.length : 0);
+  switch (key) {
+    case 'cut-planner': return !!o.profile || len(o.logs) > 0;
+    case 'habits-planner': return len(o.habits) > 0;
+    case 'goals-planner': return len(o.goals) > 0;
+    case 'schedule-planner': return len(o.items) > 0;
+    case 'ledger-planner': return len(o.entries) > 0;
+    case 'savings-planner': { const nw = o.netWorth || {}; return len(nw.snapshots) > 0 || len(nw.accounts) > 0; }
+    case 'fitness-planner': return len(o.workouts) > 0 || len(o.routines) > 0;
+    case 'learning-planner': return len(o.plans) > 0;
+    case 'project-planner': return len(o.tasks) > 0;
+    case 'papers-planner': return len(o.items) > 0;
+    case 'stocks-watch': return len(o.symbols) > 0;
+    case 'stocks-watch-cache': return false; // 缓存非用户数据，随 stocks-watch 一起处理
+    default: return Object.keys(o).length > 0;
+  }
+}
+
+/**
+ * 只为「空白模块」填充示例数据，**绝不覆盖**已有内容。返回被填充的模块键数组。
+ * 测试可注入 store（默认用浏览器 localStorage）。
+ */
+export function seedMissing(store) {
+  const ls = store || (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!ls) return [];
+  const data = buildDemoData(todayStr());
+  const filled = [];
+  for (const k of Object.keys(data)) {
+    if (k === 'stocks-watch-cache') continue; // 跟随 stocks-watch
+    let cur = null;
+    try { const raw = ls.getItem(k); cur = raw ? JSON.parse(raw) : null; } catch (e) { cur = null; }
+    if (hasModuleContent(k, cur)) continue; // 已有数据 → 保留，不动
+    try { ls.setItem(k, JSON.stringify(data[k])); filled.push(k); } catch (e) { /* 静默 */ }
+  }
+  // 仅当我们刚填充了 stocks-watch 才写入示例行情缓存（否则不动用户/已有缓存）
+  if (filled.includes('stocks-watch') && data['stocks-watch-cache']) {
+    try { ls.setItem('stocks-watch-cache', JSON.stringify(data['stocks-watch-cache'])); } catch (e) { /* 静默 */ }
+  }
+  return filled;
+}

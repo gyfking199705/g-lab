@@ -27,7 +27,7 @@ import CompareTool from '../compare/CompareTool.jsx';
 import SalaryEstimator from '../salary/SalaryEstimator.jsx';
 import { readModule } from '../core/store.js';
 import { AISettingsButton } from '../core/AISettings.jsx';
-import { seedDemo } from './seed.js';
+import { seedMissing } from './seed.js';
 import { todayStr } from '../core/date.js';
 import { overdueCount, todayView } from '../schedule/calc.js';
 import { overallStats } from '../goals/calc.js';
@@ -260,8 +260,9 @@ export default function App() {
   // 看板卡片点击：有专属大盘则打开大盘，否则直接进模块
   const openBoard = (id) => { if (hasBoard(id)) setBoard(id); else go(id); bump(); };
   const doSeed = () => {
-    if (!confirm('载入示例数据会覆盖当前所有模块数据（体重 85kg 起步的减脂记录、习惯、目标、记账、净资产、论文等）。确定继续吗？')) return;
-    seedDemo();
+    const filled = seedMissing();
+    if (!filled.length) { alert('你的各模块都已有数据，未改动任何内容——示例数据只会填充空白模块，不会覆盖你已有的数据。'); return; }
+    alert(`已为 ${filled.length} 个空白模块填充示例数据（不会覆盖你已有的数据），即将刷新页面。`);
     location.reload();
   };
 
@@ -509,14 +510,14 @@ const setLS = (k, v) => {
 
 function SeedButton() {
   const onSeed = () => {
-    if (!confirm('载入示例数据会覆盖当前所有模块数据（体重 85kg 起步的减脂记录、习惯、目标、记账、净资产、论文等）。确定继续吗？')) return;
-    seedDemo();
-    alert('已载入示例数据，即将刷新页面。');
+    const filled = seedMissing();
+    if (!filled.length) { alert('你的各模块都已有数据，未改动任何内容——示例数据只填充空白模块，不会覆盖你已有的数据。'); return; }
+    alert(`已为 ${filled.length} 个空白模块填充示例数据（不覆盖已有数据），即将刷新页面。`);
     location.reload();
   };
   return (
-    <button className="app-tool" onClick={onSeed} title="一键填充各模块示例数据，便于查看看板与大盘">
-      ✨ 载入示例数据
+    <button className="app-tool" onClick={onSeed} title="只为空白模块填充示例数据，不会覆盖你已有的内容">
+      ✨ 填充示例数据（空白模块）
     </button>
   );
 }
