@@ -576,8 +576,16 @@ function ImportButton() {
    三向对账；之后只把「变化了的文件」防抖上传；token 过期自动静默续期。Client ID/签名存本机、Key 不上云。 */
 const cloudLink = { background: 'none', border: 'none', padding: 0, color: 'var(--text-3)', fontSize: 11.5, cursor: 'pointer' };
 
+/* 默认 Google OAuth Client ID（公开值，可安全写死）。
+ * —— 一次性配置：在 Google Cloud 建好 Client ID 后，把下面这行的 '' 换成你的
+ *    （形如 1234567890-abcde.apps.googleusercontent.com），提交即生效。
+ *    之后你所有设备打开页面都自带它，无需再粘贴；勾一次「自动同步」即近似免登录。
+ *    安全：Client ID 公开是设计如此，真正的护栏是「在控制台把授权来源锁成你的域名」+ drive.file 最小权限。
+ *    详细步骤见 sync/README.md。 */
+const DEFAULT_CLIENT_ID = '';
+
 function CloudSync() {
-  const [clientId, setClientId] = useState(() => getLS('sync-client-id') || '');
+  const [clientId, setClientId] = useState(() => getLS('sync-client-id') || DEFAULT_CLIENT_ID);
   const [auto, setAuto] = useState(() => getLS('sync-auto') === '1');
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -585,6 +593,7 @@ function CloudSync() {
 
   const tokenRef = useRef(null);
   const folderRef = useRef(null);
+  const renewRef = useRef(null);
   const syncedSigRef = useRef(getLS('sync-sig') || '');
   const debRef = useRef(null);
 
@@ -597,7 +606,15 @@ function CloudSync() {
   };
   const getToken = async (silent) => {
     tokenRef.current = await requestToken(clientId, { silent });
+    scheduleRenew();
     return tokenRef.current;
+  };
+  // 主动续期：access token 约 1 小时失效，到期前 ~50 分钟静默换新，长会话也不掉线
+  const scheduleRenew = () => {
+    clearTimeout(renewRef.current);
+    renewRef.current = setTimeout(() => {
+      getToken(true).catch(() => { /* 掉登录则等下次操作触发的 401 兜底续期 */ });
+    }, 50 * 60 * 1000);
   };
   // 401 时静默续期重试一次
   const withAuth = async (fn) => {
@@ -744,10 +761,10 @@ function CloudSync() {
     if (v == null) return;
     const id = v.trim();
     setLS('sync-client-id', id);
-    setClientId(id);
+    setClientId(id || DEFAULT_CLIENT_ID);
     tokenRef.current = null;
     setConnected(false);
-    setStatus(id ? '已保存 Client ID，可以连接了' : '已清除 Client ID');
+    setStatus(id || DEFAULT_CLIENT_ID ? '已保存 Client ID，可以连接了' : '已清除 Client ID');
   };
   const toggleAuto = async () => {
     const next = !auto;
@@ -758,13 +775,15 @@ function CloudSync() {
   const disconnect = () => {
     tokenRef.current = null;
     folderRef.current = null;
+    clearTimeout(renewRef.current);
     setConnected(false);
     setStatus('已断开（自动同步暂停）');
   };
 
-  /* 启动：已配置 + 开了自动 → 尝试静默连接 */
+  /* 启动：已配置 + 开了自动 → 尝试静默连接（你登着 Google 且授权过即零点击） */
   useEffect(() => {
     if (clientId && auto) connect(true).catch(() => {});
+    return () => clearTimeout(renewRef.current);
     // 仅在挂载时尝试一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
