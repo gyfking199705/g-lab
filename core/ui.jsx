@@ -6,7 +6,7 @@
  *
  * 令牌作用在 .gx-root 上（独立页也能用）；在主应用里与根 :root 令牌一致，重复声明无害。
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export const SHARED_CSS = `
 .gx-root{
@@ -112,6 +112,28 @@ export function Progress({ pct, good }) {
     <div className={`gx-prog${good ? ' good' : ''}`}>
       <span style={{ width: w + '%' }} />
     </div>
+  );
+}
+
+/** 环形进度（手写 SVG，无图表库）；挂载时自动「描线」动画。 */
+export function Ring({ pct = 0, size = 60, stroke = 'var(--accent)', width = 6, label, sub }) {
+  const p = Math.max(0, Math.min(100, isFinite(pct) ? pct : 0));
+  const r = (size - width) / 2;
+  const c = 2 * Math.PI * r;
+  const target = c * (1 - p / 100);
+  const [off, setOff] = useState(c);
+  useEffect(() => { const t = requestAnimationFrame(() => setOff(target)); return () => cancelAnimationFrame(t); }, [target]);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flex: 'none' }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--bd-2)" strokeWidth={width} opacity="0.5" />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={stroke} strokeWidth={width} strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={off} transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 1s cubic-bezier(.22,1,.36,1)' }} />
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" dy={sub ? '-0.35em' : '0'}
+        fontSize={size * 0.27} fontFamily="var(--serif)" fontWeight="600" fill={stroke}
+        style={{ fontVariantNumeric: 'tabular-nums' }}>{label != null ? label : Math.round(p) + '%'}</text>
+      {sub && <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" dy="0.95em" fontSize={size * 0.15} fill="var(--text-3)">{sub}</text>}
+    </svg>
   );
 }
 

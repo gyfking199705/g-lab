@@ -164,7 +164,7 @@ function financeBoard(get) {
   }
   return {
     icon: '💰', title: '财富大盘', stroke: 'var(--accent)',
-    hero: { value: formatMoney(f.latest), caption: f.target ? `目标 ${formatMoney(f.target)} · ${pct}% 达成` : '净资产', delta: f.monthlyRate != null ? `${f.monthlyRate >= 0 ? '↑' : '↓'} ${formatMoney(Math.abs(Math.round(f.monthlyRate)))}/月` : '', deltaTone: f.monthlyRate >= 0 ? 'good' : 'bad' },
+    hero: { value: formatMoney(f.latest), caption: f.target ? `目标 ${formatMoney(f.target)} · ${pct}% 达成` : '净资产', delta: f.monthlyRate != null ? `${f.monthlyRate >= 0 ? '↑' : '↓'} ${formatMoney(Math.abs(Math.round(f.monthlyRate)))}/月` : '', deltaTone: f.monthlyRate >= 0 ? 'good' : 'bad', progress: f.target > 0 ? Math.max(0, Math.min(100, pct)) : null, progressSub: f.target > 0 ? '达成' : null },
     kpis: [
       kpi('净资产', formatMoney(f.latest), '最新快照', 'accent'),
       kpi('月均增速', f.monthlyRate != null ? formatMoney(Math.round(f.monthlyRate)) : '—', '近期'),
@@ -205,7 +205,7 @@ function cutBoard(get, today, opts = {}) {
     : { title: '体重趋势 + 目标', kind: 'line', values: trend, goal: s.goalWeight, stroke: 'var(--accent)', fmt: (v) => v + 'kg', captionLeft: '趋势体重(EMA)', captionRight: `目标 ${s.goalWeight}kg` };
   return {
     icon: '📉', title: '减脂大盘', stroke: 'var(--accent)',
-    hero: { value: s.currentTrend, unit: 'kg', caption: `${s.startWeight}→${s.goalWeight}kg · ${s.progressPct}% 完成`, delta: `已减 ${s.lost}kg`, deltaTone: 'good' },
+    hero: { value: s.currentTrend, unit: 'kg', caption: `${s.startWeight}→${s.goalWeight}kg · ${s.progressPct}% 完成`, delta: `已减 ${s.lost}kg`, deltaTone: 'good', progress: Math.max(0, Math.min(100, s.progressPct)), progressSub: '完成' },
     kpis: [
       kpi('趋势体重', s.currentTrend + 'kg', s.currentWeight != null ? `今测 ${s.currentWeight}kg` : '', 'accent'),
       kpi('本周速度', s.weeklyRate != null ? `${s.weeklyRate > 0 ? '+' : ''}${s.weeklyRate}kg` : '—', '趋势'),
@@ -236,7 +236,7 @@ function ledgerBoard(get, _today, opts = {}) {
   const prevExp = months.length >= 2 ? months[months.length - 2].expense : null;
   return {
     icon: '🧾', title: '记账大盘', stroke: 'var(--danger)',
-    hero: { value: formatMoney(t.expense), caption: `本月支出 · 结余 ${t.net >= 0 ? '+' : ''}${formatMoney(t.net)}`, delta: prevExp != null ? `上月 ${formatMoney(prevExp)}` : '', deltaTone: prevExp != null && t.expense > prevExp ? 'bad' : 'good' },
+    hero: { value: formatMoney(t.expense), caption: `本月支出 · 结余 ${t.net >= 0 ? '+' : ''}${formatMoney(t.net)}`, delta: prevExp != null ? `上月 ${formatMoney(prevExp)}` : '', deltaTone: prevExp != null && t.expense > prevExp ? 'bad' : 'good', progress: d.budget > 0 ? Math.min(100, Math.round((t.expense / d.budget) * 100)) : null, progressSub: d.budget > 0 ? '预算' : null, progressTone: d.budget > 0 && t.expense > d.budget ? 'bad' : null },
     kpis: [
       kpi('本月支出', formatMoney(t.expense), '', 'bad'),
       kpi('本月收入', formatMoney(t.income), '', 'good'),
@@ -290,7 +290,7 @@ function habitsBoard(get, _today, opts = {}) {
   const trend = recent7 - avg;
   return {
     icon: '🔥', title: '习惯大盘', stroke: 'var(--accent)',
-    hero: { value: `${b.doneCount}/${b.total}`, caption: '今日完成', delta: `近7天 ${recent7}%`, deltaTone: trend >= 0 ? 'good' : 'bad' },
+    hero: { value: `${b.doneCount}/${b.total}`, caption: '今日完成', delta: `近7天 ${recent7}%`, deltaTone: trend >= 0 ? 'good' : 'bad', progress: b.total ? Math.round((b.doneCount / b.total) * 100) : 0, progressSub: '今日' },
     kpis: [
       kpi('今日完成', `${b.doneCount}/${b.total}`, '', 'accent'),
       kpi(`${days}天完成率`, avg + '%', ''),
@@ -315,7 +315,7 @@ function papersBoard(get, _today, opts = {}) {
   const etaDays = weekRate > 0 ? Math.ceil(remain / weekRate) : null;
   return {
     icon: '📄', title: '论文大盘', stroke: 'var(--accent)',
-    hero: { value: s.progressPct + '%', caption: `已读 ${s.done}/${s.total}`, delta: `近7天 ${s.thisWeek} 篇`, deltaTone: 'good' },
+    hero: { value: s.progressPct + '%', caption: `已读 ${s.done}/${s.total}`, delta: `近7天 ${s.thisWeek} 篇`, deltaTone: 'good', progress: Math.max(0, Math.min(100, s.progressPct)), progressSub: '已读' },
     kpis: [
       kpi('已读/清单', `${s.done}/${s.total}`, '', 'accent'),
       kpi('在读 / 想读', `${s.reading} / ${s.want}`, ''),
@@ -342,7 +342,7 @@ function goalsBoard(get, _today, opts = {}) {
   const next = sorted.find((g) => !isAchieved(g));
   return {
     icon: '🎯', title: '目标大盘', stroke: 'var(--accent)',
-    hero: { value: o.avgPercent + '%', caption: `平均进度 · ${o.achieved}/${o.total} 达成`, delta: overdue ? `${overdue} 逾期` : (soon ? `${soon} 临近` : ''), deltaTone: overdue ? 'bad' : 'good' },
+    hero: { value: o.avgPercent + '%', caption: `平均进度 · ${o.achieved}/${o.total} 达成`, delta: overdue ? `${overdue} 逾期` : (soon ? `${soon} 临近` : ''), deltaTone: overdue ? 'bad' : 'good', progress: Math.max(0, Math.min(100, o.avgPercent)), progressSub: '平均' },
     kpis: [
       kpi('进行中', o.total - o.achieved + '', '', 'accent'),
       kpi('已达成', o.achieved + '', '', 'good'),
@@ -372,7 +372,7 @@ function learningBoard(get, _today, opts = {}) {
   const remain = st.total - st.mastered;
   return {
     icon: '📚', title: '学习大盘', stroke: 'var(--accent)',
-    hero: { value: Math.round(st.pct * 100) + '%', caption: `已掌握 ${st.mastered}/${st.total}`, delta: `近7天 ${Math.round(recentMin)} 分钟`, deltaTone: 'good' },
+    hero: { value: Math.round(st.pct * 100) + '%', caption: `已掌握 ${st.mastered}/${st.total}`, delta: `近7天 ${Math.round(recentMin)} 分钟`, deltaTone: 'good', progress: Math.max(0, Math.min(100, Math.round(st.pct * 100))), progressSub: '掌握' },
     kpis: [
       kpi('掌握度', Math.round(st.pct * 100) + '%', '', 'accent'),
       kpi('学习中', st.learning + '', ''),
@@ -403,7 +403,7 @@ function fitnessBoard(get, _today, opts = {}) {
   }
   return {
     icon: '💪', title: '健身大盘', stroke: 'var(--accent)',
-    hero: { value: week, unit: '次', caption: '本周训练', delta: `连续 ${streak} 周`, deltaTone: 'good' },
+    hero: { value: week, unit: '次', caption: '本周训练', delta: `连续 ${streak} 周`, deltaTone: 'good', progress: Math.min(100, Math.round((week / 3) * 100)), progressSub: '周目标', progressLabel: `${week}/3` },
     kpis: [
       kpi('本周训练', week + ' 次', '', 'accent'),
       kpi('连续训练周', streak + ' 周', '', 'good'),
@@ -429,7 +429,7 @@ function projectBoard(get, _today, opts = {}) {
   const daily = projLastDays(sessions, dwin, today).map((x) => x.minutes);
   return {
     icon: '📋', title: '项目大盘', stroke: 'var(--accent)',
-    hero: { value: st.donePct + '%', caption: `已完成 ${st.done}/${st.total} 任务`, delta: `专注连续 ${fStreak} 天`, deltaTone: 'good' },
+    hero: { value: st.donePct + '%', caption: `已完成 ${st.done}/${st.total} 任务`, delta: `专注连续 ${fStreak} 天`, deltaTone: 'good', progress: Math.max(0, Math.min(100, st.donePct)), progressSub: '完成' },
     kpis: [
       kpi('待办', st.todo + '', '', 'accent'),
       kpi('进行中', st.doing + '', ''),
@@ -456,7 +456,7 @@ function scheduleBoard(get, _today, opts = {}) {
   const recent = series.reduce((s, x) => s + x, 0);
   return {
     icon: '📅', title: '日程大盘', stroke: 'var(--accent)',
-    hero: { value: `${v.done.length}/${todayTotal}`, caption: '今日完成', delta: od ? `${od} 逾期` : '无逾期', deltaTone: od ? 'bad' : 'good' },
+    hero: { value: `${v.done.length}/${todayTotal}`, caption: '今日完成', delta: od ? `${od} 逾期` : '无逾期', deltaTone: od ? 'bad' : 'good', progress: todayTotal ? Math.round((v.done.length / todayTotal) * 100) : 0, progressSub: '今日' },
     kpis: [
       kpi('今日完成', `${v.done.length}/${todayTotal}`, '', 'accent'),
       kpi('逾期未完成', od + '', '', od ? 'bad' : 'good'),

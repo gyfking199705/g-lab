@@ -10,7 +10,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { readModule, saveState } from '../core/store.js';
-import { SHARED_CSS, Progress, Empty, LineChart, MiniBars } from '../core/ui.jsx';
+import { SHARED_CSS, Progress, Empty, LineChart, MiniBars, Ring } from '../core/ui.jsx';
 import { buildAnalytics } from './analytics.js';
 import { todayStr, fmtDate } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
@@ -206,8 +206,8 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
             <>
               <div className="db-sectitle">进展 · 趋势</div>
               <div className="db-grid mboards">
-                {boards.map(({ id, a }) => (
-                  <MiniBoardCard key={id} a={a} wide={id === 'wealth'} onOpen={() => open(id)} />
+                {boards.map(({ id, a }, i) => (
+                  <MiniBoardCard key={id} a={a} idx={i} wide={id === 'wealth'} onOpen={() => open(id)} />
                 ))}
               </div>
             </>
@@ -245,12 +245,14 @@ function MiniChart({ c, stroke, height = 54 }) {
   return null;
 }
 
-function MiniBoardCard({ a, wide, onOpen }) {
+function MiniBoardCard({ a, wide, idx = 0, onOpen }) {
   const chart = (a.charts || []).find((c) => ['line', 'fan', 'bars', 'cross', 'goalbars'].includes(c.kind));
   const kpis = (a.kpis || []).slice(0, 4);
   const stroke = a.stroke || 'var(--accent)';
+  const ringStroke = a.hero.progressTone === 'bad' ? 'var(--danger)' : stroke;
+  const hasRing = a.hero.progress != null && isFinite(a.hero.progress);
   return (
-    <div className={`gx-card db-board${wide ? ' wide' : ''}`} style={{ '--bb': stroke }} onClick={onOpen} role="button" tabIndex={0}>
+    <div className={`gx-card db-board${wide ? ' wide' : ''}`} style={{ '--bb': stroke, animationDelay: `${idx * 70}ms` }} onClick={onOpen} role="button" tabIndex={0}>
       <div className="db-board-head">
         <h3>{a.icon} {a.title.replace('大盘', '').trim()}</h3>
         <span className="db-board-go">查看大盘 ›</span>
@@ -258,11 +260,16 @@ function MiniBoardCard({ a, wide, onOpen }) {
 
       <div className="db-board-top">
         <div className="db-board-hero">
-          <div className="db-board-vrow">
-            <span className="db-board-v">{a.hero.value}{a.hero.unit && <span className="db-board-u">{a.hero.unit}</span>}</span>
-            {a.hero.delta && <span className={`db-board-d ${a.hero.deltaTone || ''}`}>{a.hero.delta}</span>}
+          <div className="db-board-herorow">
+            {hasRing && <Ring pct={a.hero.progress} stroke={ringStroke} size={wide ? 70 : 62} width={wide ? 7 : 6} label={a.hero.progressLabel} sub={a.hero.progressSub} />}
+            <div className="db-board-herotext">
+              <div className="db-board-vrow">
+                <span className="db-board-v">{a.hero.value}{a.hero.unit && <span className="db-board-u">{a.hero.unit}</span>}</span>
+                {a.hero.delta && <span className={`db-board-d ${a.hero.deltaTone || ''}`}>{a.hero.delta}</span>}
+              </div>
+              {a.hero.caption && <div className="db-board-c">{a.hero.caption}</div>}
+            </div>
           </div>
-          {a.hero.caption && <div className="db-board-c">{a.hero.caption}</div>}
           {kpis.length > 0 && (
             <div className="db-board-kpis">
               {kpis.map((k, i) => (
@@ -304,19 +311,25 @@ const DASH_CSS = `
 .db-col{display:flex;flex-direction:column;}
 .db-h{cursor:pointer;}
 
-/* 大盘预览卡（每张都是大卡：渐变英雄 + KPI + 趋势/预测图 + 预测语；点卡进详情大盘） */
+/* 大盘预览卡（每张都是大卡：渐变英雄 + 环形进度 + KPI + 趋势/预测图 + 预测语；点卡进详情大盘） */
+@keyframes dbRise{from{opacity:0;translate:0 18px;}to{opacity:1;translate:0 0;}}
 .db-board{display:flex;flex-direction:column;cursor:pointer;overflow:hidden;position:relative;
   background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 15%,var(--surface)),var(--surface) 62%);
-  border-color:color-mix(in srgb,var(--bb) 22%,var(--bd));transition:box-shadow .2s,transform .14s,border-color .2s;}
+  border-color:color-mix(in srgb,var(--bb) 22%,var(--bd));transition:box-shadow .2s,scale .16s,border-color .2s;
+  animation:dbRise .55s cubic-bezier(.22,1,.36,1) both;}
 .db-board::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--bb);opacity:.85;}
-.db-board:hover,.db-board:focus-visible{box-shadow:0 12px 30px rgba(38,36,31,.11);transform:translateY(-3px);border-color:color-mix(in srgb,var(--bb) 45%,var(--bd));outline:none;}
+.db-board:hover,.db-board:focus-visible{box-shadow:0 14px 34px rgba(38,36,31,.13);scale:1.014;border-color:color-mix(in srgb,var(--bb) 48%,var(--bd));outline:none;z-index:1;}
 .db-board.wide{grid-column:1/-1;background:linear-gradient(135deg,color-mix(in srgb,var(--bb) 19%,var(--surface)),var(--surface) 70%);}
+.db-board.wide:hover,.db-board.wide:focus-visible{scale:1.006;}
+@media(prefers-reduced-motion:reduce){.db-board{animation:none;}.db-board:hover{scale:1;}}
 .db-board-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:14px;}
 .db-board-head h3{font-family:var(--serif);font-size:17px;font-weight:500;letter-spacing:-.2px;}
 .db-board-go{font-size:11.5px;color:var(--bb);opacity:.9;white-space:nowrap;flex:none;font-weight:500;}
 .db-board-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:20px;align-items:center;}
 .db-board.wide .db-board-top{grid-template-columns:minmax(0,1fr) minmax(0,1.9fr);}
 .db-board-hero{min-width:0;}
+.db-board-herorow{display:flex;align-items:center;gap:14px;}
+.db-board-herotext{min-width:0;flex:1;}
 .db-board-vrow{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
 .db-board-v{font-family:var(--serif);font-size:34px;font-weight:500;line-height:1;letter-spacing:-1px;color:var(--bb);font-variant-numeric:tabular-nums;}
 .db-board.wide .db-board-v{font-size:40px;}
