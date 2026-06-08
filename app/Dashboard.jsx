@@ -1,10 +1,9 @@
 /**
  * 首页看板 —— 聚合视图（不单独存数据，只读/写各模块的 localStorage）
  * ------------------------------------------------------------------
- * 三段式、信息分层，打开一屏看懂全局：
- *   1) 今日快览：习惯 / 日程 / 逾期的关键数字（chips）
- *   2) 今日行动：今日习惯 + 今日日程（可就地打卡 / 勾选）
- *   3) 进展：目标 / 减脂 / 财富 / 学习 / 论文 的统一进度卡（等高对齐）
+ * 两段式、信息分层，打开一屏看懂全局：
+ *   1) 今日行动：今日习惯 + 今日日程（可就地打卡 / 勾选）
+ *   2) 进展 · 趋势：各模块统一「大盘预览卡」（与大盘同源，点卡进详情）
  *
  * props：{ onNavigate(id), onChange() }
  */
@@ -14,7 +13,6 @@ import { SHARED_CSS, Progress, Empty, LineChart, MiniBars, Ring } from '../core/
 import { buildAnalytics, BOARD_ORDER } from './analytics.js';
 import { todayStr, fmtDate } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
-import { overallStats as goalsOverall } from '../goals/calc.js';
 import { todayBoard, currentStreak, fitnessWorkoutDates, toggleCheck, bumpCount } from '../habits/calc.js';
 import { summary as cutSummary } from '../cut/calc.js';
 import { financeForecast } from '../savings/calc.js';
@@ -55,7 +53,6 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
 
   const sView = useMemo(() => todayView(schedule.items || [], today), [tick, today]);
   const hBoard = useMemo(() => todayBoard(habitsData.habits || [], habitsData.checkins || {}, today, fitDates), [tick, today, fitDates]);
-  const gStats = useMemo(() => goalsOverall(goalsData.goals || []), [tick]);
 
   const cut = useMemo(() => { const d = readModule(CUT_KEY); return d && d.profile ? cutSummary(d.profile, d.logs || [], today) : null; }, [tick, today]);
   const finance = useMemo(() => financeForecast(readModule(SAVINGS_KEY)), [tick]);
@@ -91,12 +88,6 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
     .map((id) => ({ id, a: buildAnalytics(id, readModule, today, { days: 30 }) }))
     .filter((x) => x.a), [tick, today]);
 
-  // chips（仅在有数据时显示）
-  const chips = [];
-  if (hBoard.total) chips.push({ icon: '🔥', label: '习惯', val: `${hBoard.doneCount}/${hBoard.total}`, to: 'habits' });
-  if (scheduleTotal) chips.push({ icon: '📅', label: '日程', val: `${sView.done.length}/${scheduleTotal}`, to: 'schedule' });
-  if (sView.overdue.length) chips.push({ icon: '⚠', label: '逾期', val: `${sView.overdue.length}`, to: 'schedule', warn: true });
-  if (gStats.total) chips.push({ icon: '🎯', label: '目标达成', val: `${gStats.achieved}/${gStats.total}`, to: 'goals' });
 
   return (
     <div className="gx-root">
@@ -125,20 +116,7 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
         </div>
       ) : (
         <>
-          {/* 1) 今日快览 */}
-          {chips.length > 0 && (
-            <div className="db-strip">
-              {chips.map((c) => (
-                <button key={c.label} className={`db-chip${c.warn ? ' warn' : ''}`} onClick={() => onNavigate(c.to)}>
-                  <span className="ic">{c.icon}</span>
-                  <span className="vl">{c.val}</span>
-                  <span className="lb">{c.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* 2) 今日行动 */}
+          {/* 今日行动 */}
           {(hBoard.total > 0 || scheduleTotal > 0 || sView.overdue.length > 0) && (
             <>
               <div className="db-sectitle">今日行动</div>
@@ -296,14 +274,6 @@ function MiniBoardCard({ a, wide, idx = 0, onOpen }) {
 }
 
 const DASH_CSS = `
-.db-strip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
-.db-chip{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--bd);border-radius:11px;padding:7px 13px;cursor:pointer;transition:.15s;font-family:var(--sans);}
-.db-chip:hover{border-color:var(--bd-2);background:var(--surface-2);}
-.db-chip .ic{font-size:14px;}
-.db-chip .vl{font-family:var(--serif);font-size:16px;font-weight:500;color:var(--text);font-variant-numeric:tabular-nums;}
-.db-chip .lb{font-size:11.5px;color:var(--text-3);}
-.db-chip.warn{border-color:#E6C8B9;background:var(--accent-soft);}
-.db-chip.warn .vl{color:var(--danger);}
 .db-sectitle{font-size:10.5px;color:var(--text-3);letter-spacing:1.6px;text-transform:uppercase;margin:18px 2px 9px;}
 .db-grid{display:grid;gap:14px;}
 .db-grid.action{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));align-items:start;}
