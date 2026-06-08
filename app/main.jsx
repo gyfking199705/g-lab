@@ -590,6 +590,7 @@ function CloudSync() {
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const [wizard, setWizard] = useState(false);
 
   const tokenRef = useRef(null);
   const folderRef = useRef(null);
@@ -756,15 +757,19 @@ function CloudSync() {
     }
   };
 
-  const editClientId = () => {
-    const v = prompt('粘贴你的 Google OAuth Client ID（在 Google Cloud 创建，步骤见 sync/README.md）：', clientId);
-    if (v == null) return;
-    const id = v.trim();
+  // 向导保存 Client ID：存本机 → 立即一键连接（弹 Google 授权）
+  const saveClientId = (id) => {
     setLS('sync-client-id', id);
     setClientId(id || DEFAULT_CLIENT_ID);
     tokenRef.current = null;
     setConnected(false);
-    setStatus(id || DEFAULT_CLIENT_ID ? '已保存 Client ID，可以连接了' : '已清除 Client ID');
+    setWizard(false);
+    if (id || DEFAULT_CLIENT_ID) {
+      setStatus('已保存，正在连接…');
+      setTimeout(() => connect(false).catch(() => {}), 0);
+    } else {
+      setStatus('已清除 Client ID');
+    }
   };
   const toggleAuto = async () => {
     const next = !auto;
@@ -808,28 +813,112 @@ function CloudSync() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {!clientId ? (
-        <button className="app-tool" onClick={editClientId}>☁️ 设置云同步</button>
+        <button className="app-tool" onClick={() => setWizard(true)}>☁️ 开启 Google 同步</button>
+      ) : !connected ? (
+        <button className="app-tool" style={{ borderColor: 'var(--accent)', color: 'var(--accent-2)', fontWeight: 500 }}
+          onClick={() => connect(false).catch(() => {})} disabled={busy}>
+          {busy ? '正在连接…' : '☁️ 一键连接 Google Drive'}
+        </button>
       ) : (
         <>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}>
             <input type="checkbox" checked={auto} onChange={toggleAuto} style={{ accentColor: 'var(--accent)' }} />
             自动同步到 Drive
           </label>
-          {!connected ? (
-            <button className="app-tool" onClick={() => connect(false).catch(() => {})} disabled={busy}>☁️ 连接 Google Drive</button>
-          ) : (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button className="app-tool" style={{ flex: 1 }} onClick={uploadManual} disabled={busy}>⬆️ 上传</button>
-              <button className="app-tool" style={{ flex: 1 }} onClick={restore} disabled={busy}>⬇️ 恢复</button>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="app-tool" style={{ flex: 1 }} onClick={uploadManual} disabled={busy}>⬆️ 上传</button>
+            <button className="app-tool" style={{ flex: 1 }} onClick={restore} disabled={busy}>⬇️ 恢复</button>
+          </div>
           <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={editClientId} style={cloudLink}>改 ID</button>
-            {connected && <button onClick={disconnect} style={cloudLink}>断开</button>}
+            <button onClick={() => setWizard(true)} style={cloudLink}>改 ID</button>
+            <button onClick={disconnect} style={cloudLink}>断开</button>
           </div>
         </>
       )}
       {status && <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{status}</div>}
+      {wizard && <SetupWizard initialId={getLS('sync-client-id') || ''} onSave={saveClientId} onClose={() => setWizard(false)} />}
+    </div>
+  );
+}
+
+/* 应用内「云同步设置向导」：预填本站域名 + 一键复制 + 末尾粘 Client ID 即可，免去翻文档。 */
+function SetupWizard({ initialId, onSave, onClose }) {
+  const [id, setId] = useState(initialId || '');
+  const [copied, setCopied] = useState('');
+  const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || 'https://<你的用户名>.github.io';
+  const copy = async (text, tag) => {
+    try { await navigator.clipboard.writeText(text); } catch (e) { try { window.prompt('复制：', text); } catch (_) {} }
+    setCopied(tag); setTimeout(() => setCopied(''), 1500);
+  };
+  const CopyBtn = ({ text, tag }) => (
+    <button onClick={() => copy(text, tag)} style={{ border: '1px solid var(--bd-2)', background: 'var(--surface)', borderRadius: 7, padding: '3px 9px', fontSize: 11.5, cursor: 'pointer', color: 'var(--text-2)', flex: 'none' }}>
+      {copied === tag ? '✓ 已复制' : '复制'}
+    </button>
+  );
+  const Field = ({ text, tag }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+      <code style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere', background: 'var(--surface-3)', borderRadius: 7, padding: '5px 9px', fontSize: 12, fontFamily: 'ui-monospace,Menlo,monospace' }}>{text}</code>
+      <CopyBtn text={text} tag={tag} />
+    </div>
+  );
+  const L = ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-2)', fontWeight: 500 }}>{children}</a>;
+  const stepWrap = { display: 'flex', gap: 10, padding: '11px 0', borderTop: '1px solid var(--bd-soft)' };
+  const num = { flex: 'none', width: 22, height: 22, borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--accent-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(38,36,31,.42)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '5vh 16px', overflowY: 'auto' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--bd)', borderRadius: 16, padding: 24, maxWidth: 560, width: '100%', boxShadow: '0 20px 60px rgba(38,36,31,.25)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+          <h2 style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 500 }}>☁️ 开启 Google Drive 同步</h2>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)', lineHeight: 1 }}>×</button>
+        </div>
+        <p style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 6, lineHeight: 1.6 }}>
+          一次性设置约 5 分钟。数据只存进<b>你自己的 Drive</b>，应用只申请 <code>drive.file</code>（仅能碰自己创建的文件）。设置完成后：每次<b>一键登录</b>、授权失效就再点一次，<b>数据一直在</b>。
+        </p>
+
+        <div style={{ marginTop: 8 }}>
+          <div style={stepWrap}>
+            <span style={num}>1</span>
+            <div style={{ fontSize: 13, lineHeight: 1.6 }}>打开 <L href="https://console.cloud.google.com/projectcreate">Google Cloud Console</L> 新建一个项目（名字随意）。</div>
+          </div>
+          <div style={stepWrap}>
+            <span style={num}>2</span>
+            <div style={{ fontSize: 13, lineHeight: 1.6 }}>启用 <L href="https://console.cloud.google.com/apis/library/drive.googleapis.com">Google Drive API</L>（点 Enable / 启用）。</div>
+          </div>
+          <div style={stepWrap}>
+            <span style={num}>3</span>
+            <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+              打开 <L href="https://console.cloud.google.com/apis/credentials/consent">OAuth consent screen</L>：User Type 选 <b>External</b>，保持 <b>Testing</b>，在 <b>Test users</b> 里<b>只加你自己的 Google 邮箱</b>。
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>🔒 这一步就是隐私锁：只有你能授权，别人连不上。</div>
+            </div>
+          </div>
+          <div style={stepWrap}>
+            <span style={num}>4</span>
+            <div style={{ fontSize: 13, lineHeight: 1.6, minWidth: 0, flex: 1 }}>
+              打开 <L href="https://console.cloud.google.com/apis/credentials">Credentials</L> → Create Credentials → <b>OAuth client ID</b> → 类型 <b>Web application</b>。
+              在 <b>Authorized JavaScript origins</b> 里<b>逐条 Add</b> 下面两个（直接复制）：
+              <Field text={origin} tag="o1" />
+              <Field text="http://localhost:8000" tag="o2" />
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>🔒 第二把锁：别的域名即使拿到你的 Client ID 也用不了。</div>
+            </div>
+          </div>
+          <div style={stepWrap}>
+            <span style={num}>5</span>
+            <div style={{ fontSize: 13, lineHeight: 1.6, minWidth: 0, flex: 1 }}>
+              创建后复制 <b>Client ID</b>（形如 <code>1234-abcd.apps.googleusercontent.com</code>），粘到这里：
+              <input value={id} onChange={(e) => setId(e.target.value)} placeholder="粘贴 Client ID" spellCheck={false}
+                style={{ width: '100%', marginTop: 6, padding: '8px 11px', border: '1px solid var(--bd-2)', borderRadius: 9, fontSize: 13, fontFamily: 'ui-monospace,Menlo,monospace' }} />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-3)', marginRight: 'auto' }}>想全设备免粘贴？把 ID 写进 <code>DEFAULT_CLIENT_ID</code>（见 sync/README）。</span>
+          <button className="app-btn" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }} onClick={onClose}>取消</button>
+          <button className="app-btn app-btn-primary" disabled={!id.trim()} style={!id.trim() ? { opacity: .5, cursor: 'not-allowed' } : {}}
+            onClick={() => onSave(id.trim())}>保存并连接 →</button>
+        </div>
+      </div>
     </div>
   );
 }
