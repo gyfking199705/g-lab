@@ -81,15 +81,17 @@ test('gold 无缓存返回 null', () => {
   assert.equal(buildAnalytics('gold', () => null), null);
 });
 
-test('财富大盘把金价作为子项 KPI 纳入（有 gold-cache 时）', () => {
+test('财富大盘把持仓（含金价折算）作为子项纳入净资产', () => {
   const map = {
-    'savings-planner': { forecast: { target: 1000000 }, netWorth: { accounts: [{ id: 'a', type: 'asset', category: '流动' }], snapshots: [
+    'savings-planner': { forecast: { target: 1000000 }, goldGrams: 38, netWorth: { accounts: [{ id: 'a', type: 'asset', category: '流动' }], snapshots: [
       { date: '2026-05-01', values: { a: 300000 } }, { date: '2026-06-01', values: { a: 420000 } },
     ] } },
     'gold-cache': { pricePerGram: 565.3, change: 2.1, changePct: 0.37, series: [560, 565.3], usdPerOz: 2450, usdCny: 7.18 },
   };
   const a = buildAnalytics('wealth', (k) => map[k] || null, '2026-06-10');
-  assert.ok(a.kpis.some((k) => /金价/.test(k.label)), '财富大盘应含金价 KPI');
+  assert.ok(a.kpis.some((k) => /持仓/.test(k.label)), '财富大盘应含持仓 KPI');
+  // 净资产 = 420000 + 38×565.3 ≈ 441481
+  assert.ok(Math.abs(a.charts[0].values[a.charts[0].values.length - 1] - (420000 + Math.round(38 * 565.3))) < 2);
 });
 
 test('buildAnalytics 无数据返回 null；hasBoard', () => {

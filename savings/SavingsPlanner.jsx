@@ -23,6 +23,7 @@ import {
   netWorthChange,
   financialHealth,
 } from './calc.js';
+import { HOLDING_KINDS, kindMeta, buildPriceCtx, holdingsValue } from '../holdings/calc.js';
 import { simulate, VOL_PRESETS } from './montecarlo.js';
 
 /* ----------------------------- 默认数据 ----------------------------- */
@@ -122,10 +123,19 @@ function loadInitial(initialState, storageKey) {
 /* ============================ 主组件 ============================ */
 export default function SavingsPlanner({ initialState, onChange, storageKey = 'savings-planner', initialTab = 'plan' }) {
   const [state, setState] = useState(() => loadInitial(initialState, storageKey));
-  // 实时金价（元/克）：由首页「行情」抓取后写入 gold-cache，这里只读用于积存金折算
-  const goldPrice = useMemo(() => {
-    try { const g = JSON.parse(localStorage.getItem('gold-cache') || 'null'); return g && isFinite(g.pricePerGram) ? g.pricePerGram : 0; } catch (e) { return 0; }
+  // 实时价格上下文（金价 + 股票报价）：由首页「行情」/「股市观测」抓取后写入缓存，这里只读用于持仓折算
+  const priceCtx = useMemo(() => {
+    const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+    return buildPriceCtx(read('gold-cache'), read('stocks-watch-cache'));
   }, [state]);
+  // 旧版兼容：把历史的 goldGrams 一次性迁移成一条黄金持仓，之后统一用 holdings 列表管理
+  useEffect(() => {
+    const grams = Number(state.goldGrams) || 0;
+    if (grams > 0 && !((state.holdings || []).some((h) => h.kind === 'gold'))) {
+      setState((prev) => ({ ...prev, goldGrams: 0, holdings: [...(prev.holdings || []), { id: uid('hold'), kind: 'gold', name: '积存金', qty: grams }] }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 把每个人的专项附加扣除明细同步成总额，喂给 calc
   const planInput = useMemo(() => {
@@ -397,7 +407,7 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
         </>
       )}
 
-      {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} goldGrams={Number(state.goldGrams) || 0} onGoldGrams={(v) => update(['goldGrams'], v)} goldPrice={goldPrice} />}
+      {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} holdings={state.holdings || []} onHoldings={(list) => update(['holdings'], list)} priceCtx={priceCtx} />}
       {tab === 'health' && <HealthTab netWorth={state.netWorth} budget={budget} />}
       {tab === 'mc' && <MonteCarloTab forecast={state.forecast} budget={budget} investment={investment} />}
     </div>
@@ -635,10 +645,11 @@ function WealthChart({ series, target, years }) {
 /* ============================ 净资产追踪 ============================ */
 const NW_CATEGORIES = ['流动', '投资', '固定', '其他'];
 
-function NetWorthTab({ netWorth, setNW, goldGrams = 0, onGoldGrams, goldPrice = 0 }) {
+function NetWorthTab({ netWorth, setNW, holdings = [], onHoldings, priceCtx = {} }) {
   const accounts = netWorth.accounts || [];
   const snapshots = netWorth.snapshots || [];
-  const goldValue = goldGrams > 0 && goldPrice > 0 ? Math.round(goldGrams * goldPrice) : 0;
+  const hv = useMemo(() => holdingsValue(holdings, priceCtx), [holdings, priceCtx]);
+  const goldValue = hv.total;
   const series = useMemo(() => netWorthSeries(snapshots, accounts), [snapshots, accounts]);
   const change = useMemo(() => netWorthChange(series), [series]);
   const [manageOpen, setManageOpen] = useState(false);
@@ -697,23 +708,8 @@ function NetWorthTab({ netWorth, setNW, goldGrams = 0, onGoldGrams, goldPrice = 
         />
       </div>
 
-      <Section title="积存金（自动计入净资产）" badge="子项">
-        <div className="sp-gold">
-          <div className="sp-gold-in">
-            <NumberField label="积存金持有" value={goldGrams} onChange={(v) => onGoldGrams && onGoldGrams(Math.max(0, v))} unit="克" step={1} />
-          </div>
-          <div className="sp-gold-out">
-            {goldPrice > 0 ? (
-              <>
-                <div className="sp-gold-v">{formatMoney(goldValue)}</div>
-                <div className="sp-gold-sub">{goldGrams} 克 × {goldPrice.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元/克 · 已计入上方净资产</div>
-              </>
-            ) : (
-              <div className="sp-gold-sub">去首页「行情」刷新一次金价后，这里会按实时金价自动折算（≈工行积存金）。</div>
-            )}
-          </div>
-        </div>
-      </Section>
+      <HoldingsSection holdings={holdings} onHoldings={onHoldings} hv={hv} />
+
 
       <Section title="净资产走势" badge="结果">
         <NetWorthChart series={series} />
@@ -779,6 +775,63 @@ function NetWorthTab({ netWorth, setNW, goldGrams = 0, onGoldGrams, goldPrice = 
         )}
       </Section>
     </div>
+  );
+}
+
+/* 持仓：现金/黄金/股票/基金 按实时价折算，自动计入净资产（叠加在账户快照之上） */
+function HoldingsSection({ holdings, onHoldings, hv }) {
+  const add = (kind) => onHoldings([...(holdings || []), { id: uid('hold'), kind, name: '', qty: 0, symbol: '', nav: 0 }]);
+  const patch = (id, field, value) => onHoldings((holdings || []).map((h) => (h.id === id ? { ...h, [field]: value } : h)));
+  const remove = (id) => onHoldings((holdings || []).filter((h) => h.id !== id));
+  const valById = {};
+  for (const it of hv.items) valById[it.id] = it;
+
+  return (
+    <Section title="持仓（实时估值 · 自动计入净资产）" badge="子项">
+      <p className="sp-note" style={{ marginBottom: 10 }}>
+        记下你持有多少，按实时价自动折算汇总并计入上方净资产。
+        <b>请勿与「账户快照」里同一笔重复登记</b>（持仓是额外叠加项）。金价/股价来自首页「行情」「股市观测」抓取的快照。
+      </p>
+      <div className="sp-hold-add">
+        {HOLDING_KINDS.map((k) => (
+          <button key={k.kind} className="sp-hold-addbtn" onClick={() => add(k.kind)}>＋ {k.icon} {k.label.split(' ')[0]}</button>
+        ))}
+      </div>
+      {(holdings || []).length === 0 ? (
+        <p className="sp-note" style={{ marginTop: 10 }}>还没有持仓。点上面按钮添加现金 / 黄金 / 股票 / 基金。</p>
+      ) : (
+        <div className="sp-hold-list">
+          {(holdings || []).map((h) => {
+            const meta = kindMeta(h.kind);
+            const v = valById[h.id] || { value: 0, price: 0, priced: false };
+            return (
+              <div className="sp-hold-row" key={h.id}>
+                <span className="sp-hold-ic" title={meta.label}>{meta.icon}</span>
+                <input className="sp-hold-name" placeholder={meta.label} value={h.name || ''} onChange={(e) => patch(h.id, 'name', e.target.value)} />
+                {h.kind === 'stock' && (
+                  <input className="sp-hold-sym" placeholder="代码 如 NVDA / 600519.SS" value={h.symbol || ''} onChange={(e) => patch(h.id, 'symbol', e.target.value.toUpperCase())} />
+                )}
+                <span className="sp-hold-qtywrap">
+                  <input className="sp-hold-qty" type="number" inputMode="decimal" placeholder={meta.qtyLabel} value={h.qty || ''} onChange={(e) => patch(h.id, 'qty', Number(e.target.value) || 0)} />
+                  <span className="sp-hold-unit">{meta.unit}</span>
+                </span>
+                {h.kind === 'fund' && (
+                  <span className="sp-hold-qtywrap">
+                    <input className="sp-hold-qty" type="number" inputMode="decimal" placeholder="净值" value={h.nav || ''} onChange={(e) => patch(h.id, 'nav', Number(e.target.value) || 0)} />
+                    <span className="sp-hold-unit">元/份</span>
+                  </span>
+                )}
+                <span className="sp-hold-val" title={v.priced ? (meta.live ? `单价 ${v.price}` : '') : '暂无实时价'}>
+                  {v.priced ? formatMoney(v.value) : (meta.live ? '待刷新' : formatMoney(v.value))}
+                </span>
+                <button className="sp-link sp-link-del" onClick={() => remove(h.id)}>删</button>
+              </div>
+            );
+          })}
+          <div className="sp-hold-total"><span>持仓合计（已计入净资产）</span><b>{formatMoney(hv.total)}</b></div>
+        </div>
+      )}
+    </Section>
   );
 }
 
@@ -1329,11 +1382,20 @@ const CSS = `
 
 /* ===== 净资产 ===== */
 .sp-nw{display:flex;flex-direction:column;gap:14px;}
-.sp-gold{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
-.sp-gold-in{min-width:180px;flex:none;}
-.sp-gold-out{flex:1;min-width:160px;}
-.sp-gold-v{font-family:var(--serif);font-size:24px;font-weight:500;color:var(--accent-2);letter-spacing:-.5px;line-height:1.1;}
-.sp-gold-sub{font-size:11.5px;color:var(--t3);margin-top:3px;line-height:1.5;}
+.sp-hold-add{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.sp-hold-addbtn{border:1px solid var(--bd-2,#E3E0D7);background:var(--surface-2,#FBFAF6);border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer;color:var(--t2);transition:.15s;font-family:var(--sans);}
+.sp-hold-addbtn:hover{border-color:var(--accent);color:var(--accent-2);}
+.sp-hold-list{display:flex;flex-direction:column;gap:7px;}
+.sp-hold-row{display:flex;align-items:center;gap:8px;background:var(--surface-2,#FBFAF6);border:1px solid var(--bd,#ECEAE2);border-radius:10px;padding:8px 11px;flex-wrap:wrap;}
+.sp-hold-ic{font-size:16px;flex:none;}
+.sp-hold-name{flex:1;min-width:90px;border:1px solid var(--bd,#ECEAE2);background:#fff;border-radius:7px;padding:6px 9px;font-size:12.5px;font-family:var(--sans);}
+.sp-hold-sym{width:130px;border:1px solid var(--bd,#ECEAE2);background:#fff;border-radius:7px;padding:6px 9px;font-size:12px;font-family:ui-monospace,Menlo,monospace;text-transform:uppercase;}
+.sp-hold-qtywrap{display:inline-flex;align-items:center;gap:4px;flex:none;}
+.sp-hold-qty{width:84px;border:1px solid var(--bd,#ECEAE2);background:#fff;border-radius:7px;padding:6px 8px;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;font-family:var(--sans);}
+.sp-hold-unit{font-size:11px;color:var(--t3);}
+.sp-hold-val{min-width:84px;text-align:right;font-family:var(--serif);font-size:14px;font-weight:500;color:var(--accent-2);font-variant-numeric:tabular-nums;flex:none;margin-left:auto;}
+.sp-hold-total{display:flex;justify-content:space-between;align-items:baseline;padding:9px 4px 2px;border-top:1px dashed var(--bd-2,#E3E0D7);margin-top:3px;font-size:12.5px;color:var(--t2);}
+.sp-hold-total b{font-family:var(--serif);font-size:18px;color:var(--accent-2);font-variant-numeric:tabular-nums;}
 .sp-nw-empty{text-align:center;padding:34px 16px;color:var(--t2);}
 .sp-nw-empty-ic{font-size:34px;margin-bottom:10px;}
 .sp-nw-empty p{font-size:12.5px;max-width:420px;margin:0 auto 16px;line-height:1.7;}
