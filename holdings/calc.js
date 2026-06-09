@@ -24,14 +24,25 @@ export function kindMeta(kind) {
   return HOLDING_KINDS.find((k) => k.kind === kind) || HOLDING_KINDS[HOLDING_KINDS.length - 1];
 }
 
-/** 由各数据源缓存构造价格上下文：{ goldPrice, quotes:{SYM:quote} }。纯函数。 */
-export function buildPriceCtx(goldCache, stocksCache) {
+/**
+ * 由各数据源缓存构造价格上下文：{ goldPrice, quotes:{SYM:quote}, funds:{CODE:nav} }。纯函数。
+ * @param goldCache     gold-cache（金价）
+ * @param stocksCache   stocks-watch-cache（自选股报价）
+ * @param holdingsCache holdings-quotes-cache（持仓自取的股票报价 + 基金净值，叠加在自选之上）
+ */
+export function buildPriceCtx(goldCache, stocksCache, holdingsCache) {
   const goldPrice = goldCache && isFinite(goldCache.pricePerGram) && goldCache.pricePerGram > 0 ? goldCache.pricePerGram : 0;
   const quotes = {};
   for (const q of (stocksCache && stocksCache.quotes) || []) {
     if (q && q.symbol && isFinite(q.price)) quotes[String(q.symbol).toUpperCase()] = q;
   }
-  return { goldPrice, quotes };
+  // 持仓自取的报价覆盖/补充自选缓存
+  const hq = (holdingsCache && holdingsCache.quotes) || {};
+  for (const k of Object.keys(hq)) if (hq[k] && isFinite(hq[k].price)) quotes[String(k).toUpperCase()] = hq[k];
+  const funds = {};
+  const hf = (holdingsCache && holdingsCache.funds) || {};
+  for (const k of Object.keys(hf)) funds[String(k).trim()] = hf[k];
+  return { goldPrice, quotes, funds };
 }
 
 /** 单条持仓估值 → { value, price, priced }。priced=false 表示暂缺实时价。 */
@@ -51,8 +62,11 @@ export function holdingValue(h, ctx = {}) {
       return { value: p > 0 ? Math.round(qty * p) : 0, price: p, priced: p > 0 };
     }
     case 'fund': {
-      const nav = Number(h.nav) || 0;
-      return { value: nav > 0 ? Math.round(qty * nav) : 0, price: nav, priced: nav > 0 };
+      // 优先用数据源自动取的净值（实时估算/单位净值），回落到手填 nav
+      const src = (ctx.funds || {})[String(h.code || '').trim()];
+      const srcNav = src ? (src.estNav != null && isFinite(src.estNav) && src.estNav > 0 ? src.estNav : (isFinite(src.nav) && src.nav > 0 ? src.nav : 0)) : 0;
+      const nav = srcNav > 0 ? srcNav : (Number(h.nav) || 0);
+      return { value: nav > 0 ? Math.round(qty * nav) : 0, price: nav, priced: nav > 0, auto: srcNav > 0 };
     }
     default:
       return { value: 0, price: 0, priced: false };

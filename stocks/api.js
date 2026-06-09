@@ -84,6 +84,7 @@ const CORS_PROXIES = [
   (u) => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
   (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
 ];
+export { CORS_PROXIES };
 
 function parseYahoo(d, fallbackSym) {
   const res = d && d.chart && d.chart.result && d.chart.result[0];

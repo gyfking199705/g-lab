@@ -24,6 +24,8 @@ import {
   financialHealth,
 } from './calc.js';
 import { HOLDING_KINDS, kindMeta, buildPriceCtx, holdingsValue } from '../holdings/calc.js';
+import { fetchQuotes } from '../stocks/api.js';
+import { fetchFundNavs } from '../funds/api.js';
 import { simulate, VOL_PRESETS } from './montecarlo.js';
 
 /* ----------------------------- 默认数据 ----------------------------- */
@@ -123,11 +125,35 @@ function loadInitial(initialState, storageKey) {
 /* ============================ 主组件 ============================ */
 export default function SavingsPlanner({ initialState, onChange, storageKey = 'savings-planner', initialTab = 'plan' }) {
   const [state, setState] = useState(() => loadInitial(initialState, storageKey));
-  // 实时价格上下文（金价 + 股票报价）：由首页「行情」/「股市观测」抓取后写入缓存，这里只读用于持仓折算
+  const [priceNonce, setPriceNonce] = useState(0);
+  const [holdBusy, setHoldBusy] = useState(false);
+  // 实时价格上下文（金价 + 股票报价 + 基金净值）：来自各数据源缓存，priceNonce 在「刷新持仓行情」后自增以重算
   const priceCtx = useMemo(() => {
     const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
-    return buildPriceCtx(read('gold-cache'), read('stocks-watch-cache'));
-  }, [state]);
+    return buildPriceCtx(read('gold-cache'), read('stocks-watch-cache'), read('holdings-quotes-cache'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, priceNonce]);
+  // 刷新持仓行情：股票走 stocks 适配器（沿用自选股的 provider 配置），基金走天天基金净值适配器
+  const refreshHoldings = async () => {
+    const list = state.holdings || [];
+    const symbols = [...new Set(list.filter((h) => h.kind === 'stock' && h.symbol).map((h) => String(h.symbol).toUpperCase()))];
+    const codes = [...new Set(list.filter((h) => h.kind === 'fund' && h.code).map((h) => String(h.code).trim()))];
+    if (!symbols.length && !codes.length) return;
+    setHoldBusy(true);
+    try {
+      let cfg = {}; try { cfg = JSON.parse(localStorage.getItem('stocks-watch') || '{}') || {}; } catch (e) { /* */ }
+      const [quotes, funds] = await Promise.all([
+        symbols.length ? fetchQuotes(symbols, { provider: cfg.provider || 'yahoo', apiKey: cfg.apiKey, proxyUrl: cfg.proxyUrl }) : Promise.resolve([]),
+        codes.length ? fetchFundNavs(codes, { provider: 'eastmoney' }) : Promise.resolve([]),
+      ]);
+      const qmap = {}; for (const q of quotes) if (q && q.symbol && !q.error) qmap[String(q.symbol).toUpperCase()] = q;
+      const fmap = {}; for (const f of funds) if (f && f.code && !f.error) fmap[String(f.code).trim()] = f;
+      const cache = { quotes: qmap, funds: fmap, at: new Date().toISOString() };
+      try { localStorage.setItem('holdings-quotes-cache', JSON.stringify(cache)); } catch (e) { /* */ }
+      setPriceNonce((n) => n + 1);
+    } catch (e) { /* 保留旧快照 */ }
+    finally { setHoldBusy(false); }
+  };
   // 旧版兼容：把历史的 goldGrams 一次性迁移成一条黄金持仓，之后统一用 holdings 列表管理
   useEffect(() => {
     const grams = Number(state.goldGrams) || 0;
@@ -407,7 +433,7 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
         </>
       )}
 
-      {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} holdings={state.holdings || []} onHoldings={(list) => update(['holdings'], list)} priceCtx={priceCtx} />}
+      {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} holdings={state.holdings || []} onHoldings={(list) => update(['holdings'], list)} priceCtx={priceCtx} onRefreshHoldings={refreshHoldings} holdBusy={holdBusy} />}
       {tab === 'health' && <HealthTab netWorth={state.netWorth} budget={budget} />}
       {tab === 'mc' && <MonteCarloTab forecast={state.forecast} budget={budget} investment={investment} />}
     </div>
@@ -424,12 +450,13 @@ function Kpi({ label, value, tone }) {
   );
 }
 
-function Section({ title, badge, children }) {
+function Section({ title, badge, children, extra }) {
   return (
     <section className="sp-section">
       <div className="sp-section-head">
         <h3>{title}</h3>
         <span className={`sp-badge sp-badge-${badge === '输入' ? 'in' : 'out'}`}>{badge}</span>
+        {extra && <span className="sp-section-extra">{extra}</span>}
       </div>
       <div className="sp-section-body">{children}</div>
     </section>
@@ -645,7 +672,7 @@ function WealthChart({ series, target, years }) {
 /* ============================ 净资产追踪 ============================ */
 const NW_CATEGORIES = ['流动', '投资', '固定', '其他'];
 
-function NetWorthTab({ netWorth, setNW, holdings = [], onHoldings, priceCtx = {} }) {
+function NetWorthTab({ netWorth, setNW, holdings = [], onHoldings, priceCtx = {}, onRefreshHoldings, holdBusy }) {
   const accounts = netWorth.accounts || [];
   const snapshots = netWorth.snapshots || [];
   const hv = useMemo(() => holdingsValue(holdings, priceCtx), [holdings, priceCtx]);
@@ -708,7 +735,7 @@ function NetWorthTab({ netWorth, setNW, holdings = [], onHoldings, priceCtx = {}
         />
       </div>
 
-      <HoldingsSection holdings={holdings} onHoldings={onHoldings} hv={hv} />
+      <HoldingsSection holdings={holdings} onHoldings={onHoldings} hv={hv} onRefresh={onRefreshHoldings} busy={holdBusy} />
 
 
       <Section title="净资产走势" badge="结果">
@@ -779,18 +806,28 @@ function NetWorthTab({ netWorth, setNW, holdings = [], onHoldings, priceCtx = {}
 }
 
 /* 持仓：现金/黄金/股票/基金 按实时价折算，自动计入净资产（叠加在账户快照之上） */
-function HoldingsSection({ holdings, onHoldings, hv }) {
-  const add = (kind) => onHoldings([...(holdings || []), { id: uid('hold'), kind, name: '', qty: 0, symbol: '', nav: 0 }]);
+function HoldingsSection({ holdings, onHoldings, hv, onRefresh, busy }) {
+  const add = (kind) => onHoldings([...(holdings || []), { id: uid('hold'), kind, name: '', qty: 0, symbol: '', code: '', nav: 0 }]);
   const patch = (id, field, value) => onHoldings((holdings || []).map((h) => (h.id === id ? { ...h, [field]: value } : h)));
   const remove = (id) => onHoldings((holdings || []).filter((h) => h.id !== id));
   const valById = {};
   for (const it of hv.items) valById[it.id] = it;
+  const canRefresh = (holdings || []).some((h) => (h.kind === 'stock' && h.symbol) || (h.kind === 'fund' && h.code));
 
   return (
-    <Section title="持仓（实时估值 · 自动计入净资产）" badge="子项">
+    <Section
+      title="持仓（实时估值 · 自动计入净资产）"
+      badge="子项"
+      extra={onRefresh && canRefresh ? (
+        <button className="sp-hold-refresh" onClick={onRefresh} disabled={busy} title="拉取股票/基金最新行情">
+          {busy ? '刷新中…' : '↻ 刷新持仓行情'}
+        </button>
+      ) : null}
+    >
       <p className="sp-note" style={{ marginBottom: 10 }}>
         记下你持有多少，按实时价自动折算汇总并计入上方净资产。
-        <b>请勿与「账户快照」里同一笔重复登记</b>（持仓是额外叠加项）。金价/股价来自首页「行情」「股市观测」抓取的快照。
+        <b>请勿与「账户快照」里同一笔重复登记</b>（持仓是额外叠加项）。
+        股票/基金填代码后点「↻ 刷新持仓行情」自动取价；金价来自首页「行情」。
       </p>
       <div className="sp-hold-add">
         {HOLDING_KINDS.map((k) => (
@@ -811,18 +848,22 @@ function HoldingsSection({ holdings, onHoldings, hv }) {
                 {h.kind === 'stock' && (
                   <input className="sp-hold-sym" placeholder="代码 如 NVDA / 600519.SS" value={h.symbol || ''} onChange={(e) => patch(h.id, 'symbol', e.target.value.toUpperCase())} />
                 )}
+                {h.kind === 'fund' && (
+                  <input className="sp-hold-sym" placeholder="基金代码 6位" value={h.code || ''} onChange={(e) => patch(h.id, 'code', e.target.value.replace(/\D/g, '').slice(0, 6))} />
+                )}
                 <span className="sp-hold-qtywrap">
                   <input className="sp-hold-qty" type="number" inputMode="decimal" placeholder={meta.qtyLabel} value={h.qty || ''} onChange={(e) => patch(h.id, 'qty', Number(e.target.value) || 0)} />
                   <span className="sp-hold-unit">{meta.unit}</span>
                 </span>
-                {h.kind === 'fund' && (
-                  <span className="sp-hold-qtywrap">
+                {h.kind === 'fund' && !v.auto && (
+                  <span className="sp-hold-qtywrap" title="未取到实时净值时用此手填值估值">
                     <input className="sp-hold-qty" type="number" inputMode="decimal" placeholder="净值" value={h.nav || ''} onChange={(e) => patch(h.id, 'nav', Number(e.target.value) || 0)} />
                     <span className="sp-hold-unit">元/份</span>
                   </span>
                 )}
                 <span className="sp-hold-val" title={v.priced ? (meta.live ? `单价 ${v.price}` : '') : '暂无实时价'}>
                   {v.priced ? formatMoney(v.value) : (meta.live ? '待刷新' : formatMoney(v.value))}
+                  {v.auto && <span className="sp-hold-auto" title="实时净值估算">估</span>}
                 </span>
                 <button className="sp-link sp-link-del" onClick={() => remove(h.id)}>删</button>
               </div>
@@ -1393,7 +1434,12 @@ const CSS = `
 .sp-hold-qtywrap{display:inline-flex;align-items:center;gap:4px;flex:none;}
 .sp-hold-qty{width:84px;border:1px solid var(--bd,#ECEAE2);background:#fff;border-radius:7px;padding:6px 8px;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;font-family:var(--sans);}
 .sp-hold-unit{font-size:11px;color:var(--t3);}
-.sp-hold-val{min-width:84px;text-align:right;font-family:var(--serif);font-size:14px;font-weight:500;color:var(--accent-2);font-variant-numeric:tabular-nums;flex:none;margin-left:auto;}
+.sp-hold-val{min-width:84px;text-align:right;font-family:var(--serif);font-size:14px;font-weight:500;color:var(--accent-2);font-variant-numeric:tabular-nums;flex:none;margin-left:auto;display:inline-flex;align-items:center;justify-content:flex-end;gap:5px;}
+.sp-hold-auto{font-family:var(--sans);font-size:9.5px;font-weight:600;color:var(--accent-2);background:color-mix(in srgb,var(--accent,#B08D57) 16%,transparent);border-radius:4px;padding:1px 4px;letter-spacing:.5px;}
+.sp-section-extra{margin-left:auto;}
+.sp-hold-refresh{border:1px solid var(--bd-2,#E3E0D7);background:var(--surface-2,#FBFAF6);border-radius:8px;padding:5px 11px;font-size:11.5px;cursor:pointer;color:var(--t2);transition:.15s;font-family:var(--sans);}
+.sp-hold-refresh:hover:not(:disabled){border-color:var(--accent);color:var(--accent-2);}
+.sp-hold-refresh:disabled{opacity:.55;cursor:default;}
 .sp-hold-total{display:flex;justify-content:space-between;align-items:baseline;padding:9px 4px 2px;border-top:1px dashed var(--bd-2,#E3E0D7);margin-top:3px;font-size:12.5px;color:var(--t2);}
 .sp-hold-total b{font-family:var(--serif);font-size:18px;color:var(--accent-2);font-variant-numeric:tabular-nums;}
 .sp-nw-empty{text-align:center;padding:34px 16px;color:var(--t2);}

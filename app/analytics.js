@@ -139,7 +139,7 @@ function passivePlan(get) {
 function financeBoard(get) {
   const s = get('savings-planner');
   // 持仓联动：现金/黄金/股票/基金 按实时价折算，作为额外资产自动计入净资产
-  const ctx = buildPriceCtx(get('gold-cache'), get('stocks-watch-cache'));
+  const ctx = buildPriceCtx(get('gold-cache'), get('stocks-watch-cache'), get('holdings-quotes-cache'));
   const hv = holdingsValue(effectiveHoldings(s), ctx);
   const f = financeForecast(s, { extraAssets: hv.total });
   if (!f || (!f.target && !f.latest)) return null;

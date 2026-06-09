@@ -48,3 +48,25 @@ test('kindMeta：取类型元信息', () => {
   assert.equal(kindMeta('gold').unit, '克');
   assert.equal(kindMeta('stock').needs, 'symbol');
 });
+
+test('buildPriceCtx：合并持仓自取报价 + 基金净值', () => {
+  const c = buildPriceCtx(
+    { pricePerGram: 565 },
+    { quotes: [{ symbol: 'AAPL', price: 200 }] },
+    { quotes: { TSLA: { price: 250 }, AAPL: { price: 210 } }, funds: { '161725': { nav: 1.2, estNav: 1.25 } } }
+  );
+  assert.equal(c.quotes.TSLA.price, 250); // 持仓自取补充
+  assert.equal(c.quotes.AAPL.price, 210); // 持仓自取覆盖自选缓存
+  assert.equal(c.funds['161725'].estNav, 1.25);
+});
+
+test('holdingValue(fund)：数据源净值优先（实时估算），auto 标记', () => {
+  const ctx = { funds: { '161725': { nav: 1.2, estNav: 1.25 } } };
+  const v = holdingValue({ kind: 'fund', code: '161725', qty: 1000, nav: 1.0 }, ctx);
+  assert.equal(v.value, 1250); // 用 estNav 而非手填 1.0
+  assert.equal(v.auto, true);
+  // 无数据源时回落手填 nav
+  const v2 = holdingValue({ kind: 'fund', code: '000000', qty: 1000, nav: 1.1 }, ctx);
+  assert.equal(v2.value, 1100);
+  assert.equal(v2.auto, false);
+});
