@@ -13,21 +13,63 @@ import { callChat } from '../learning/ai.js';
 
 /** 同分组内取前置/后继各 N 个（按地图排布顺序 = 编排的学习顺序）。 */
 export function pathFor(groups, sel, n = 3) {
+  const cl = clusterOf(groups, sel);
+  if (!cl) return { prev: [], next: [] };
+  const i = cl.topics.findIndex((t) => t.id === sel.topicId);
+  if (i < 0) return { prev: [], next: [] };
+  return {
+    prev: cl.topics.slice(Math.max(0, i - n), i),
+    next: cl.topics.slice(i + 1, i + 1 + n),
+  };
+}
+
+/** 找到 sel 所在分组（返回 cluster 对象，找不到为 null）。 */
+export function clusterOf(groups, sel) {
   for (const g of groups || []) {
     for (const tr of g.tracks) {
       if (tr.id !== sel.trackId) continue;
+      for (const cl of tr.clusters) if (cl.id === sel.clusterId) return cl;
+    }
+  }
+  return null;
+}
+
+/**
+ * 下一个该学的知识点（「继续学习」入口）：
+ * 进行中优先（接着推进前线）→ 迷雾（清雾）→ 第一个未开始（开新地）。
+ * 顺序即地图排布顺序（自建图最前）。返回 topic 的 id，找不到为 null。
+ */
+export function nextToLearn(groups) {
+  let firstFog = null, firstTodo = null;
+  for (const g of groups || []) {
+    for (const tr of g.tracks) {
       for (const cl of tr.clusters) {
-        if (cl.id !== sel.clusterId) continue;
-        const i = cl.topics.findIndex((t) => t.id === sel.topicId);
-        if (i < 0) return { prev: [], next: [] };
-        return {
-          prev: cl.topics.slice(Math.max(0, i - n), i),
-          next: cl.topics.slice(i + 1, i + 1 + n),
-        };
+        for (const t of cl.topics) {
+          if (t.status === 'doing') return t.id;
+          if (t.status === 'fog' && !firstFog) firstFog = t.id;
+          if (t.status === 'todo' && !firstTodo) firstTodo = t.id;
+        }
       }
     }
   }
-  return { prev: [], next: [] };
+  return firstFog || firstTodo;
+}
+
+/**
+ * 从学习卡 markdown 解析「自检三问」：取 ## 自检 小节内的列表/编号行。
+ * 返回字符串数组（题面，可能含参考答案），解析不到返回 []。
+ */
+export function parseQuiz(md) {
+  const lines = String(md || '').split(/\r?\n/);
+  const items = [];
+  let inQuiz = false;
+  for (const ln of lines) {
+    const t = ln.trim();
+    if (/^#{2,3}\s*自检/.test(t)) { inQuiz = true; continue; }
+    if (inQuiz && /^#{2,3}\s+/.test(t)) break;
+    if (inQuiz && /^([-*]|\d+[.、)])\s+/.test(t)) items.push(t.replace(/^([-*]|\d+[.、)])\s+/, ''));
+  }
+  return items;
 }
 
 /** 学习卡提示词（system/user）。迷雾点以解锁问题为靶心。 */

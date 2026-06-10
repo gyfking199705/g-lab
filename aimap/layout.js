@@ -80,6 +80,7 @@ export function layoutWorld(groups, r = HEX_R, maxRowW = 900) {
   }
   const height = y + LABEL + shelfH;
   const tileById = {};
-  for (const c of continents) for (const t of c.tiles) tileById[t.topicId] = t;
+  // gx/gy = 世界绝对坐标（大陆偏移 + 大陆内坐标），供「继续学习」等居中跳转用
+  for (const c of continents) for (const t of c.tiles) tileById[t.topicId] = { ...t, gx: c.x + t.x, gy: c.y + t.y };
   return { continents, width, height, tileById };
 }

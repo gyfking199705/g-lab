@@ -12,7 +12,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { layoutWorld, hexPoints, HEX_R } from './layout.js';
 import { STATUS_META, STATUS_CYCLE } from './calc.js';
-import { pathFor, copyablePrompt, generateStudyCard, renderCardHtml } from './study.js';
+import { pathFor, copyablePrompt, generateStudyCard, renderCardHtml, clusterOf, nextToLearn, parseQuiz } from './study.js';
 import { loadAIConfig } from '../core/AISettings.jsx';
 import { isConfigured } from '../learning/ai.js';
 
@@ -41,7 +41,62 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
   const aiCfg = useMemo(() => loadAIConfig(), [selId]);
   const aiReady = aiCfg && aiCfg.enabled !== false && isConfigured(aiCfg);
 
-  const pickTile = (id) => { setSelId(id); setStudyOpen(false); setStudyErr(''); setCopied(false); };
+  const [quiz, setQuiz] = useState(null); // {items:[], checked:bool[]} 自检过关中
+  const [batch, setBatch] = useState(null); // {done,total} 整组生成中
+  const batchRef = useRef({ cancel: false });
+
+  const pickTile = (id) => { setSelId(id); setStudyOpen(false); setStudyErr(''); setCopied(false); setQuiz(null); };
+
+  /* 居中跳转到某格（「继续学习」/路径跳转用） */
+  const centerOn = (id) => {
+    const t = world.tileById[id];
+    const el = wrapRef.current;
+    if (!t || !el) return;
+    const k = Math.max(view.current.k, 1.25);
+    view.current = { k, x: el.clientWidth / 2 - t.gx * k, y: el.clientHeight / 2 - t.gy * k };
+    apply();
+  };
+  const continueLearning = () => {
+    const id = nextToLearn(groups);
+    if (id) { pickTile(id); centerOn(id); }
+  };
+
+  /* 标记已掌握前的自检关卡：有学习卡且含自检题时，先答题再点亮 */
+  const trySetStatus = (k) => {
+    if (k === 'done' && sel.status !== 'done' && sel.card) {
+      const items = parseQuiz(sel.card);
+      if (items.length) { setQuiz({ items, checked: items.map(() => false) }); setStudyOpen(false); return; }
+    }
+    onSetStatus(sel, k);
+    setQuiz(null);
+  };
+
+  /* 整组批量生成：当前分组缺卡的知识点，顺序逐个生成（可中断） */
+  const clusterMissing = useMemo(() => {
+    if (!sel) return [];
+    const cl = clusterOf(groups, sel);
+    return cl ? cl.topics.filter((t) => !t.card) : [];
+  }, [groups, selId]);
+  const runBatch = async () => {
+    const cl = clusterOf(groups, sel);
+    if (!cl) return;
+    const targets = cl.topics.filter((t) => !t.card);
+    if (!targets.length) return;
+    batchRef.current = { cancel: false };
+    setBatch({ done: 0, total: targets.length });
+    const base = { trackId: sel.trackId, clusterId: sel.clusterId, trackName: sel.trackName, clusterName: sel.clusterName, domain: sel.domain };
+    for (let i = 0; i < targets.length; i++) {
+      if (batchRef.current.cancel) break;
+      const t = targets[i];
+      const tSel = { ...base, topicId: t.id, name: t.name, note: t.note || '', unlock: t.unlock || '' };
+      try {
+        const text = await generateStudyCard({ config: aiCfg, sel: tSel, path: pathFor(groups, tSel) });
+        onPatchTopic(tSel, { card: text });
+      } catch (e) { setStudyErr(`「${t.name}」生成失败：` + (e.message || '')); break; }
+      setBatch({ done: i + 1, total: targets.length });
+    }
+    setBatch(null);
+  };
 
   const makeCard = async () => {
     if (!sel) return;
@@ -158,6 +213,7 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
           <span key={k}><i style={{ background: FILL[k], borderColor: STROKE[k] }} />{STATUS_META[k].label}</span>
         ))}
       </div>
+      <button className="amv-continue" onClick={continueLearning} title="跳到下一个该学的点：进行中 → 迷雾 → 未开始">▶ 继续学习</button>
 
       {/* 悬停浮签 */}
       {tip && !sel && (
@@ -183,7 +239,7 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
             {STATUS_CYCLE.map((k) => (
               <button key={k} className={sel.status === k ? 'on' : ''}
                 style={sel.status === k ? { background: FILL[k], borderColor: STROKE[k], color: k === 'todo' ? 'var(--text-2)' : '#fff' } : {}}
-                onClick={() => onSetStatus(sel, k)}>
+                onClick={() => trySetStatus(k)}>
                 {STATUS_META[k].label}
               </button>
             ))}
@@ -213,12 +269,45 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
                   {aiReady && <button className="amv-study-btn" disabled={studyBusy} onClick={makeCard}>{studyBusy ? '生成中…' : '↻ 重新生成'}</button>}
                 </>
               : aiReady
-                ? <button className="amv-study-btn primary" disabled={studyBusy} onClick={makeCard}>{studyBusy ? '✨ 生成中…' : '🎓 生成学习卡'}</button>
+                ? <button className="amv-study-btn primary" disabled={studyBusy || !!batch} onClick={makeCard}>{studyBusy ? '✨ 生成中…' : '🎓 生成学习卡'}</button>
                 : <>
                     <button className="amv-study-btn" onClick={copyPrompt}>{copied ? '✓ 已复制' : '📋 复制学习提示词'}</button>
                     <span className="amv-study-hint">粘到任意 AI 对话即可学；或在侧栏「✨ AI 设置」配 Key 后这里一键生成</span>
                   </>}
+            {aiReady && !batch && clusterMissing.length > 1 && (
+              <button className="amv-study-btn" disabled={studyBusy} onClick={runBatch} title={`为「${sel.clusterName || sel.trackName}」分组缺卡的 ${clusterMissing.length} 个知识点依次生成`}>
+                ⚡ 整组生成({clusterMissing.length})
+              </button>
+            )}
+            {batch && (
+              <span className="amv-batch">
+                ⚡ {batch.done}/{batch.total} 生成中…
+                <button className="amv-study-btn" onClick={() => { batchRef.current.cancel = true; }}>停止</button>
+              </span>
+            )}
           </div>
+
+          {/* 自检过关：答出三问才点亮「已掌握」 */}
+          {quiz && (
+            <div className="amv-quiz">
+              <div className="amv-quiz-t">🧭 点亮前的自检——能答出每一问再勾（答案就在题后/学习卡里）</div>
+              {quiz.items.map((q, i) => (
+                <label className="amv-quiz-item" key={i}>
+                  <input type="checkbox" checked={quiz.checked[i]}
+                    onChange={() => setQuiz((z) => ({ ...z, checked: z.checked.map((c, j) => (j === i ? !c : c)) }))} />
+                  <span dangerouslySetInnerHTML={{ __html: renderCardHtml(q).replace(/^<p>|<\/p>$/g, '') }} />
+                </label>
+              ))}
+              <div className="amv-quiz-acts">
+                <button className="amv-study-btn primary" disabled={!quiz.checked.every(Boolean)}
+                  onClick={() => { onSetStatus(sel, 'done'); setQuiz(null); }}>
+                  {quiz.checked.every(Boolean) ? '✓ 全部答出，点亮领土' : `还差 ${quiz.checked.filter((c) => !c).length} 问`}
+                </button>
+                <button className="amv-link-skip" onClick={() => { onSetStatus(sel, 'done'); setQuiz(null); }}>跳过自检直接标记</button>
+                <button className="amv-link-skip" onClick={() => setQuiz(null)}>取消</button>
+              </div>
+            </div>
+          )}
           {studyOpen && (
             <div className="amv-card">
               {studyBusy && <p className="amv-card-busy">✨ 正在为「{sel.name}」生成学习卡…</p>}
@@ -295,6 +384,19 @@ export const MAP_CSS = `
 .amv-study-btn.primary:hover:not(:disabled){background:var(--accent-2);color:#fff;}
 .amv-study-btn.on{border-color:var(--accent);color:var(--accent-2);background:var(--accent-soft);}
 .amv-study-hint{font-size:10px;color:var(--text-3);line-height:1.5;}
+.amv-continue{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:3;border:1px solid var(--accent);
+  background:var(--accent);color:#fff;border-radius:999px;padding:7px 18px;font-size:12.5px;font-weight:500;cursor:pointer;
+  box-shadow:0 6px 18px rgba(204,120,92,.35);transition:.15s;font-family:var(--sans);}
+.amv-continue:hover{background:var(--accent-2);}
+.amv-batch{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--accent-2);font-variant-numeric:tabular-nums;}
+.amv-quiz{margin-top:10px;background:color-mix(in srgb,var(--accent-soft) 60%,var(--surface));border:1px solid var(--accent);
+  border-radius:10px;padding:11px 13px;}
+.amv-quiz-t{font-size:11px;color:var(--accent-2);font-weight:600;margin-bottom:7px;}
+.amv-quiz-item{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:11.5px;line-height:1.6;cursor:pointer;}
+.amv-quiz-item input{margin-top:3px;accent-color:var(--accent);flex:none;}
+.amv-quiz-acts{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;}
+.amv-link-skip{border:none;background:none;font-size:10.5px;color:var(--text-3);cursor:pointer;text-decoration:underline;font-family:var(--sans);}
+.amv-link-skip:hover{color:var(--text-2);}
 .amv-card{margin-top:10px;max-height:280px;overflow-y:auto;background:var(--surface-2);border:1px solid var(--bd);
   border-radius:10px;padding:12px 15px;font-size:12px;line-height:1.75;color:var(--text);}
 .amv-card h4{font-family:var(--serif);font-size:12.5px;font-weight:600;color:var(--accent-2);margin:10px 0 4px;}

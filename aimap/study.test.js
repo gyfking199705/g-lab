@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pathFor, buildStudyPrompt, copyablePrompt, renderCardHtml } from './study.js';
+import { pathFor, buildStudyPrompt, copyablePrompt, renderCardHtml, clusterOf, nextToLearn, parseQuiz } from './study.js';
 import { normalize, groupByDomain } from './calc.js';
 
 const st = normalize({ tracks: [{ name: '主线', domain: 'X', clusters: [
@@ -43,4 +43,25 @@ test('renderCardHtml：## / - / ** 渲染，HTML 注入被转义', () => {
   assert.match(html, /<ul><li>点 <b>加粗<\/b> 与 <code>code<\/code><\/li><\/ul>/);
   assert.match(html, /&lt;script&gt;/);
   assert.ok(!html.includes('<script>'));
+});
+
+test('clusterOf：按 ids 定位分组', () => {
+  assert.equal(clusterOf(groups, selOf(0)).name, '地基');
+  assert.equal(clusterOf(groups, { trackId: 'x', clusterId: 'y' }), null);
+});
+
+test('nextToLearn：doing 优先 → fog → todo', () => {
+  const mkG = (statuses) => groupByDomain(normalize({ tracks: [{ name: 't', clusters: [{ topics: statuses.map((s, i) => ({ name: 'n' + i, status: s })) }] }] }).tracks);
+  const g1 = mkG(['done', 'todo', 'fog', 'doing']);
+  const pick = (g) => { const id = nextToLearn(g); for (const gr of g) for (const tr of gr.tracks) for (const cl of tr.clusters) for (const t of cl.topics) if (t.id === id) return t.name; return null; };
+  assert.equal(pick(g1), 'n3'); // doing 优先
+  assert.equal(pick(mkG(['done', 'todo', 'fog'])), 'n2'); // 无 doing → fog
+  assert.equal(pick(mkG(['done', 'todo'])), 'n1'); // 无雾 → todo
+  assert.equal(nextToLearn(mkG(['done'])), null);
+});
+
+test('parseQuiz：解析自检小节的列表/编号行，无小节为空', () => {
+  const md = '## 核心拆解\n- 不是题\n## 自检三问（附答案）\n- Q1？（答：A1）\n2. Q2？\n* Q3？\n## 接缝\n- 也不是题';
+  assert.deepEqual(parseQuiz(md), ['Q1？（答：A1）', 'Q2？', 'Q3？']);
+  assert.deepEqual(parseQuiz('## 没有自检\n- x'), []);
 });
