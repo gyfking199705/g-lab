@@ -43,6 +43,36 @@
     ]
   },
   {
+    "file": "finance-investing.json",
+    "id": "finance-investing",
+    "icon": "📈",
+    "name": "投资与金融市场",
+    "desc": "从市场结构到估值、组合与行为金融：建立完整的投资认知框架。",
+    "tracks": 4,
+    "topics": 120,
+    "trackNames": [
+      "金融市场基础",
+      "股票分析",
+      "债券与衍生品",
+      "组合与量化"
+    ]
+  },
+  {
+    "file": "finance-personal.json",
+    "id": "finance-personal",
+    "icon": "💰",
+    "name": "个人理财与财务规划",
+    "desc": "中国语境的实操理财：五险一金、房贷、保险、基金定投、养老与 FIRE。",
+    "tracks": 4,
+    "topics": 95,
+    "trackNames": [
+      "现金流与制度",
+      "房产与保险",
+      "基金与投资实操",
+      "养老与人生财务"
+    ]
+  },
+  {
     "file": "genai-apps.json",
     "id": "genai-apps",
     "icon": "🤖",
