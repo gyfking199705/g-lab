@@ -28,6 +28,22 @@
     ]
   },
   {
+    "file": "cognitive-psychology.json",
+    "id": "cognitive-psychology",
+    "icon": "🧩",
+    "name": "认知与心理科学",
+    "desc": "决策、学习、习惯、情绪与思维模型：理解自己这台机器的说明书。",
+    "tracks": 5,
+    "topics": 112,
+    "trackNames": [
+      "决策与偏差",
+      "学习与记忆科学",
+      "习惯与动机",
+      "情绪与心理健康",
+      "社会心理与思维模型"
+    ]
+  },
+  {
     "file": "dl-foundations.json",
     "id": "dl-foundations",
     "icon": "🧮",
@@ -70,6 +86,21 @@
       "房产与保险",
       "基金与投资实操",
       "养老与人生财务"
+    ]
+  },
+  {
+    "file": "fitness-science.json",
+    "id": "fitness-science",
+    "icon": "💪",
+    "name": "健身与运动科学",
+    "desc": "训练、增肌减脂、营养与恢复的循证知识：练得明白，不交智商税。",
+    "tracks": 4,
+    "topics": 98,
+    "trackNames": [
+      "训练科学地基",
+      "力量与增肌",
+      "减脂与心肺",
+      "营养与恢复"
     ]
   },
   {
