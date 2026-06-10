@@ -58,3 +58,12 @@ test('normalize：补 id、字符串 parked 升级为对象、非法状态归 to
   // 空输入安全
   assert.deepEqual(normalize(null).tracks, []);
 });
+
+test('normalize：字符串知识点展开为 todo 对象（地图库紧凑格式）', () => {
+  const n = normalize({ tracks: [{ name: 't', clusters: [{ topics: ['卷积的平移等变性', { name: 'x', status: 'done' }] }] }] });
+  const tp = n.tracks[0].clusters[0].topics;
+  assert.equal(tp[0].name, '卷积的平移等变性');
+  assert.equal(tp[0].status, 'todo');
+  assert.ok(tp[0].id);
+  assert.equal(tp[1].status, 'done');
+});

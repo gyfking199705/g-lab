@@ -1,0 +1,89 @@
+{
+  "id": "llm-arch-training",
+  "icon": "🧠",
+  "name": "大模型架构与训练",
+  "desc": "Transformer 解剖、预训练、分布式训练与后训练对齐的全景。",
+  "tracks": [
+    { "tag": "大模型 · 架构", "name": "Transformer 解剖", "clusters": [
+      { "name": "注意力机制", "topics": [
+        "scaled dot-product 推导", "为什么除以 √d", "QKV 的检索隐喻", "多头与子空间分解",
+        "因果掩码的实现", "cross-attention 的用法", "注意力二次复杂度的来源", "attention sink 与首 token",
+        "softmax 温度与熵", "注意力头的可解释模式（归纳头）", "logit soft-capping"
+      ] },
+      { "name": "位置编码", "topics": [
+        "正弦绝对位置编码", "可学习位置嵌入", "相对位置（Shaw/T5 bias）", "RoPE 旋转推导",
+        "RoPE 频率与维度分工", "NTK-aware 缩放", "YaRN", "ALiBi 线性偏置", "NoPE 与隐式位置"
+      ] },
+      { "name": "架构组件", "topics": [
+        "decoder-only 为何成为主流", "FFN 作为键值记忆", "SwiGLU 门控", "参数分配：深 vs 宽",
+        "embedding 与 LM head 共享", "词表大小的工程权衡", "tokenizer 与字节回退", "BPE 与 unigram 对比",
+        "多语言词表设计", "残差流视角（transformer circuits）", "最后一层 logits 与 softmax 瓶颈"
+      ] },
+      { "name": "高效注意力与新架构", "topics": [
+        "MQA 单 KV 头", "GQA 分组查询", "MLA 低秩潜变量压缩", "滑动窗口注意力",
+        "稀疏注意力（Longformer/BigBird）", "线性注意力与核技巧", "FlashAttention 的 IO 复杂度", "Mamba 选择性状态空间",
+        "RWKV 线性 RNN", "混合架构（滑窗+全局层间隔）"
+      ] }
+    ] },
+    { "tag": "大模型 · 预训练", "name": "预训练", "clusters": [
+      { "name": "数据工程", "topics": [
+        "语料来源与配比", "去重：MinHash 与精确去重", "质量过滤分类器", "启发式清洗规则",
+        "测试集污染检测", "数据课程（由易到难）", "多 epoch 与重复的代价", "合成数据与模型坍缩",
+        "tokenizer 训练流程", "分词对数学/代码的影响", "数据混合律（data mixing laws）", "隐私与去标识"
+      ] },
+      { "name": "训练目标与流程", "topics": [
+        "下一词预测的本质", "MLM 与双向上下文", "span corruption（T5）", "FIM 中间填空",
+        "多 token 预测 MTP", "序列打包与跨文档注意力", "课程退火（高质量数据收尾）", "持续预训练与领域适配", "检查点平均"
+      ] },
+      { "name": "Scaling Laws", "topics": [
+        "Kaplan 幂律", "Chinchilla 计算最优配比", "数据受限下的 scaling", "推理感知 scaling（过训练小模型）",
+        "涌现能力与度量伪影之争", "小模型代理实验与 loss 外推", "超参的 scaling（μP）", "MoE 的 scaling 修正"
+      ] },
+      { "name": "MoE 架构", "topics": [
+        "稀疏激活的动机", "top-k 路由机制", "负载均衡辅助损失", "aux-loss-free 偏置均衡",
+        "expert capacity factor", "共享专家与细粒度专家", "路由坍缩问题", "稠密转 MoE（upcycling）",
+        "专家专业化分析", "MoE 的推理成本视角"
+      ] },
+      { "name": "长上下文", "topics": [
+        "位置插值 PI", "NTK/YaRN 上下文扩展", "长上下文继续训练配方", "大海捞针与 RULER 评测",
+        "长上下文的注意力分散", "上下文长度 vs RAG 之争"
+      ] }
+    ] },
+    { "tag": "大模型 · 分布式", "name": "分布式训练", "clusters": [
+      { "name": "数据并行", "topics": [
+        "DDP 与梯度 all-reduce", "梯度累积", "ZeRO-1/2/3 逐级分片", "FSDP 参数切分的生命周期",
+        "通信-计算重叠（训练侧）", "梯度压缩与误差反馈", "异步 SGD 与陈旧梯度"
+      ] },
+      { "name": "模型并行", "topics": [
+        "Megatron TP：行切与列切", "TP 每层的两次 all-reduce", "GPipe 流水线", "1F1B 的内存优化",
+        "interleaved 虚拟流水", "zero-bubble PP", "序列并行（Megatron-SP）", "上下文并行 Ring Attention",
+        "DeepSpeed-Ulysses", "专家并行的 all-to-all（训练侧）", "3D 并行组合决策树", "拓扑感知的并行映射"
+      ] },
+      { "name": "训练工程", "topics": [
+        "BF16 vs FP16", "动态 loss scaling", "FP8 训练实践（DeepSeek-V3）", "激活检查点与重计算策略",
+        "显存四大件估算（参数/梯度/优化器态/激活）", "大规模 checkpoint 分布式读写", "弹性训练与故障恢复", "straggler 与网络抖动诊断",
+        "MFU/HFU 计算", "万卡集群的硬件故障率现实", "训练日志与 loss 曲线鉴诊"
+      ] }
+    ] },
+    { "tag": "大模型 · 后训练", "name": "后训练与对齐", "clusters": [
+      { "name": "SFT", "topics": [
+        "指令数据格式与模板", "chat template 与特殊 token", "数据质量 vs 数量（LIMA 假说）", "数据多样性度量",
+        "全参微调 vs LoRA 的质量差异", "多任务混合与配比", "灾难性遗忘的缓解", "拒绝采样微调 RFT"
+      ] },
+      { "name": "偏好优化", "topics": [
+        "奖励模型与 Bradley-Terry", "奖励过优化（Goodhart）", "RLHF-PPO 完整流程", "KL 惩罚与参考模型",
+        "价值函数与 GAE", "DPO 从 RLHF 目标的推导", "DPO 的隐式奖励", "IPO/KTO/ORPO/SimPO 变体速览",
+        "GRPO 组相对优势", "在线 vs 离线偏好数据", "RLAIF 与宪法 AI", "长度偏置与奖励黑客", "过程奖励 PRM vs 结果奖励 ORM"
+      ] },
+      { "name": "推理能力训练", "topics": [
+        "CoT 从提示到训练数据", "self-consistency 多数表决", "STaR 自举推理", "o1/R1 范式：RL 激发长思维链",
+        "R1-Zero 与冷启动", "推理模型蒸馏到小模型", "测试时计算扩展律", "思维链长度与过度思考",
+        "可验证奖励 RLVR（数学/代码）", "课程式难度调度"
+      ] },
+      { "name": "评测", "topics": [
+        "MMLU/GSM8K/HumanEval 谱系", "评测污染与动态评测", "LLM-as-judge 的偏置", "Elo 与 Arena 竞技场",
+        "校准与不确定性评测", "能力评测与安全评测的分离"
+      ] }
+    ] }
+  ]
+}

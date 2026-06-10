@@ -26,6 +26,10 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
   const [state, setState] = useState(() => load(initialState, storageKey));
   const [filter, setFilter] = useState('all');
   const [edit, setEdit] = useState(false);
+  const [showLib, setShowLib] = useState(false);
+  const [lib, setLib] = useState(null);
+  const [libErr, setLibErr] = useState('');
+  const [importing, setImporting] = useState('');
   const first = useRef(true);
 
   useEffect(() => {
@@ -75,6 +79,31 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
   const addParked = (name) => name.trim() && up((s) => ({ ...s, parked: [...s.parked, { id: rid('pk'), name: name.trim() }] }));
   const delParked = (id) => up((s) => ({ ...s, parked: s.parked.filter((p) => p.id !== id) }));
 
+  /* ---------- 地图库（仓库内置静态 JSON，按需拉取，不占应用包体） ---------- */
+  const toggleLib = async () => {
+    setShowLib((v) => !v);
+    if (lib || showLib) return;
+    try {
+      const r = await fetch('aimap/maps/index.json');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      setLib(await r.json());
+      setLibErr('');
+    } catch (e) { setLibErr('地图库加载失败（需在线访问站点）：' + (e.message || '')); }
+  };
+  const hasMap = (m) => (m.trackNames || []).some((n) => state.tracks.some((tr) => tr.name === n));
+  const importMap = async (m) => {
+    setImporting(m.file);
+    try {
+      const r = await fetch('aimap/maps/' + m.file);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const tracks = normalize({ tracks: data.tracks }).tracks;
+      up((s) => ({ ...s, tracks: [...s.tracks, ...tracks] }));
+      setLibErr('');
+    } catch (e) { setLibErr(`导入「${m.name}」失败：` + (e.message || '')); }
+    finally { setImporting(''); }
+  };
+
   const empty = state.tracks.length === 0;
 
   return (
@@ -94,8 +123,32 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
             {state.anchor && <p className="am-manchor">⚓ {state.anchor}</p>}
           </>
         )}
-        <button className={`am-editbtn${edit ? ' on' : ''}`} onClick={() => setEdit(!edit)}>{edit ? '✓ 完成编辑' : '✎ 编辑地图'}</button>
+        <span className="am-mbtns">
+          <button className={`am-editbtn${showLib ? ' on' : ''}`} onClick={toggleLib}>📥 地图库</button>
+          <button className={`am-editbtn${edit ? ' on' : ''}`} onClick={() => setEdit(!edit)}>{edit ? '✓ 完成编辑' : '✎ 编辑地图'}</button>
+        </span>
       </div>
+
+      {/* 地图库：内置课程图谱，一键并入（追加为新轨道，可再删） */}
+      {showLib && (
+        <div className="am-lib">
+          <p className="am-lib-lead">内置知识地图（共 {(lib || []).reduce((s, m) => s + (m.topics || 0), 0) || '…'} 个知识点）。导入后以「未开始」并入你的地图，慢慢点亮；不需要的轨道可在编辑模式删除。</p>
+          {libErr && <p className="am-lib-err">⚠ {libErr}</p>}
+          {!lib && !libErr && <p className="am-lib-lead">正在加载…</p>}
+          {(lib || []).map((m) => (
+            <div className="am-lib-row" key={m.file}>
+              <span className="am-lib-ic">{m.icon}</span>
+              <div className="am-lib-body">
+                <div className="am-lib-name">{m.name} <em>{m.topics} 点 · {m.tracks} 轨道</em></div>
+                <div className="am-lib-desc">{m.desc}</div>
+              </div>
+              {hasMap(m)
+                ? <span className="am-lib-done">✓ 已导入</span>
+                : <button className="am-lib-btn" disabled={!!importing} onClick={() => importMap(m)}>{importing === m.file ? '导入中…' : '导入'}</button>}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 测绘总览 */}
       {!empty && (
@@ -290,7 +343,22 @@ function QuickAdd({ placeholder, onAdd, wide }) {
 
 const CSS = `
 .am-root{--fog:#8E7CC3;}
-.am-mission{position:relative;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:16px 130px 16px 18px;margin-bottom:16px;}
+.am-mission{position:relative;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:16px 210px 16px 18px;margin-bottom:16px;}
+.am-mbtns{position:absolute;top:14px;right:14px;display:flex;gap:6px;}
+.am-mbtns .am-editbtn{position:static;}
+.am-lib{background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:14px 18px;margin-bottom:16px;}
+.am-lib-lead{font-size:12px;color:var(--text-2);line-height:1.6;margin-bottom:6px;}
+.am-lib-err{font-size:12px;color:var(--danger);margin-bottom:6px;}
+.am-lib-row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--bd-soft);}
+.am-lib-ic{font-size:20px;flex:none;}
+.am-lib-body{flex:1;min-width:0;}
+.am-lib-name{font-weight:600;font-size:13px;}
+.am-lib-name em{font-style:normal;font-weight:400;font-size:11px;color:var(--text-3);margin-left:6px;font-variant-numeric:tabular-nums;}
+.am-lib-desc{font-size:11.5px;color:var(--text-2);margin-top:2px;line-height:1.55;}
+.am-lib-btn{flex:none;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-2);border-radius:8px;padding:5px 14px;font-size:12px;cursor:pointer;transition:.15s;font-family:var(--sans);}
+.am-lib-btn:hover:not(:disabled){background:var(--accent);color:#fff;}
+.am-lib-btn:disabled{opacity:.55;cursor:default;}
+.am-lib-done{flex:none;font-size:12px;color:var(--success);font-weight:500;}
 .am-mtext{font-family:var(--serif);font-size:14.5px;line-height:1.7;color:var(--text);}
 .am-manchor{font-size:11.5px;color:var(--text-3);margin-top:6px;font-variant-numeric:tabular-nums;}
 .am-editbtn{position:absolute;top:14px;right:14px;border:1px solid var(--bd-2);background:var(--surface-2);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-2);transition:.15s;}

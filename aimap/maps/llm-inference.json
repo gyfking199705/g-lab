@@ -1,0 +1,87 @@
+{
+  "id": "llm-inference",
+  "icon": "⚙️",
+  "name": "LLM 推理引擎（完整版）",
+  "desc": "vLLM / SGLang / TensorRT-LLM 级推理系统：建模、并行、显存、内核、调度、压测。",
+  "tracks": [
+    { "tag": "推理 · 建模", "name": "理论与性能建模", "clusters": [
+      { "name": "性能模型", "topics": [
+        "roofline 与 ridge point", "算术强度逐算子计算", "prefill 的算力受限分析", "decode 的带宽受限分析",
+        "KV cache 对算术强度的拖累", "TTFT/TPOT/E2E 指标体系", "吞吐-延迟帕累托前沿", "goodput：SLO 内的有效吞吐",
+        "显存预算四件套（权重/KV/激活/碎片）", "MoE 激活参数与路由稀释", "推理成本核算：$/1M token 拆解"
+      ] },
+      { "name": "带宽与互联", "topics": [
+        "HBM 带宽与代际演进", "NVLink/NVSwitch 拓扑", "PCIe 代际与瓶颈位置", "InfiniBand/RoCE 跨机互联",
+        "GPUDirect RDMA", "NCCL 通信原语在推理中的用法", "ring all-reduce 逐步手推", "all-to-all 的流量矩阵",
+        "P2P 传输与流水化", "带宽利用率的实测方法"
+      ] }
+    ] },
+    { "tag": "推理 · 并行", "name": "并行与部署形态", "clusters": [
+      { "name": "推理并行", "topics": [
+        "推理 TP 的切法与通信点", "TP 的延迟收益与通信税", "推理 PP 与气泡", "多副本 batch 级 DP",
+        "DP-attention + EP（DeepSeek 服务形态）", "EP 不均衡因子与 EPLB", "专家冗余副本策略", "PD 分离架构的动机",
+        "PD 间 KV 跨机传输", "并行形态选型决策树"
+      ] },
+      { "name": "集群与路由", "topics": [
+        "副本负载均衡策略", "会话亲和与 prefix 感知路由", "自动扩缩容与冷启动", "多租户隔离",
+        "抢占与请求迁移", "异构 GPU 混部", "spot 实例与容错", "集群级全局调度器"
+      ] }
+    ] },
+    { "tag": "推理 · 显存", "name": "显存与缓存", "clusters": [
+      { "name": "KV cache", "topics": [
+        "KV 大小公式与逐模型对比", "PagedAttention 分页表机制", "block size 的内部碎片权衡", "copy-on-write 分叉",
+        "prefix cache 的命中率经济学", "RadixAttention 树匹配（SGLang）", "跨请求/跨轮共享", "KV 量化 FP8/INT4 的精度影响",
+        "KV 驱逐策略（H2O/SnapKV/StreamingLLM）", "KV offload 到 CPU/SSD 分层", "MLA 吸收式推理省 KV", "分布式 KV 池（Mooncake/LMCache）"
+      ] },
+      { "name": "权重量化", "topics": [
+        "量化基础：对称/非对称/分组", "GPTQ 二阶量化", "AWQ 激活感知量化", "SmoothQuant 难度迁移",
+        "FP8 的 per-tensor/per-block scale", "W4A16 vs W8A8 选型", "INT4 GEMM 内核（marlin）", "量化校准集的选择",
+        "量化精度的评估方法", "端侧 GGUF 与 k-quants", "低比特的误差累积", "极低比特探索（BitNet）"
+      ] }
+    ] },
+    { "tag": "推理 · 内核", "name": "计算与内核", "clusters": [
+      { "name": "核心内核", "topics": [
+        "GEMM tiling 与 shared memory", "tensor core MMA 指令", "grouped GEMM 与 MoE", "GEMV 与 decode 带宽墙",
+        "kernel fusion 常见模式", "FlashAttention 前向细节", "FlashDecoding 长序列拆分", "PagedAttention kernel 设计",
+        "MLA 矩阵吸收的实现", "persistent kernel 与 megakernel", "CUTLASS/Triton 自定义内核路线"
+      ] },
+      { "name": "执行优化", "topics": [
+        "kernel launch 开销量化", "CUDA graph 捕获与约束", "动态 shape 与分桶", "multi-stream 重叠",
+        "通信-计算 overlap（双 microbatch/TBO）", "prefill-decode 混排执行", "CPU 侧开销与调度热路径", "detokenize 与流式开销",
+        "profile 驱动的优化循环"
+      ] }
+    ] },
+    { "tag": "推理 · 调度", "name": "调度与解码", "clusters": [
+      { "name": "批处理调度", "topics": [
+        "静态批的浪费", "continuous batching 迭代级调度", "chunked prefill 的切块大小", "prefill 饥饿与公平性",
+        "优先级队列与 SLO 感知调度", "抢占：重计算 vs swap", "准入控制与背压", "请求超时与取消传播",
+        "长短请求混合的干扰", "调度模拟器"
+      ] },
+      { "name": "解码策略", "topics": [
+        "采样全家桶（temperature/top-k/top-p/min-p）", "重复惩罚与频率惩罚", "投机解码的接受率推导", "draft 模型的蒸馏",
+        "Medusa 多头预测", "EAGLE 特征级投机", "n-gram/检索式草稿", "树形投机与并行验证",
+        "约束解码 FSM/CFG", "JSON mode 的实现", "结构化输出的回溯问题", "logit processor 流水线"
+      ] }
+    ] },
+    { "tag": "推理 · 系统", "name": "服务系统与压测", "clusters": [
+      { "name": "框架内幕", "topics": [
+        "vLLM 架构拆解（调度器/worker/缓存管理）", "SGLang 架构拆解（RadixAttention/约束解码）", "TensorRT-LLM 编译路线", "llama.cpp 与端侧路线",
+        "框架选型的维度", "OpenAI 兼容 API 层", "流式 SSE 与背压", "多 LoRA 服务（S-LoRA）", "模型热更新与灰度"
+      ] },
+      { "name": "压测与可观测", "topics": [
+        "三层方法论（客户端/遥测/内核）", "MLPerf inference 场景定义", "开环 Poisson vs 闭环负载", "负载发生器设计（bench_serving）",
+        "p50/p99 与长尾归因", "预热与稳态判定", "压测 spec 与归档回归门禁", "Prometheus 指标体系设计",
+        "nsys 时间线实读", "ncu kernel 级 roofline 实测"
+      ] },
+      { "name": "部署运维", "topics": [
+        "safetensors 与权重加载加速", "冷启动与流式加载", "MIG/MPS 切分", "容量规划公式",
+        "故障演练与降级路径", "推理能效与碳足迹"
+      ] },
+      { "name": "经典论文与源码", "topics": [
+        "Attention is All You Need 精读", "GPT-3 论文（in-context learning）", "Chinchilla 论文", "FlashAttention 论文",
+        "vLLM/PagedAttention 论文", "Orca：continuous batching 论文", "DeepSeek-V2（MLA）", "DeepSeek-V3 技术报告",
+        "DeepSeek-R1 报告", "Mixtral 报告", "Llama 3 报告", "Mooncake 分离式架构论文"
+      ] }
+    ] }
+  ]
+}

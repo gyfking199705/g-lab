@@ -1,0 +1,83 @@
+{
+  "id": "dl-foundations",
+  "icon": "🧮",
+  "name": "深度学习与数学地基",
+  "desc": "从线性代数到训练动力学：一切大模型知识的承重墙。",
+  "tracks": [
+    { "tag": "地基 · 数学", "name": "数学基础", "clusters": [
+      { "name": "线性代数", "topics": [
+        "向量空间与基变换", "矩阵乘法的四种视角", "秩·零空间·四个基本子空间", "特征值与特征向量的几何意义",
+        "对角化与谱定理", "SVD 奇异值分解", "低秩近似与 Eckart-Young 定理", "正定矩阵与二次型",
+        "矩阵范数与条件数", "投影矩阵与最小二乘", "张量运算与 einsum 记法", "矩阵求导的布局约定", "Kronecker 积与向量化技巧"
+      ] },
+      { "name": "微积分与优化数学", "topics": [
+        "梯度·方向导数·等高线直觉", "多元链式法则", "泰勒展开与二阶近似", "Hessian 与曲率",
+        "Jacobian 矩阵", "凸集与凸函数判定", "强凸性与 Lipschitz 光滑", "拉格朗日乘子法",
+        "KKT 条件", "对偶问题与对偶间隙", "梯度下降收敛速率分析", "鞍点与逃逸方向"
+      ] },
+      { "name": "概率与统计", "topics": [
+        "概率公理与条件概率", "贝叶斯定理与先验后验", "常见分布速查（高斯/伯努利/泊松/Gamma）", "多元高斯与协方差几何",
+        "期望·方差·协方差·相关", "大数定律与中心极限定理", "最大似然估计 MLE", "MAP 与正则化的贝叶斯解释",
+        "指数族与共轭先验", "假设检验与 p 值", "置信区间与 bootstrap", "蒙特卡洛估计",
+        "重要性采样", "马尔可夫链与平稳分布"
+      ] },
+      { "name": "信息论", "topics": [
+        "自信息与熵", "联合熵·条件熵·互信息", "KL 散度及其不对称性", "交叉熵与对数损失的关系",
+        "perplexity 的直觉", "JS 散度与 Wasserstein 距离", "最优编码与压缩视角（算术编码）", "信息瓶颈理论"
+      ] }
+    ] },
+    { "tag": "地基 · 网络", "name": "神经网络核心", "clusters": [
+      { "name": "前向与反向", "topics": [
+        "感知机与线性可分性", "MLP 与万能逼近定理", "计算图与拓扑排序", "反向传播逐层手推",
+        "自动微分：前向与反向模式", "VJP 与 JVP", "数值梯度检验", "梯度消失/爆炸的根源", "残差连接：梯度高速公路"
+      ] },
+      { "name": "激活与初始化", "topics": [
+        "sigmoid/tanh 的饱和问题", "ReLU 与稀疏激活", "Leaky/PReLU/ELU 家族", "GELU 与 SiLU 的平滑性",
+        "Xavier 初始化推导", "Kaiming 初始化推导", "正交初始化", "μP 参数化与超参迁移"
+      ] },
+      { "name": "归一化", "topics": [
+        "BatchNorm 机制与训练/推理差异", "BN 为什么有效的争论", "LayerNorm 与序列模型", "RMSNorm 的简化",
+        "GroupNorm/InstanceNorm 适用场景", "Pre-LN vs Post-LN 稳定性", "QK-Norm"
+      ] },
+      { "name": "正则化与泛化", "topics": [
+        "L1/L2 与权重衰减的区别", "Dropout 与集成解释", "标签平滑", "数据增强谱系",
+        "早停作为隐式正则", "双下降现象", "彩票假说", "平坦极小值与 SAM",
+        "grokking 顿悟现象", "记忆 vs 泛化"
+      ] },
+      { "name": "损失函数", "topics": [
+        "MSE/MAE/Huber 的选择", "softmax+交叉熵梯度推导", "focal loss 与类别不均衡", "对比损失 InfoNCE",
+        "triplet loss 与难例挖掘", "排序损失（pairwise/listwise）"
+      ] }
+    ] },
+    { "tag": "地基 · 训练", "name": "训练动力学", "clusters": [
+      { "name": "优化器", "topics": [
+        "SGD 与动量的物理直觉", "Nesterov 前瞻动量", "AdaGrad 自适应分母", "RMSProp",
+        "Adam 推导与偏差修正", "AdamW 解耦权重衰减", "大批量优化 LAMB/LARS", "Lion 符号动量",
+        "二阶方法 K-FAC/Shampoo", "Muon 与正交化更新"
+      ] },
+      { "name": "学习率", "topics": [
+        "学习率-批量线性缩放法则", "warmup 的必要性", "cosine 退火", "WSD（warmup-stable-decay）调度",
+        "cyclical LR", "LR range test", "逐层学习率", "学习率与泛化的关系"
+      ] },
+      { "name": "训练稳定性", "topics": [
+        "梯度裁剪（范数/值）", "loss spike 的成因与急救", "混合精度溢出与 loss scaling", "EMA 权重平均",
+        "SWA 随机权重平均", "梯度噪声尺度与临界批量", "数据顺序与课程", "随机种子与可复现性"
+      ] }
+    ] },
+    { "tag": "地基 · 架构史", "name": "经典架构", "clusters": [
+      { "name": "CNN 时代", "topics": [
+        "卷积的平移等变性", "感受野计算", "LeNet→AlexNet 的跨越", "VGG 的堆叠哲学",
+        "Inception 多尺度", "ResNet 残差革命", "DenseNet 密集连接", "EfficientNet 复合缩放",
+        "空洞卷积", "转置卷积与棋盘伪影"
+      ] },
+      { "name": "RNN 时代", "topics": [
+        "RNN 与 BPTT", "截断 BPTT", "LSTM 门控拆解", "GRU 简化",
+        "双向 RNN", "seq2seq 编解码框架", "Bahdanau/Luong 注意力", "beam search 与长度惩罚", "曝光偏差问题"
+      ] },
+      { "name": "表示学习", "topics": [
+        "word2vec：CBOW 与 SkipGram", "负采样与层次 softmax", "GloVe 共现矩阵", "fastText 子词",
+        "ELMo 上下文化表示", "句向量（SBERT 思想）", "t-SNE/UMAP 可视化及其陷阱"
+      ] }
+    ] }
+  ]
+}

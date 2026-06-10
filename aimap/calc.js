@@ -80,13 +80,15 @@ export function normalize(raw) {
       clusters: (Array.isArray(tr.clusters) ? tr.clusters : []).map((cl) => ({
         id: cl.id || rid('cl'),
         name: cl.name || '',
-        topics: (Array.isArray(cl.topics) ? cl.topics : []).map((t) => ({
-          id: t.id || rid('tp'),
-          name: t.name || '',
-          status: STATUS_META[t.status] ? t.status : 'todo',
-          note: t.note || '',
-          unlock: t.unlock || '',
-        })),
+        topics: (Array.isArray(cl.topics) ? cl.topics : []).map((t) => (typeof t === 'string'
+          ? { id: rid('tp'), name: t, status: 'todo', note: '', unlock: '' }
+          : {
+            id: t.id || rid('tp'),
+            name: t.name || '',
+            status: STATUS_META[t.status] ? t.status : 'todo',
+            note: t.note || '',
+            unlock: t.unlock || '',
+          })),
       })),
     })) : [],
     parked: Array.isArray(s.parked) ? s.parked.map((p) => (typeof p === 'string' ? { id: rid('pk'), name: p } : { id: p.id || rid('pk'), name: p.name || '' })) : [],

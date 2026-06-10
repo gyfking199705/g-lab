@@ -1,0 +1,123 @@
+[
+  {
+    "file": "ai-safety-eval.json",
+    "id": "ai-safety-eval",
+    "icon": "🛡️",
+    "name": "对齐、安全与评测科学",
+    "desc": "对齐理论、安全工程、可解释性与评测方法论：负责任地构建与度量。",
+    "tracks": 2,
+    "topics": 78,
+    "trackNames": [
+      "对齐与安全",
+      "评测科学与治理"
+    ]
+  },
+  {
+    "file": "classic-ml-rl.json",
+    "id": "classic-ml-rl",
+    "icon": "📊",
+    "name": "经典机器学习与强化学习",
+    "desc": "监督/无监督、统计学习理论、因果推断与 RL：深度学习之外的半壁江山。",
+    "tracks": 4,
+    "topics": 108,
+    "trackNames": [
+      "监督学习",
+      "无监督与生成模型",
+      "统计学习理论与因果",
+      "强化学习"
+    ]
+  },
+  {
+    "file": "dl-foundations.json",
+    "id": "dl-foundations",
+    "icon": "🧮",
+    "name": "深度学习与数学地基",
+    "desc": "从线性代数到训练动力学：一切大模型知识的承重墙。",
+    "tracks": 4,
+    "topics": 139,
+    "trackNames": [
+      "数学基础",
+      "神经网络核心",
+      "训练动力学",
+      "经典架构"
+    ]
+  },
+  {
+    "file": "genai-apps.json",
+    "id": "genai-apps",
+    "icon": "🤖",
+    "name": "生成式 AI 应用层",
+    "desc": "提示、RAG、Agent、多模态与微调落地：把模型变成产品。",
+    "tracks": 5,
+    "topics": 140,
+    "trackNames": [
+      "提示与工具使用",
+      "RAG 与知识系统",
+      "Agent 系统",
+      "多模态",
+      "微调与产品化"
+    ]
+  },
+  {
+    "file": "gpu-cuda.json",
+    "id": "gpu-cuda",
+    "icon": "🖥️",
+    "name": "GPU 体系结构与 CUDA",
+    "desc": "从 SM 微架构到 Triton：读懂并写出高性能 GPU 代码。",
+    "tracks": 4,
+    "topics": 130,
+    "trackNames": [
+      "GPU 体系结构",
+      "CUDA 编程",
+      "并行计算理论",
+      "系统软件"
+    ]
+  },
+  {
+    "file": "llm-arch-training.json",
+    "id": "llm-arch-training",
+    "icon": "🧠",
+    "name": "大模型架构与训练",
+    "desc": "Transformer 解剖、预训练、分布式训练与后训练对齐的全景。",
+    "tracks": 4,
+    "topics": 153,
+    "trackNames": [
+      "Transformer 解剖",
+      "预训练",
+      "分布式训练",
+      "后训练与对齐"
+    ]
+  },
+  {
+    "file": "llm-inference.json",
+    "id": "llm-inference",
+    "icon": "⚙️",
+    "name": "LLM 推理引擎（完整版）",
+    "desc": "vLLM / SGLang / TensorRT-LLM 级推理系统：建模、并行、显存、内核、调度、压测。",
+    "tracks": 6,
+    "topics": 142,
+    "trackNames": [
+      "理论与性能建模",
+      "并行与部署形态",
+      "显存与缓存",
+      "计算与内核",
+      "调度与解码",
+      "服务系统与压测"
+    ]
+  },
+  {
+    "file": "systems-foundations.json",
+    "id": "systems-foundations",
+    "icon": "🌐",
+    "name": "系统与网络地基",
+    "desc": "OS、网络、分布式系统与工程素养：AI Infra 工程师的暗功夫。",
+    "tracks": 4,
+    "topics": 115,
+    "trackNames": [
+      "操作系统",
+      "网络",
+      "分布式系统",
+      "工程素养"
+    ]
+  }
+]

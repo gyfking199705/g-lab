@@ -1,0 +1,70 @@
+{
+  "id": "systems-foundations",
+  "icon": "🌐",
+  "name": "系统与网络地基",
+  "desc": "OS、网络、分布式系统与工程素养：AI Infra 工程师的暗功夫。",
+  "tracks": [
+    { "tag": "系统 · OS", "name": "操作系统", "clusters": [
+      { "name": "进程与并发", "topics": [
+        "进程 vs 线程 vs 协程", "上下文切换的真实成本", "Linux 调度器（CFS/EEVDF）概览", "锁与无锁（CAS）",
+        "死锁四条件与排查", "条件变量与信号量", "内存模型与 happens-before", "futex 机制",
+        "线程池设计要点", "异步 IO（epoll/io_uring）", "GIL 与 Python 并发现实", "NUMA 感知调度"
+      ] },
+      { "name": "内存管理", "topics": [
+        "虚拟内存与页表", "TLB 与大页（hugepage）", "缺页中断与换页", "mmap 与文件映射",
+        "写时复制 COW", "内存分配器（ptmalloc/jemalloc）", "内外部碎片", "cgroup 内存限制与 OOM killer",
+        "swap 与 LRU 近似", "DMA 与设备内存", "pinned 内存为何快", "共享内存 IPC"
+      ] },
+      { "name": "存储与文件", "topics": [
+        "文件系统抽象（inode/dentry）", "page cache 与回写策略", "fsync 与持久性保证", "顺序 vs 随机 IO 的数量级差",
+        "SSD 内部（FTL/磨损均衡/写放大）", "NVMe 多队列", "RAID 级别速查", "对象/块/文件存储的取舍",
+        "零拷贝（sendfile/splice）", "checkpoint 写放大问题", "大文件并行读取模式"
+      ] }
+    ] },
+    { "tag": "系统 · 网络", "name": "网络", "clusters": [
+      { "name": "网络基础", "topics": [
+        "TCP 握手与状态机", "拥塞控制（CUBIC/BBR）", "TCP vs UDP 选型", "HTTP/1.1→2→3（QUIC）",
+        "TLS 握手与开销", "DNS 解析路径", "负载均衡 L4 vs L7", "连接池与 keep-alive",
+        "Nagle 算法与延迟敏感应用", "网络延迟的物理极限"
+      ] },
+      { "name": "数据中心网络", "topics": [
+        "Clos/fat-tree 拓扑", "spine-leaf 与 ToR", "RDMA verbs 模型", "RoCEv2 与 PFC 风暴",
+        "ECN 拥塞通知", "IB 子网管理", "集合通信的网络流量模式", "GPU 集群专网设计",
+        "拥塞与 straggler 的因果", "带宽收敛比"
+      ] },
+      { "name": "RPC 与序列化", "topics": [
+        "REST vs gRPC", "protobuf 编码原理", "流式 RPC", "序列化开销对比（JSON/msgpack/arrow）",
+        "背压与流控", "超时/重试/熔断", "幂等性设计", "API 版本演进策略"
+      ] }
+    ] },
+    { "tag": "系统 · 分布式", "name": "分布式系统", "clusters": [
+      { "name": "一致性与共识", "topics": [
+        "CAP 定理的准确表述", "线性一致 vs 最终一致", "Paxos 直觉", "Raft 选举与日志复制",
+        "租约与心跳", "逻辑时钟（Lamport/向量钟）", "两阶段提交", "事务隔离级别",
+        "quorum 读写", "拜占庭容错概览"
+      ] },
+      { "name": "经典模式", "topics": [
+        "分片与一致性哈希", "副本与读写分离", "消息队列语义（至少/至多/恰好一次）", "流处理 vs 批处理",
+        "MapReduce 模型", "DAG 任务编排", "服务发现", "限流算法（令牌桶/漏桶）",
+        "缓存模式与雪崩/穿透/击穿", "分布式追踪（trace/span）"
+      ] },
+      { "name": "可靠性工程", "topics": [
+        "可观测三支柱（log/metric/trace）", "SLI/SLO 与 error budget", "灰度与金丝雀发布", "混沌工程",
+        "容量规划方法", "时序数据库（Prometheus 数据模型）", "告警设计与告警疲劳", "事后复盘文化",
+        "配置管理与 feature flag", "蓝绿部署与快速回滚"
+      ] }
+    ] },
+    { "tag": "系统 · 素养", "name": "工程素养", "clusters": [
+      { "name": "工程实践", "topics": [
+        "Git 分支策略与 rebase", "code review 的要点", "CI/CD 流水线设计", "测试金字塔（单元/集成/E2E）",
+        "性能基准的统计学（方差/离群值）", "profile 驱动开发", "结构化日志规范", "文档即代码",
+        "依赖管理与锁文件", "语义化版本", "开源 license 常识", "安全基线（密钥管理/最小权限）"
+      ] },
+      { "name": "Python 与工具", "topics": [
+        "Python 性能模型（为什么慢）", "NumPy 向量化与广播", "pandas/polars 取舍", "类型注解与 mypy",
+        "asyncio 心智模型", "打包与 uv/pip", "pytest 模式与夹具", "调试器与断点技巧",
+        "Jupyter 的版本控制难题", "CLI 工具设计"
+      ] }
+    ] }
+  ]
+}

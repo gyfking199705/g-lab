@@ -1,0 +1,80 @@
+{
+  "id": "gpu-cuda",
+  "icon": "🖥️",
+  "name": "GPU 体系结构与 CUDA",
+  "desc": "从 SM 微架构到 Triton：读懂并写出高性能 GPU 代码。",
+  "tracks": [
+    { "tag": "GPU · 硬件", "name": "GPU 体系结构", "clusters": [
+      { "name": "SM 与执行模型", "topics": [
+        "GPU vs CPU 的设计哲学", "SM 流多处理器的组成", "warp 与 SIMT 执行", "warp divergence 的分支代价",
+        "warp scheduler 与延迟隐藏", "occupancy 计算与权衡", "寄存器文件与寄存器溢出", "指令级并行 ILP",
+        "tensor core 演进（V100→H100→B200）", "SFU 特殊函数单元", "时钟与功耗墙（DVFS/降频）", "Hopper 的 TMA 与 WGMMA"
+      ] },
+      { "name": "内存层次", "topics": [
+        "HBM 与显存控制器", "L2 cache 与持久化窗口", "shared memory 与 bank conflict", "L1/纹理/常量缓存",
+        "全局内存合并访问", "向量化访存（float4）", "异步拷贝 cp.async", "unified memory 与缺页迁移",
+        "pinned memory 与 H2D 带宽", "zero-copy 访问", "内存屏障与一致性模型", "NVLink-C2C（Grace Hopper）"
+      ] },
+      { "name": "多 GPU 硬件", "topics": [
+        "PCIe switch 拓扑", "NVSwitch 全互联", "NVL72 机柜级 NVLink 域", "IB 网卡与 GPUDirect RDMA",
+        "RoCE vs InfiniBand", "拓扑发现（nvidia-smi topo）", "NUMA 亲和与绑核", "机内/机间带宽实测"
+      ] },
+      { "name": "其他加速器", "topics": [
+        "TPU 脉动阵列", "AMD MI300 与 ROCm 生态", "国产加速器概览", "Apple Silicon 统一内存",
+        "NPU 与端侧推理芯片", "FPGA 路线", "存算一体方向", "加速器选型的维度"
+      ] }
+    ] },
+    { "tag": "GPU · CUDA", "name": "CUDA 编程", "clusters": [
+      { "name": "编程模型", "topics": [
+        "kernel/grid/block/thread 层级", "线程索引计算", "执行配置的选择", "stream 与异步并发",
+        "event 计时与同步", "错误处理模式", "统一虚拟地址空间", "动态并行",
+        "cooperative groups", "CUDA 版本兼容（PTX/cubin/fatbin）"
+      ] },
+      { "name": "内核优化", "topics": [
+        "矩阵乘 tiling 逐步优化", "shared memory 数据复用", "bank conflict 消除（padding/swizzle）", "循环展开",
+        "寄存器阻塞（register blocking）", "warp 级原语（shuffle/vote）", "原子操作与竞争", "高效 reduction 实现",
+        "scan 前缀和", "软件流水与 double buffering", "occupancy vs ILP 的权衡实例", "FMA 与数值精度",
+        "fast math 的代价", "常量内存与 kernel 参数"
+      ] },
+      { "name": "工具链", "topics": [
+        "nvcc 编译流程", "PTX 与 SASS 阅读入门", "Nsight Systems 时间线分析", "Nsight Compute 指标解读",
+        "roofline 实测方法", "compute-sanitizer 查内存错", "CUPTI 与自定义 profiling", "cuda-gdb 调试",
+        "性能回归基准框架"
+      ] },
+      { "name": "高层抽象", "topics": [
+        "Triton 编程模型", "Triton 与手写 CUDA 的边界", "CUTLASS 模板库", "Thrust/CUB 原语库",
+        "torch.compile 与 inductor", "自定义算子接入 PyTorch", "cuBLAS/cuDNN 调用层", "JAX/XLA 路线",
+        "kernel 自动调优（autotuning）"
+      ] }
+    ] },
+    { "tag": "GPU · 理论", "name": "并行计算理论", "clusters": [
+      { "name": "并行理论", "topics": [
+        "Amdahl 与 Gustafson 定律", "强扩展与弱扩展", "work-span 模型", "PRAM 模型",
+        "BSP 模型", "roofline 的理论根基", "通信复杂度下界", "负载均衡与 work stealing",
+        "流水线理论与 Little's Law", "并行模式（map/reduce/scan/stencil）"
+      ] },
+      { "name": "数值计算", "topics": [
+        "IEEE754 浮点表示", "FP16/BF16/FP8/FP4 格式对比", "舍入误差与累积", "Kahan 补偿求和",
+        "数值稳定的 softmax/logsumexp", "混合精度矩阵乘的累加器位宽", "随机舍入", "原子加的不确定性与确定性模式",
+        "条件数与病态问题", "块状缩放（MX microscaling 格式）"
+      ] }
+    ] },
+    { "tag": "GPU · 软件栈", "name": "系统软件", "clusters": [
+      { "name": "驱动与运行时", "topics": [
+        "CUDA driver API vs runtime API", "context 与 MPS", "MIG 切分机制", "GPU 虚拟化（vGPU/SR-IOV）",
+        "容器内 GPU（nvidia-container-toolkit）", "k8s device plugin 与 GPU 调度", "DCGM 监控指标", "nvidia-smi 深度解读",
+        "驱动/CUDA/框架版本兼容矩阵"
+      ] },
+      { "name": "框架内部", "topics": [
+        "PyTorch tensor 与 storage", "autograd 引擎机制", "dispatcher 与算子注册", "CUDA caching allocator 与碎片",
+        "dataloader 与 H2D 流水", "DDP bucket 机制", "torch.compile 图捕获（dynamo）", "算子融合 pass",
+        "PyTorch profiler 使用", "显存泄漏排查方法"
+      ] },
+      { "name": "编译器栈", "topics": [
+        "XLA/HLO 的思想", "MLIR 方言体系", "TVM 调度与自动搜索", "图优化（常量折叠/CSE/布局变换）",
+        "算子调度的搜索空间", "polyhedral 模型概览", "ONNX 与互操作", "AOT vs JIT 的权衡",
+        "编译器生成 vs 手写内核的边界"
+      ] }
+    ] }
+  ]
+}
