@@ -14,7 +14,7 @@
  *   <AIMapPlanner storageKey="aimap-planner" onChange={fn} />
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { STATUS_META, STATUS_CYCLE, cycleStatus, trackStats, overallCounts, donePct, fogItems, normalize, rid } from './calc.js';
+import { STATUS_META, STATUS_CYCLE, cycleStatus, trackStats, overallCounts, donePct, fogItems, normalize, groupByDomain, rid } from './calc.js';
 import { todayStr } from '../core/date.js';
 
 function load(initialState, key) {
@@ -38,8 +38,52 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
     if (onChange) onChange(state);
   }, [state]);
 
+  // 地图库自动并入：每张图只导一次（libImported 记账），用户删掉的领域不会复活。
+  // 站点静态 JSON 按需拉取；离线/本地打开时静默跳过，可稍后用「地图库」手动导。
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('aimap/maps/index.json');
+        if (!r.ok) return;
+        const idx = await r.json();
+        const cur = normalize(JSON.parse(localStorage.getItem(storageKey) || 'null'));
+        const pending = idx.filter((m) => !cur.libImported[m.file]);
+        if (!pending.length) return;
+        const newTracks = [];
+        const flags = {};
+        for (const m of pending) {
+          // 之前手动导过（有同名轨道）则只补记账，不重复并入
+          if ((m.trackNames || []).some((n) => cur.tracks.some((tr) => tr.name === n))) { flags[m.file] = true; continue; }
+          try {
+            const rr = await fetch('aimap/maps/' + m.file);
+            if (!rr.ok) continue;
+            const data = await rr.json();
+            const tracks = normalize({ tracks: data.tracks }).tracks.map((t) => ({ ...t, domain: data.name, domainIcon: data.icon || '🗺️' }));
+            newTracks.push(...tracks);
+            flags[m.file] = true;
+          } catch (e) { /* 单图失败不影响其他 */ }
+        }
+        if (cancelled || !Object.keys(flags).length) return;
+        up((s) => ({ ...s, tracks: [...s.tracks, ...newTracks], libImported: { ...s.libImported, ...flags } }));
+        setLib(idx);
+      } catch (e) { /* 静默：离线或本地打开 */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const counts = useMemo(() => overallCounts(state), [state]);
   const fogs = useMemo(() => fogItems(state), [state]);
+  const groups = useMemo(() => groupByDomain(state.tracks), [state.tracks]);
+  // 领域展开状态（不持久化；默认只展开自建图和有动静的领域，营造「探索点亮」感）
+  const [openMap, setOpenMap] = useState({});
+  const isOpen = (g, gStats, hasMatch) => {
+    if (edit) return true;
+    if (filter !== 'all') return hasMatch;
+    if (openMap[g.domain] != null) return openMap[g.domain];
+    return g.domain === '' || gStats.done + gStats.doing + gStats.fog > 0;
+  };
 
   /* ---------- 不可变更新工具 ---------- */
   const up = (fn) => setState((prev) => fn(normalize(prev)));
@@ -97,8 +141,8 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
       const r = await fetch('aimap/maps/' + m.file);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const data = await r.json();
-      const tracks = normalize({ tracks: data.tracks }).tracks;
-      up((s) => ({ ...s, tracks: [...s.tracks, ...tracks] }));
+      const tracks = normalize({ tracks: data.tracks }).tracks.map((t) => ({ ...t, domain: data.name, domainIcon: data.icon || '🗺️' }));
+      up((s) => ({ ...s, tracks: [...s.tracks, ...tracks], libImported: { ...s.libImported, [m.file]: true } }));
       setLibErr('');
     } catch (e) { setLibErr(`导入「${m.name}」失败：` + (e.message || '')); }
     finally { setImporting(''); }
@@ -106,95 +150,9 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
 
   const empty = state.tracks.length === 0;
 
-  return (
-    <div className="am-root">
-      <style>{CSS}</style>
-
-      {/* 任务声明 + 锚点 */}
-      <div className="am-mission">
-        {edit ? (
-          <>
-            <input className="am-in am-in-block" placeholder="主线目标（一句话：这张图为了吃透什么）" value={state.mission} onChange={(e) => up((s) => ({ ...s, mission: e.target.value }))} />
-            <input className="am-in am-in-block" placeholder="锚点（当前任务 / 锚定系统，如：DeepSeek-V3 @ H100）" value={state.anchor} onChange={(e) => up((s) => ({ ...s, anchor: e.target.value }))} />
-          </>
-        ) : (
-          <>
-            {state.mission && <p className="am-mtext">{state.mission}</p>}
-            {state.anchor && <p className="am-manchor">⚓ {state.anchor}</p>}
-          </>
-        )}
-        <span className="am-mbtns">
-          <button className={`am-editbtn${showLib ? ' on' : ''}`} onClick={toggleLib}>📥 地图库</button>
-          <button className={`am-editbtn${edit ? ' on' : ''}`} onClick={() => setEdit(!edit)}>{edit ? '✓ 完成编辑' : '✎ 编辑地图'}</button>
-        </span>
-      </div>
-
-      {/* 地图库：内置课程图谱，一键并入（追加为新轨道，可再删） */}
-      {showLib && (
-        <div className="am-lib">
-          <p className="am-lib-lead">内置知识地图（共 {(lib || []).reduce((s, m) => s + (m.topics || 0), 0) || '…'} 个知识点）。导入后以「未开始」并入你的地图，慢慢点亮；不需要的轨道可在编辑模式删除。</p>
-          {libErr && <p className="am-lib-err">⚠ {libErr}</p>}
-          {!lib && !libErr && <p className="am-lib-lead">正在加载…</p>}
-          {(lib || []).map((m) => (
-            <div className="am-lib-row" key={m.file}>
-              <span className="am-lib-ic">{m.icon}</span>
-              <div className="am-lib-body">
-                <div className="am-lib-name">{m.name} <em>{m.topics} 点 · {m.tracks} 轨道</em></div>
-                <div className="am-lib-desc">{m.desc}</div>
-              </div>
-              {hasMap(m)
-                ? <span className="am-lib-done">✓ 已导入</span>
-                : <button className="am-lib-btn" disabled={!!importing} onClick={() => importMap(m)}>{importing === m.file ? '导入中…' : '导入'}</button>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 测绘总览 */}
-      {!empty && (
-        <div className="am-survey">
-          {state.tracks.map((tr) => {
-            const s = trackStats(tr);
-            if (!s.total) return null;
-            const w = (k) => (s.total ? (s[k] / s.total) * 100 : 0);
-            return (
-              <div className="am-bar-card" key={tr.id}>
-                <div className="am-bar-t"><span className="am-bar-name">{tr.name}</span><span className="am-bar-pct">{s.done}/{s.total} 已掌握</span></div>
-                <div className="am-bar">
-                  <i style={{ width: w('done') + '%', background: STATUS_META.done.color }} />
-                  <i style={{ width: w('doing') + '%', background: STATUS_META.doing.color }} />
-                  <i style={{ width: w('fog') + '%', background: STATUS_META.fog.color }} />
-                </div>
-                <div className="am-bar-sub">进行中 {s.doing} · 迷雾 {s.fog} · 未开始 {s.todo}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 筛选 */}
-      {!empty && (
-        <div className="am-chips">
-          <button className={`am-chip${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}><i style={{ background: 'var(--accent)' }} />全部 <em>{counts.total}</em></button>
-          {STATUS_CYCLE.map((k) => (
-            <button key={k} className={`am-chip${filter === k ? ' on' : ''}`} onClick={() => setFilter(k)}>
-              <i style={{ background: STATUS_META[k].color }} />{STATUS_META[k].label} <em>{counts[k]}</em>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* 轨道 → 分组 → 知识点 */}
-      {empty ? (
-        <div className="am-empty">
-          <div className="ic">🗺️</div>
-          <div>还没有学习地图</div>
-          <p>点右上「✎ 编辑地图」新建轨道开始测绘；或去首页「一键填充示例」看一张完整的样例地图（LLM 推理引擎）。</p>
-          {edit && <button className="am-add" onClick={addTrack}>＋ 新建轨道</button>}
-        </div>
-      ) : (
-        state.tracks.map((tr) => (
-          <section className="am-track" key={tr.id}>
+  /* 单条轨道渲染（编辑/浏览两态）：自建图平铺，领域内部复用 */
+  const renderTrack = (tr) => (
+    <section className="am-track" key={tr.id}>
             <div className="am-track-h">
               {edit ? (
                 <>
@@ -255,8 +213,124 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
               );
             })}
             {edit && <button className="am-add" onClick={() => addCluster(tr.id)}>＋ 分组</button>}
-          </section>
-        ))
+    </section>
+  );
+
+  return (
+    <div className="am-root">
+      <style>{CSS}</style>
+
+      {/* 任务声明 + 锚点 */}
+      <div className="am-mission">
+        {edit ? (
+          <>
+            <input className="am-in am-in-block" placeholder="主线目标（一句话：这张图为了吃透什么）" value={state.mission} onChange={(e) => up((s) => ({ ...s, mission: e.target.value }))} />
+            <input className="am-in am-in-block" placeholder="锚点（当前任务 / 锚定系统，如：DeepSeek-V3 @ H100）" value={state.anchor} onChange={(e) => up((s) => ({ ...s, anchor: e.target.value }))} />
+          </>
+        ) : (
+          <>
+            {state.mission && <p className="am-mtext">{state.mission}</p>}
+            {state.anchor && <p className="am-manchor">⚓ {state.anchor}</p>}
+          </>
+        )}
+        <span className="am-mbtns">
+          <button className={`am-editbtn${showLib ? ' on' : ''}`} onClick={toggleLib}>📥 地图库</button>
+          <button className={`am-editbtn${edit ? ' on' : ''}`} onClick={() => setEdit(!edit)}>{edit ? '✓ 完成编辑' : '✎ 编辑地图'}</button>
+        </span>
+      </div>
+
+      {/* 地图库：内置课程图谱，一键并入（追加为新轨道，可再删） */}
+      {showLib && (
+        <div className="am-lib">
+          <p className="am-lib-lead">内置知识地图（共 {(lib || []).reduce((s, m) => s + (m.topics || 0), 0) || '…'} 个知识点）。导入后以「未开始」并入你的地图，慢慢点亮；不需要的轨道可在编辑模式删除。</p>
+          {libErr && <p className="am-lib-err">⚠ {libErr}</p>}
+          {!lib && !libErr && <p className="am-lib-lead">正在加载…</p>}
+          {(lib || []).map((m) => (
+            <div className="am-lib-row" key={m.file}>
+              <span className="am-lib-ic">{m.icon}</span>
+              <div className="am-lib-body">
+                <div className="am-lib-name">{m.name} <em>{m.topics} 点 · {m.tracks} 轨道</em></div>
+                <div className="am-lib-desc">{m.desc}</div>
+              </div>
+              {hasMap(m)
+                ? <span className="am-lib-done">✓ 已导入</span>
+                : <button className="am-lib-btn" disabled={!!importing} onClick={() => importMap(m)}>{importing === m.file ? '导入中…' : '导入'}</button>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 测绘总览：自建轨道逐条，领域（地图库的图）聚合为一条 */}
+      {!empty && (
+        <div className="am-survey">
+          {groups.flatMap((g) => {
+            const items = g.domain === ''
+              ? g.tracks.map((tr) => ({ key: tr.id, name: tr.name, s: trackStats(tr) }))
+              : [{ key: g.domain, name: `${g.icon || '🗺️'} ${g.domain}`, s: overallCounts({ tracks: g.tracks }) }];
+            return items.filter((x) => x.s.total > 0).map(({ key, name, s }) => {
+              const w = (k) => (s.total ? (s[k] / s.total) * 100 : 0);
+              return (
+                <div className="am-bar-card" key={key}>
+                  <div className="am-bar-t"><span className="am-bar-name">{name}</span><span className="am-bar-pct">{s.done}/{s.total} 已掌握</span></div>
+                  <div className="am-bar">
+                    <i style={{ width: w('done') + '%', background: STATUS_META.done.color }} />
+                    <i style={{ width: w('doing') + '%', background: STATUS_META.doing.color }} />
+                    <i style={{ width: w('fog') + '%', background: STATUS_META.fog.color }} />
+                  </div>
+                  <div className="am-bar-sub">进行中 {s.doing} · 迷雾 {s.fog} · 未开始 {s.todo}</div>
+                </div>
+              );
+            });
+          })}
+        </div>
+      )}
+
+      {/* 筛选 */}
+      {!empty && (
+        <div className="am-chips">
+          <button className={`am-chip${filter === 'all' ? ' on' : ''}`} onClick={() => setFilter('all')}><i style={{ background: 'var(--accent)' }} />全部 <em>{counts.total}</em></button>
+          {STATUS_CYCLE.map((k) => (
+            <button key={k} className={`am-chip${filter === k ? ' on' : ''}`} onClick={() => setFilter(k)}>
+              <i style={{ background: STATUS_META[k].color }} />{STATUS_META[k].label} <em>{counts[k]}</em>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 轨道 → 分组 → 知识点 */}
+      {empty ? (
+        <div className="am-empty">
+          <div className="ic">🗺️</div>
+          <div>还没有学习地图</div>
+          <p>点右上「✎ 编辑地图」新建轨道开始测绘；或去首页「一键填充示例」看一张完整的样例地图（LLM 推理引擎）。</p>
+          {edit && <button className="am-add" onClick={addTrack}>＋ 新建轨道</button>}
+        </div>
+      ) : (
+        groups.map((g) => {
+          const gStats = overallCounts({ tracks: g.tracks });
+          const matchCount = filter === 'all' ? gStats.total : gStats[filter];
+          if (filter !== 'all' && !matchCount && !edit) return null;
+          const open = isOpen(g, gStats, matchCount > 0);
+          const body = g.tracks.map((tr) => renderTrack(tr));
+          if (g.domain === '') return <React.Fragment key="own">{body}</React.Fragment>;
+          const w = (k) => (gStats.total ? (gStats[k] / gStats.total) * 100 : 0);
+          return (
+            <section className={`am-domain${open ? ' open' : ''}`} key={g.domain}>
+              <button className="am-domain-h" onClick={() => setOpenMap((o) => ({ ...o, [g.domain]: !open }))}>
+                <span className="am-domain-ic">{g.icon || '🗺️'}</span>
+                <span className="am-domain-name">{g.domain}</span>
+                <span className="am-domain-bar">
+                  <i style={{ width: w('done') + '%', background: STATUS_META.done.color }} />
+                  <i style={{ width: w('doing') + '%', background: STATUS_META.doing.color }} />
+                  <i style={{ width: w('fog') + '%', background: STATUS_META.fog.color }} />
+                </span>
+                <span className="am-domain-sub">{gStats.done > 0 ? `${gStats.done}/${gStats.total}` : `${gStats.total} 点待探索`}</span>
+                <span className="am-domain-chev">{open ? '▾' : '▸'}</span>
+              </button>
+              {open && <div className="am-domain-body">{body}</div>}
+            </section>
+          );
+        })
       )}
       {edit && !empty && <button className="am-add" onClick={addTrack}>＋ 新建轨道</button>}
 
@@ -378,6 +452,18 @@ const CSS = `
 .am-chip em{font-style:normal;font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums;}
 .am-chip:hover{border-color:var(--bd-2);}
 .am-chip.on{border-color:var(--accent);color:var(--text);background:var(--accent-soft);}
+.am-domain{margin-top:14px;border:1px solid var(--bd);border-radius:14px;background:var(--surface);overflow:hidden;}
+.am-domain.open{border-color:var(--bd-2);}
+.am-domain-h{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;padding:13px 16px;cursor:pointer;font-family:var(--sans);text-align:left;transition:background .15s;}
+.am-domain-h:hover{background:var(--surface-2);}
+.am-domain-ic{font-size:17px;flex:none;}
+.am-domain-name{font-family:var(--serif);font-size:14.5px;font-weight:500;color:var(--text);flex:none;}
+.am-domain-bar{flex:1;height:6px;border-radius:99px;background:var(--surface-3);overflow:hidden;display:flex;min-width:60px;}
+.am-domain-bar i{display:block;height:100%;}
+.am-domain-sub{flex:none;font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.am-domain-chev{flex:none;font-size:11px;color:var(--text-3);width:14px;text-align:center;}
+.am-domain-body{padding:0 18px 20px;}
+.am-domain-body .am-track{margin-top:18px;}
 .am-track{margin-top:30px;}
 .am-track-h{display:flex;align-items:baseline;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--bd);flex-wrap:wrap;}
 .am-track-h h3{font-family:var(--serif);font-size:18px;font-weight:500;}

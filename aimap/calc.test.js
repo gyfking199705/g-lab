@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cycleStatus, trackStats, overallCounts, donePct, fogItems, normalize, STATUS_CYCLE } from './calc.js';
+import { cycleStatus, trackStats, overallCounts, donePct, fogItems, normalize, groupByDomain, STATUS_CYCLE } from './calc.js';
 
 const state = normalize({
   mission: '吃透推理引擎',
@@ -66,4 +66,24 @@ test('normalize：字符串知识点展开为 todo 对象（地图库紧凑格�
   assert.equal(tp[0].status, 'todo');
   assert.ok(tp[0].id);
   assert.equal(tp[1].status, 'done');
+});
+
+test('groupByDomain：按领域分组，自建图（无 domain）排最前', () => {
+  const g = groupByDomain([
+    { name: 'a', domain: 'GPU', domainIcon: '🖥️' },
+    { name: 'b', domain: '' },
+    { name: 'c', domain: 'GPU' },
+    { name: 'd', domain: '数学', domainIcon: '🧮' },
+  ]);
+  assert.equal(g[0].domain, '');
+  assert.equal(g.length, 3);
+  const gpu = g.find((x) => x.domain === 'GPU');
+  assert.equal(gpu.tracks.length, 2);
+  assert.equal(gpu.icon, '🖥️');
+});
+
+test('normalize：libImported 标记透传（防止自动并入复活已删领域）', () => {
+  const n = normalize({ libImported: { 'a.json': true } });
+  assert.equal(n.libImported['a.json'], true);
+  assert.deepEqual(normalize(null).libImported, {});
 });

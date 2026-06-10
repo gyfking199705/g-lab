@@ -77,6 +77,8 @@ export function normalize(raw) {
       id: tr.id || rid('tr'),
       tag: tr.tag || '',
       name: tr.name || '',
+      domain: tr.domain || '',
+      domainIcon: tr.domainIcon || '',
       clusters: (Array.isArray(tr.clusters) ? tr.clusters : []).map((cl) => ({
         id: cl.id || rid('cl'),
         name: cl.name || '',
@@ -94,7 +96,25 @@ export function normalize(raw) {
     parked: Array.isArray(s.parked) ? s.parked.map((p) => (typeof p === 'string' ? { id: rid('pk'), name: p } : { id: p.id || rid('pk'), name: p.name || '' })) : [],
     queue: Array.isArray(s.queue) ? s.queue.map((q) => ({ id: q.id || rid('q'), title: q.title || '', desc: q.desc || '' })) : [],
     log: Array.isArray(s.log) ? s.log.map((l) => ({ id: l.id || rid('lg'), date: l.date || '', text: l.text || '' })) : [],
+    libImported: s.libImported && typeof s.libImported === 'object' ? s.libImported : {},
   };
+}
+
+/**
+ * 按领域分组轨道：[{domain, icon, tracks}]。domain 为空的（用户自建/主线图）排最前。
+ * 领域 = 地图库中的一张图，自动并入时打上 domain/domainIcon 标记。
+ */
+export function groupByDomain(tracks) {
+  const groups = [];
+  const idx = {};
+  for (const tr of tracks || []) {
+    const key = tr.domain || '';
+    if (idx[key] == null) { idx[key] = groups.length; groups.push({ domain: key, icon: tr.domainIcon || '', tracks: [] }); }
+    if (!groups[idx[key]].icon && tr.domainIcon) groups[idx[key]].icon = tr.domainIcon;
+    groups[idx[key]].tracks.push(tr);
+  }
+  groups.sort((a, b) => (a.domain === '' ? -1 : b.domain === '' ? 1 : 0));
+  return groups;
 }
 
 let _seq = 0;
