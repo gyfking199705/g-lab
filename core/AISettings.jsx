@@ -7,7 +7,7 @@
  * 导出：loadAIConfig / saveAIConfig（纯读写）、AISettingsButton（带状态的入口按钮 + 弹窗）。
  */
 import React, { useState } from 'react';
-import { SHARED_CSS } from './ui.jsx';
+import { SHARED_CSS, BodyPortal } from './ui.jsx';
 import { PROVIDERS, defaultAIConfig, isConfigured } from '../learning/ai.js';
 
 const AI_KEY = 'learning-ai';
@@ -65,6 +65,7 @@ function AISettingsModal({ onClose, onSaved }) {
   const clearKey = () => { setApiKey(''); };
 
   return (
+    <BodyPortal>
     <div className="gx-root" onClick={onClose} style={overlay}>
       <style>{SHARED_CSS}</style>
       <div onClick={(e) => e.stopPropagation()} style={panel}>
@@ -119,6 +120,7 @@ function AISettingsModal({ onClose, onSaved }) {
         </div>
       </div>
     </div>
+    </BodyPortal>
   );
 }
 

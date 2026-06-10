@@ -26,6 +26,7 @@ import LedgerPlanner from '../ledger/LedgerPlanner.jsx';
 import CompareTool from '../compare/CompareTool.jsx';
 import SalaryEstimator from '../salary/SalaryEstimator.jsx';
 import { readModule } from '../core/store.js';
+import { BodyPortal } from '../core/ui.jsx';
 import { AISettingsButton } from '../core/AISettings.jsx';
 import { seedMissing } from './seed.js';
 import { todayStr } from '../core/date.js';
@@ -867,6 +868,7 @@ function SetupWizard({ initialId, onSave, onClose }) {
   const num = { flex: 'none', width: 22, height: 22, borderRadius: '50%', background: 'var(--accent-soft)', color: 'var(--accent-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600 };
 
   return (
+    <BodyPortal>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(38,36,31,.42)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '5vh 16px', overflowY: 'auto' }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--bd)', borderRadius: 16, padding: 24, maxWidth: 560, width: '100%', boxShadow: '0 20px 60px rgba(38,36,31,.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
@@ -921,5 +923,6 @@ function SetupWizard({ initialId, onSave, onClose }) {
         </div>
       </div>
     </div>
+    </BodyPortal>
   );
 }

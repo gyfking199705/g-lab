@@ -7,6 +7,18 @@
  * 令牌作用在 .gx-root 上（独立页也能用）；在主应用里与根 :root 令牌一致，重复声明无害。
  */
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+
+/**
+ * 把全屏弹窗/遮罩传送到 document.body 渲染。
+ * 侧栏是 position:sticky（自成层叠上下文），若 fixed 弹窗渲染在侧栏内部，
+ * 其 zIndex 只在侧栏内部比较，会被主区 hover 卡片（z-index:1）盖住。
+ * 凡全屏 overlay 一律经此传送，与触发按钮位置解耦。
+ */
+export function BodyPortal({ children }) {
+  if (typeof document === 'undefined') return children;
+  return createPortal(children, document.body);
+}
 
 export const SHARED_CSS = `
 .gx-root{
