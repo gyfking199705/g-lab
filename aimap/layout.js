@@ -41,8 +41,8 @@ export function layoutDomain(group, r = HEX_R) {
       x: col * hw + off + hw / 2,
       y: row * vh + r,
       topicId: t.id, trackId: tr.id, clusterId: cl.id,
-      name: t.name, status: t.status, note: t.note || '', unlock: t.unlock || '',
-      trackName: tr.name, clusterName: cl.name || '',
+      name: t.name, status: t.status, note: t.note || '', unlock: t.unlock || '', card: t.card || '',
+      trackName: tr.name, clusterName: cl.name || '', domain: group.domain || '',
     });
     col += 1;
   };

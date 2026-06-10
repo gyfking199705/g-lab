@@ -12,6 +12,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { layoutWorld, hexPoints, HEX_R } from './layout.js';
 import { STATUS_META, STATUS_CYCLE } from './calc.js';
+import { pathFor, copyablePrompt, generateStudyCard, renderCardHtml } from './study.js';
+import { loadAIConfig } from '../core/AISettings.jsx';
+import { isConfigured } from '../learning/ai.js';
 
 const FILL = {
   done: '#79a186', doing: '#d2a45c', fog: '#9d8cc9', todo: '#e9e6db',
@@ -29,7 +32,31 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
   const moved = useRef(false);
   const [selId, setSelId] = useState(null);
   const [tip, setTip] = useState(null);
+  const [studyOpen, setStudyOpen] = useState(false);
+  const [studyBusy, setStudyBusy] = useState(false);
+  const [studyErr, setStudyErr] = useState('');
+  const [copied, setCopied] = useState(false);
   const sel = selId ? world.tileById[selId] : null;
+  const path = useMemo(() => (sel ? pathFor(groups, sel) : { prev: [], next: [] }), [groups, selId]);
+  const aiCfg = useMemo(() => loadAIConfig(), [selId]);
+  const aiReady = aiCfg && aiCfg.enabled !== false && isConfigured(aiCfg);
+
+  const pickTile = (id) => { setSelId(id); setStudyOpen(false); setStudyErr(''); setCopied(false); };
+
+  const makeCard = async () => {
+    if (!sel) return;
+    setStudyBusy(true); setStudyErr(''); setStudyOpen(true);
+    try {
+      const text = await generateStudyCard({ config: aiCfg, sel, path });
+      onPatchTopic(sel, { card: text });
+    } catch (e) { setStudyErr(e.message || '生成失败'); }
+    finally { setStudyBusy(false); }
+  };
+  const copyPrompt = async () => {
+    const text = copyablePrompt(sel, path);
+    try { await navigator.clipboard.writeText(text); } catch (e) { try { window.prompt('复制学习提示词：', text); } catch (e2) { /* 静默 */ } }
+    setCopied(true); setTimeout(() => setCopied(false), 1600);
+  };
 
   const apply = () => {
     const v = view.current;
@@ -109,7 +136,7 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
                   strokeDasharray={t.status === 'fog' ? '3 2' : undefined}
                   opacity={dimmed(t) ? 0.16 : 1}
                   className="amv-hex"
-                  onClick={() => { if (!moved.current) { setSelId(t.topicId); setTip(null); } }}
+                  onClick={() => { if (!moved.current) { pickTile(t.topicId); setTip(null); } }}
                   onMouseEnter={(e) => showTip(e, t)}
                   onMouseMove={(e) => showTip(e, t)}
                   onMouseLeave={() => setTip(null)}
@@ -161,6 +188,45 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
               </button>
             ))}
           </div>
+          {/* 学习路径：同分组前置 → 当前 → 后继，点击跳转 */}
+          {(path.prev.length > 0 || path.next.length > 0) && (
+            <div className="amv-path">
+              {path.prev.map((t) => (
+                <button key={t.id} className="amv-path-chip" onClick={() => pickTile(t.id)} title={STATUS_META[t.status].label}>
+                  <i style={{ background: FILL[t.status] }} />{t.name}
+                </button>
+              ))}
+              <span className="amv-path-now"><i style={{ background: FILL[sel.status] }} />{sel.name}</span>
+              {path.next.map((t) => (
+                <button key={t.id} className="amv-path-chip" onClick={() => pickTile(t.id)} title={STATUS_META[t.status].label}>
+                  <i style={{ background: FILL[t.status] }} />{t.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 学习：AI 学习卡（有配置）或一键复制提示词（无配置） */}
+          <div className="amv-study-bar">
+            {sel.card
+              ? <>
+                  <button className="amv-study-btn on" onClick={() => setStudyOpen(!studyOpen)}>{studyOpen ? '收起学习卡' : '📖 打开学习卡'}</button>
+                  {aiReady && <button className="amv-study-btn" disabled={studyBusy} onClick={makeCard}>{studyBusy ? '生成中…' : '↻ 重新生成'}</button>}
+                </>
+              : aiReady
+                ? <button className="amv-study-btn primary" disabled={studyBusy} onClick={makeCard}>{studyBusy ? '✨ 生成中…' : '🎓 生成学习卡'}</button>
+                : <>
+                    <button className="amv-study-btn" onClick={copyPrompt}>{copied ? '✓ 已复制' : '📋 复制学习提示词'}</button>
+                    <span className="amv-study-hint">粘到任意 AI 对话即可学；或在侧栏「✨ AI 设置」配 Key 后这里一键生成</span>
+                  </>}
+          </div>
+          {studyOpen && (
+            <div className="amv-card">
+              {studyBusy && <p className="amv-card-busy">✨ 正在为「{sel.name}」生成学习卡…</p>}
+              {studyErr && <p className="amv-card-err">⚠ {studyErr}</p>}
+              {!studyBusy && !studyErr && sel.card && <div dangerouslySetInnerHTML={{ __html: renderCardHtml(sel.card) }} />}
+            </div>
+          )}
+
           <textarea className="amv-p-ta" rows={2} placeholder="一句话笔记：现在理解到哪一步"
             value={sel.note} onChange={(e) => onPatchTopic(sel, { note: e.target.value })} />
           {sel.status === 'fog' && (
@@ -202,7 +268,7 @@ export const MAP_CSS = `
 .amv-tip em{display:block;font-style:normal;font-size:10px;color:var(--text-3);margin-top:1px;}
 .amv-tip p{color:var(--text-2);margin-top:4px;font-size:11px;}
 .amv-panel{position:absolute;left:12px;right:12px;bottom:12px;z-index:5;background:var(--surface);border:1px solid var(--bd-2);
-  border-radius:13px;padding:12px 14px;box-shadow:0 10px 30px rgba(38,36,31,.16);}
+  border-radius:13px;padding:12px 14px;box-shadow:0 10px 30px rgba(38,36,31,.16);max-height:calc(100% - 24px);overflow-y:auto;}
 .amv-p-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
 .amv-p-crumb{font-size:10px;color:var(--text-3);letter-spacing:.4px;}
 .amv-p-name{font-weight:600;font-size:14px;margin-top:1px;}
@@ -213,6 +279,32 @@ export const MAP_CSS = `
   font-size:11.5px;cursor:pointer;color:var(--text-2);transition:.15s;font-family:var(--sans);}
 .amv-p-status button:hover{border-color:var(--accent);color:var(--accent-2);}
 .amv-p-status button.on{font-weight:600;}
+.amv-path{display:flex;align-items:center;gap:5px;margin-top:10px;flex-wrap:wrap;font-size:10.5px;}
+.amv-path-chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--bd);background:var(--surface-2);
+  border-radius:999px;padding:3px 9px;font-size:10.5px;color:var(--text-2);cursor:pointer;transition:.15s;font-family:var(--sans);max-width:150px;}
+.amv-path-chip:hover{border-color:var(--accent);color:var(--accent-2);}
+.amv-path-now{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--accent);background:var(--accent-soft);
+  border-radius:999px;padding:3px 10px;font-size:10.5px;color:var(--accent-2);font-weight:600;max-width:170px;}
+.amv-path i{width:7px;height:7px;border-radius:99px;flex:none;}
+.amv-study-bar{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.amv-study-btn{border:1px solid var(--bd-2);background:var(--surface-2);border-radius:8px;padding:5px 13px;
+  font-size:11.5px;cursor:pointer;color:var(--text-2);transition:.15s;font-family:var(--sans);}
+.amv-study-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent-2);}
+.amv-study-btn:disabled{opacity:.6;cursor:default;}
+.amv-study-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500;}
+.amv-study-btn.primary:hover:not(:disabled){background:var(--accent-2);color:#fff;}
+.amv-study-btn.on{border-color:var(--accent);color:var(--accent-2);background:var(--accent-soft);}
+.amv-study-hint{font-size:10px;color:var(--text-3);line-height:1.5;}
+.amv-card{margin-top:10px;max-height:280px;overflow-y:auto;background:var(--surface-2);border:1px solid var(--bd);
+  border-radius:10px;padding:12px 15px;font-size:12px;line-height:1.75;color:var(--text);}
+.amv-card h4{font-family:var(--serif);font-size:12.5px;font-weight:600;color:var(--accent-2);margin:10px 0 4px;}
+.amv-card h4:first-child{margin-top:0;}
+.amv-card ul{padding-left:18px;margin:2px 0;}
+.amv-card li{margin:2px 0;}
+.amv-card p{margin:4px 0;}
+.amv-card code{background:var(--surface-3);border-radius:4px;padding:0 4px;font-size:11px;font-family:ui-monospace,Menlo,monospace;}
+.amv-card-busy{color:var(--text-2);}
+.amv-card-err{color:var(--danger);}
 .amv-p-ta{width:100%;border:1px solid var(--bd);background:var(--surface-2);border-radius:8px;padding:6px 10px;
   font-size:11.5px;font-family:var(--sans);color:var(--text);margin-top:8px;resize:vertical;line-height:1.5;}
 .amv-p-ta:focus{outline:none;border-color:var(--accent);}

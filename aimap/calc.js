@@ -83,13 +83,14 @@ export function normalize(raw) {
         id: cl.id || rid('cl'),
         name: cl.name || '',
         topics: (Array.isArray(cl.topics) ? cl.topics : []).map((t) => (typeof t === 'string'
-          ? { id: rid('tp'), name: t, status: 'todo', note: '', unlock: '' }
+          ? { id: rid('tp'), name: t, status: 'todo', note: '', unlock: '', card: '' }
           : {
             id: t.id || rid('tp'),
             name: t.name || '',
             status: STATUS_META[t.status] ? t.status : 'todo',
             note: t.note || '',
             unlock: t.unlock || '',
+            card: t.card || '',
           })),
       })),
     })) : [],
