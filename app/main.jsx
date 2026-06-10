@@ -11,6 +11,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import SavingsPlanner from '../savings/SavingsPlanner.jsx';
 import LearningPlanner from '../learning/LearningPlanner.jsx';
+import AIMapPlanner from '../aimap/AIMapPlanner.jsx';
 import FitnessPlanner from '../fitness/FitnessPlanner.jsx';
 import ProjectPlanner from '../project/ProjectPlanner.jsx';
 import StockWatch from '../stocks/StockWatch.jsx';
@@ -65,6 +66,7 @@ const NAV_ITEMS = [
   { id: 'papers', icon: '📄', label: '论文阅读', kind: 'papers', group: 'core' },
   { id: 'personal', icon: '📝', label: '个人规划', kind: 'task', group: 'more' },
   { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning', group: 'more' },
+  { id: 'aimap', icon: '🗺️', label: '学习地图', kind: 'aimap', group: 'more' },
   { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness', group: 'more' },
   { id: 'project', icon: '📋', label: '项目规划', kind: 'project', group: 'more' },
   { id: 'ledger', icon: '🧾', label: '记账', kind: 'ledger', group: 'more' },
@@ -113,6 +115,17 @@ function readCount(key) {
 }
 
 /* 学习规划的侧边栏徽章：已掌握/总知识点；无知识点时退化为计划数。 */
+function readAimapBadge() {
+  try {
+    const raw = localStorage.getItem('aimap-planner');
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    let total = 0, done = 0;
+    for (const tr of s.tracks || []) for (const cl of tr.clusters || []) for (const t of cl.topics || []) { total++; if (t.status === 'done') done++; }
+    return total ? `${done}/${total}` : null;
+  } catch (e) { return null; }
+}
+
 function readLearningBadge() {
   try {
     const raw = localStorage.getItem('learning-planner');
@@ -219,6 +232,7 @@ function badgeFor(kind, id) {
   switch (kind) {
     case 'task': return readCount(`planning_${id}`);
     case 'learning': return readLearningBadge();
+    case 'aimap': return readAimapBadge();
     case 'fitness': return readFitnessBadge();
     case 'project': return readProjectBadge();
     case 'schedule': return readScheduleBadge();
@@ -354,6 +368,14 @@ export default function App() {
             <WealthSection />
           ) : active === 'learning' ? (
             <LearningPlanner storageKey="learning-planner" onChange={bump} />
+          ) : active === 'aimap' ? (
+            <>
+              <div className="app-modhead">
+                <h2>🗺️ 学习地图</h2>
+                <p>知识疆域：亮色是点亮的领土，紫色虚线是迷雾——每片雾挂一个「解锁问题」，答出来雾就散</p>
+              </div>
+              <AIMapPlanner storageKey="aimap-planner" onChange={bump} />
+            </>
           ) : active === 'fitness' ? (
             <FitnessPlanner storageKey="fitness-planner" onChange={bump} />
           ) : active === 'project' ? (

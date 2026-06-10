@@ -14,6 +14,7 @@ export const BACKUP_KEYS = [
   'planning_learning', // 旧版学习待办，保留以兼容历史备份
   'planning_fitness', // 旧版健身待办，保留以兼容历史备份
   'learning-planner', // AI 学习计划站数据
+  'aimap-planner', // AI 学习地图（知识疆域/迷雾）
   'fitness-planner', // 健身训练规划数据
   'savings-planner', // 财富规划（含净资产）
   'stocks-watch', // 股市观测自选与设置
@@ -117,6 +118,7 @@ export const FILE_MAP = [
   { key: 'planning_learning', file: '学习待办(旧版).json' },
   { key: 'planning_fitness', file: '健身待办(旧版).json' },
   { key: 'learning-planner', file: '学习计划.json' },
+  { key: 'aimap-planner', file: '学习地图.json' },
   { key: 'fitness-planner', file: '健身训练.json' },
   { key: 'savings-planner', file: '财富规划.json' },
   { key: 'stocks-watch', file: '股市观测.json' },

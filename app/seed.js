@@ -150,7 +150,61 @@ export function buildDemoData(today = todayStr()) {
   });
   const stocksCache = { quotes, at: today + 'T09:30:00Z' };
 
+  // 学习地图：知识疆域示例（LLM 推理引擎）。展示四态 + 迷雾解锁问题 + 队列/足迹的用法。
+  const tp = (name, status, note, unlock) => ({ id: `am-${name.slice(0, 6)}-${status}`, name, status, note: note || '', unlock: unlock || '' });
+  const aimap = {
+    mission: '把 vLLM / SGLang / TensorRT-LLM 级别的推理引擎吃透——算力、显存、通信、均衡，从理论建模到真机压测。',
+    anchor: 'DeepSeek-V3 @ H100 SXM · 当前任务：单任务 DP/PP/EP 负载分析',
+    tracks: [
+      { id: 'am-tr1', tag: 'TRACK 1 · 主线', name: 'LLM 推理引擎', clusters: [
+        { id: 'am-c11', name: '理论地基', topics: [
+          tp('四层模型栈（架构→框架→权重→引擎）', 'done', '组织一切的骨架：优化住在哪一层，一问便知。'),
+          tp('Prefill / Decode 不对称', 'done', 'prefill 算力瓶颈、decode 带宽瓶颈；一切分析先分两套。'),
+          tp('Roofline · 算术强度 · ridge', 'done', 'H100 FP8 ridge≈591；MoE 含 /32 路由稀释。'),
+          tp('单卡三函数成本建模', 'doing', '公式骨架已立；还没对真实多卡配置完整代入一遍。'),
+        ] },
+        { id: 'am-c12', name: '并行策略', topics: [
+          tp('DP / TP / PP / EP：切什么·负载指纹', 'done', '没有并行是好处，全是代价，只比谁便宜。'),
+          tp('PP：microbatch 与 bubble', 'done', 'bubble≈(p−1)/(m+p−1)；存在理由=装不下+穷通信扛慢网。'),
+          tp('1F1B / interleaved 排程', 'doing', '知道各自目标；没手推过完整时刻表。'),
+          tp('EP 负载不均衡与 EPLB', 'fog', '不均衡因子会算了；EPLB 怎么治还是黑盒。', '冗余专家放在哪、何时触发重排？重排时权重怎么搬、服务会不会抖？'),
+        ] },
+        { id: 'am-c13', name: '通信', topics: [
+          tp('all-to-all（EP 的税）', 'done', '「换」不是「合」：token 按目的地洗牌。'),
+          tp('NVLink / 带宽阶梯', 'done', 'NVLink 900 → PCIe ~128 → IB ~100 GB/s。'),
+          tp('NCCL 内部（ring/tree）', 'fog', '知道它是物流公司；不知道卡车怎么排班。', 'ring all-reduce 每一步谁发谁收？为什么带宽最优？'),
+          tp('通信-计算 overlap 工程', 'fog', '反复出现的「能不能藏住」；怎么藏的没拆过。', '双 microbatch 怎么把 all-to-all 压进 GEMM 底下？'),
+        ] },
+        { id: 'am-c14', name: '引擎核心机制', topics: [
+          tp('KV cache · PagedAttention', 'doing', 'OS 分页类比已建立；block size 权衡待深入。'),
+          tp('Continuous batching', 'doing', '迭代级调度概念有。'),
+          tp('CUDA graph', 'fog', '只知道 decode 整图回放。', '为什么 decode 需要它？捕获时 shape 怎么固定？'),
+          tp('nsys 时间线实读', 'todo', '最后一公里：认 NCCL 原语、判 overlap、找 straggler。'),
+        ] },
+      ] },
+      { id: 'am-tr2', tag: 'TRACK 2 · 副线', name: '训练基础（够看懂被服务的模型即可）', clusters: [
+        { id: 'am-c21', name: '', topics: [
+          tp('Attention 变体（MHA/GQA/MLA）', 'doing', '名字与定位清楚；MLA 细节在主线迷雾。'),
+          tp('训练流程概览（数据→预训练→对齐）', 'todo', '低优先；遇到再补。'),
+        ] },
+      ] },
+    ],
+    parked: [
+      { id: 'am-p1', name: 'AI 战略 / 行业格局' }, { id: 'am-p2', name: '多模态' }, { id: 'am-p3', name: '强化学习 RL' },
+    ],
+    queue: [
+      { id: 'am-q1', title: 'nsys 时间线实读演练', desc: '在真实 trace 里认出 NCCL 原语，判断 overlap 与 straggler。' },
+      { id: 'am-q2', title: '把成本模型真正代入一次', desc: '16 卡 H100 放 DeepSeek-V3，几种并行配置逐个算出来对比。' },
+      { id: 'am-q3', title: '迷雾区点名清扫', desc: '按阻塞度：CUDA graph → EPLB → overlap 工程，每个一次对话讲透。' },
+    ],
+    log: [
+      { id: 'am-l1', date: today, text: '并行大扫盲：TP/DP/PP/EP 负载指纹 → microbatch 与 bubble 时空图 → 带宽阶梯。' },
+      { id: 'am-l2', date: addDays(today, -3), text: '四层模型栈 · PagedAttention 与 OS 分页类比 · roofline 钉点。' },
+    ],
+  };
+
   return {
+    'aimap-planner': aimap,
     'cut-planner': cut,
     'habits-planner': habits,
     'goals-planner': goals,
@@ -189,6 +243,7 @@ export function hasModuleContent(key, o) {
     case 'savings-planner': { const nw = o.netWorth || {}; return len(nw.snapshots) > 0 || len(nw.accounts) > 0; }
     case 'fitness-planner': return len(o.workouts) > 0 || len(o.routines) > 0;
     case 'learning-planner': return len(o.plans) > 0;
+    case 'aimap-planner': return len(o.tracks) > 0;
     case 'project-planner': return len(o.tasks) > 0;
     case 'papers-planner': return len(o.items) > 0;
     case 'stocks-watch': return len(o.symbols) > 0;

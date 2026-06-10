@@ -16,6 +16,7 @@ import { todayBoard, currentStreak, bestStreak, isDoneOn, fitnessWorkoutDates } 
 import { summary as papersSummary } from '../papers/calc.js';
 import { overallStats as goalsOverall, sortGoalsForBoard, goalPercent, daysLeft, isAchieved } from '../goals/calc.js';
 import { overallStats as learningStats, computeStreak as learnStreak, studyMinutes, activitySeries as learnActivity } from '../learning/calc.js';
+import { overallCounts as aimapCounts, donePct as aimapDonePct, fogItems as aimapFog, trackStats as aimapTrackStats } from '../aimap/calc.js';
 import { workoutsThisWeek, weekStreak, totalVolume, activitySeries as fitActivity, formatVolume } from '../fitness/calc.js';
 import { taskStats, totalFocusMinutes, focusStreak, lastNDays as projLastDays } from '../project/calc.js';
 import { todayView, overdueCount } from '../schedule/calc.js';
@@ -540,9 +541,39 @@ function goldBoard(get) {
   };
 }
 
+function aimapBoard(get) {
+  const s = get('aimap-planner');
+  const c = aimapCounts(s);
+  if (!c.total) return null;
+  const pct = aimapDonePct(c);
+  const fogs = aimapFog(s);
+  const queue = (s && s.queue) || [];
+  const tracks = ((s && s.tracks) || []).map((tr) => {
+    const ts = aimapTrackStats(tr);
+    return { title: tr.name, pct: ts.total ? Math.round((ts.done / ts.total) * 100) : 0, done: ts.total > 0 && ts.done === ts.total };
+  }).filter((t) => t.title);
+  const nextFog = fogs.find((f) => f.unlock);
+  return {
+    icon: '🗺️', title: '学习地图大盘', stroke: '#8E7CC3',
+    hero: { value: pct + '%', caption: `疆域点亮 · ${c.done}/${c.total} 已掌握`, delta: c.fog ? `${c.fog} 片迷雾` : '无迷雾', deltaTone: c.fog ? 'bad' : 'good', progress: pct, progressSub: '掌握度' },
+    kpis: [
+      kpi('进行中', c.doing + '', '前线推进', 'accent'),
+      kpi('迷雾', c.fog + '', '挂着解锁问题', c.fog ? 'bad' : 'good'),
+      kpi('未开始', c.todo + '', ''),
+      kpi('下一步', queue.length + '', queue[0] ? queue[0].title.slice(0, 12) : '队列空'),
+    ],
+    charts: [
+      { title: '各轨道掌握度', kind: 'goalbars', goals: tracks.slice(0, 6) },
+      { title: '状态分布', kind: 'bars', values: [c.done, c.doing, c.fog, c.todo], labels: ['已掌握', '进行中', '迷雾', '未开始'], single: true },
+    ],
+    forecast: { text: nextFog ? `🔮 优先清雾：「${nextFog.name}」—— ${nextFog.unlock}` : (queue[0] ? `🔮 下一步：${queue[0].title}` : '🔮 地图全亮，开新轨道吧！') },
+    insights: [],
+  };
+}
+
 const BUILDERS = {
   wealth: financeBoard, gold: goldBoard, cut: cutBoard, ledger: ledgerBoard, habits: habitsBoard,
-  papers: papersBoard, goals: goalsBoard, learning: learningBoard,
+  papers: papersBoard, goals: goalsBoard, learning: learningBoard, aimap: aimapBoard,
   fitness: fitnessBoard, project: projectBoard, schedule: scheduleBoard, stocks: stocksBoard,
 };
 
@@ -550,7 +581,7 @@ const BUILDERS = {
 export function hasBoard(id) { return !!BUILDERS[id]; }
 
 /** 大盘的推荐展示顺序（首页卡片 / 详情轮播共用）。 */
-export const BOARD_ORDER = ['wealth', 'gold', 'cut', 'ledger', 'goals', 'learning', 'papers', 'fitness', 'project', 'stocks', 'habits', 'schedule'];
+export const BOARD_ORDER = ['wealth', 'gold', 'cut', 'ledger', 'goals', 'learning', 'aimap', 'papers', 'fitness', 'project', 'stocks', 'habits', 'schedule'];
 
 /**
  * 构造某模块的大盘数据；无数据/无专属分析返回 null。
