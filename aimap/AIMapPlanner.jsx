@@ -15,6 +15,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { STATUS_META, STATUS_CYCLE, cycleStatus, trackStats, overallCounts, donePct, fogItems, normalize, groupByDomain, rid } from './calc.js';
+import MapView, { MAP_CSS } from './MapView.jsx';
 import { todayStr } from '../core/date.js';
 
 function load(initialState, key) {
@@ -26,6 +27,9 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
   const [state, setState] = useState(() => load(initialState, storageKey));
   const [filter, setFilter] = useState('all');
   const [edit, setEdit] = useState(false);
+  // 视图：map=世界图（默认，探索感），list=列表（结构编辑用）
+  const [viewMode, setViewMode] = useState(() => { try { return localStorage.getItem('aimap-view') || 'map'; } catch (e) { return 'map'; } });
+  const switchView = (v) => { setViewMode(v); if (v === 'map') setEdit(false); try { localStorage.setItem('aimap-view', v); } catch (e) { /* 静默 */ } };
   const [showLib, setShowLib] = useState(false);
   const [lib, setLib] = useState(null);
   const [libErr, setLibErr] = useState('');
@@ -218,7 +222,7 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
 
   return (
     <div className="am-root">
-      <style>{CSS}</style>
+      <style>{CSS + MAP_CSS}</style>
 
       {/* 任务声明 + 锚点 */}
       <div className="am-mission">
@@ -234,8 +238,10 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
           </>
         )}
         <span className="am-mbtns">
-          <button className={`am-editbtn${showLib ? ' on' : ''}`} onClick={toggleLib}>📥 地图库</button>
-          <button className={`am-editbtn${edit ? ' on' : ''}`} onClick={() => setEdit(!edit)}>{edit ? '✓ 完成编辑' : '✎ 编辑地图'}</button>
+          <button className={`am-editbtn${viewMode === 'map' ? ' on' : ''}`} onClick={() => switchView('map')}>🗺️ 地图</button>
+          <button className={`am-editbtn${viewMode === 'list' && !edit ? ' on' : ''}`} onClick={() => switchView('list')}>📋 列表</button>
+          <button className={`am-editbtn${showLib ? ' on' : ''}`} onClick={toggleLib}>📥 库</button>
+          <button className={`am-editbtn${edit ? ' on' : ''}`} onClick={() => { if (!edit) switchView('list'); setEdit(!edit); }}>{edit ? '✓ 完成编辑' : '✎ 编辑'}</button>
         </span>
       </div>
 
@@ -260,8 +266,8 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
         </div>
       )}
 
-      {/* 测绘总览：自建轨道逐条，领域（地图库的图）聚合为一条 */}
-      {!empty && (
+      {/* 测绘总览：自建轨道逐条，领域（地图库的图）聚合为一条（地图视图下大陆自带计数，免重复） */}
+      {!empty && viewMode === 'list' && (
         <div className="am-survey">
           {groups.flatMap((g) => {
             const items = g.domain === ''
@@ -305,6 +311,10 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
           <p>点右上「✎ 编辑地图」新建轨道开始测绘；或去首页「一键填充示例」看一张完整的样例地图（LLM 推理引擎）。</p>
           {edit && <button className="am-add" onClick={addTrack}>＋ 新建轨道</button>}
         </div>
+      ) : viewMode === 'map' ? (
+        <MapView groups={groups} filter={filter}
+          onSetStatus={(t, k) => upTopic(t.trackId, t.clusterId, t.topicId, { status: k })}
+          onPatchTopic={(t, patch) => upTopic(t.trackId, t.clusterId, t.topicId, patch)} />
       ) : (
         groups.map((g) => {
           const gStats = overallCounts({ tracks: g.tracks });
