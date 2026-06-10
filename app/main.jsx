@@ -62,18 +62,18 @@ const NAV_ITEMS = [
   { id: 'schedule', icon: '📅', label: '日程安排', kind: 'schedule', group: 'core' },
   { id: 'goals', icon: '🎯', label: '目标进度', kind: 'goals', group: 'core' },
   { id: 'habits', icon: '🔥', label: '习惯打卡', kind: 'habits', group: 'core' },
-  { id: 'cut', icon: '📉', label: '减脂计划', kind: 'cut', group: 'core' },
-  { id: 'papers', icon: '📄', label: '论文阅读', kind: 'papers', group: 'core' },
-  { id: 'personal', icon: '📝', label: '个人规划', kind: 'task', group: 'more' },
-  { id: 'learning', icon: '📚', label: '学习规划', kind: 'learning', group: 'more' },
-  { id: 'aimap', icon: '🗺️', label: '学习地图', kind: 'aimap', group: 'more' },
-  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness', group: 'more' },
-  { id: 'project', icon: '📋', label: '项目规划', kind: 'project', group: 'more' },
-  { id: 'ledger', icon: '🧾', label: '记账', kind: 'ledger', group: 'more' },
-  { id: 'compare', icon: '🧮', label: '比价助手', kind: 'compare', group: 'more' },
-  { id: 'salary', icon: '💵', label: '薪资到手', kind: 'salary', group: 'more' },
-  { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth', group: 'more' },
-  { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks', group: 'more' },
+  { id: 'personal', icon: '📝', label: '个人规划', kind: 'task', group: 'core' },
+  { id: 'project', icon: '📋', label: '项目规划', kind: 'project', group: 'core' },
+  { id: 'aimap', icon: '🗺️', label: '学习地图', kind: 'aimap', group: 'learn' },
+  { id: 'learning', icon: '📚', label: '学习计划', kind: 'learning', group: 'learn' },
+  { id: 'papers', icon: '📄', label: '论文阅读', kind: 'papers', group: 'learn' },
+  { id: 'cut', icon: '📉', label: '减脂计划', kind: 'cut', group: 'health' },
+  { id: 'fitness', icon: '💪', label: '健身规划', kind: 'fitness', group: 'health' },
+  { id: 'wealth', icon: '💰', label: '财富规划', kind: 'wealth', group: 'money' },
+  { id: 'ledger', icon: '🧾', label: '记账', kind: 'ledger', group: 'money' },
+  { id: 'stocks', icon: '📈', label: '股市观测', kind: 'stocks', group: 'money' },
+  { id: 'salary', icon: '💵', label: '薪资到手', kind: 'salary', group: 'money' },
+  { id: 'compare', icon: '🧮', label: '比价助手', kind: 'compare', group: 'money' },
 ];
 
 /* 参与备份 / 云同步的 localStorage 键集中在 ../sync/backup.js（BACKUP_KEYS）；
@@ -245,7 +245,7 @@ function badgeFor(kind, id) {
   }
 }
 
-const GROUP_LABEL = { core: '日常', more: '规划工具' };
+const GROUP_LABEL = { core: '日常', learn: '学习', health: '健康', money: '财务', more: '其他' };
 
 /* ----------------------------- URL hash 路由（静态托管用 hash 最稳） ----------------------------- */
 const NAV_IDS = new Set(['home', ...NAV_ITEMS.map((m) => m.id)]);
@@ -372,7 +372,7 @@ export default function App() {
             <>
               <div className="app-modhead">
                 <h2>🗺️ 学习地图</h2>
-                <p>知识疆域：亮色是点亮的领土，紫色虚线是迷雾——每片雾挂一个「解锁问题」，答出来雾就散</p>
+                <p>「学什么」的全景版图：把整片知识画成疆域，逐格点亮、清雾、生成学习卡。想要「怎么学」的节奏（计划+番茄+复习）见左侧「学习计划」</p>
               </div>
               <AIMapPlanner storageKey="aimap-planner" onChange={bump} />
             </>

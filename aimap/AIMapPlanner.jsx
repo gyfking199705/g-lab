@@ -34,6 +34,7 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
   const [lib, setLib] = useState(null);
   const [libErr, setLibErr] = useState('');
   const [importing, setImporting] = useState('');
+  const [justImported, setJustImported] = useState(null);
   const first = useRef(true);
 
   useEffect(() => {
@@ -71,6 +72,11 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
         if (cancelled || !Object.keys(flags).length) return;
         up((s) => ({ ...s, tracks: [...s.tracks, ...newTracks], libImported: { ...s.libImported, ...flags } }));
         setLib(idx);
+        if (newTracks.length) {
+          let pts = 0; for (const tr of newTracks) for (const cl of tr.clusters) pts += cl.topics.length;
+          const maps = new Set(newTracks.map((t) => t.domain)).size;
+          setJustImported({ maps, pts });
+        }
       } catch (e) { /* 静默：离线或本地打开 */ }
     })();
     return () => { cancelled = true; };
@@ -224,26 +230,41 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
     <div className="am-root">
       <style>{CSS + MAP_CSS}</style>
 
-      {/* 任务声明 + 锚点 */}
-      <div className="am-mission">
-        {edit ? (
-          <>
-            <input className="am-in am-in-block" placeholder="主线目标（一句话：这张图为了吃透什么）" value={state.mission} onChange={(e) => up((s) => ({ ...s, mission: e.target.value }))} />
-            <input className="am-in am-in-block" placeholder="锚点（当前任务 / 锚定系统，如：DeepSeek-V3 @ H100）" value={state.anchor} onChange={(e) => up((s) => ({ ...s, anchor: e.target.value }))} />
-          </>
-        ) : (
-          <>
-            {state.mission && <p className="am-mtext">{state.mission}</p>}
-            {state.anchor && <p className="am-manchor">⚓ {state.anchor}</p>}
-          </>
-        )}
-        <span className="am-mbtns">
-          <button className={`am-editbtn${viewMode === 'map' ? ' on' : ''}`} onClick={() => switchView('map')}>🗺️ 地图</button>
-          <button className={`am-editbtn${viewMode === 'list' && !edit ? ' on' : ''}`} onClick={() => switchView('list')}>📋 列表</button>
-          <button className={`am-editbtn${showLib ? ' on' : ''}`} onClick={toggleLib}>📥 库</button>
+      {/* 顶部工具条：视图切换 + 库 + 编辑 */}
+      <div className="am-toolbar">
+        <span className="am-seg">
+          <button className={viewMode === 'map' && !edit ? 'on' : ''} onClick={() => switchView('map')}>🗺️ 地图</button>
+          <button className={viewMode === 'list' && !edit ? 'on' : ''} onClick={() => switchView('list')}>📋 列表</button>
+        </span>
+        <span className="am-tb-right">
+          <button className={`am-editbtn${showLib ? ' on' : ''}`} onClick={toggleLib}>📥 地图库</button>
           <button className={`am-editbtn${edit ? ' on' : ''}`} onClick={() => { if (!edit) switchView('list'); setEdit(!edit); }}>{edit ? '✓ 完成编辑' : '✎ 编辑'}</button>
         </span>
       </div>
+
+      {/* 任务声明 + 锚点（编辑态或已填时才占位） */}
+      {(edit || state.mission || state.anchor) && (
+        <div className="am-mission">
+          {edit ? (
+            <>
+              <input className="am-in am-in-block" placeholder="主线目标（一句话：这张图为了吃透什么）" value={state.mission} onChange={(e) => up((s) => ({ ...s, mission: e.target.value }))} />
+              <input className="am-in am-in-block" placeholder="锚点（当前任务 / 锚定系统，如：DeepSeek-V3 @ H100）" value={state.anchor} onChange={(e) => up((s) => ({ ...s, anchor: e.target.value }))} />
+            </>
+          ) : (
+            <>
+              {state.mission && <p className="am-mtext">{state.mission}</p>}
+              {state.anchor && <p className="am-manchor">⚓ {state.anchor}</p>}
+            </>
+          )}
+        </div>
+      )}
+
+      {justImported && (
+        <div className="am-imported">
+          <span>🗺️ 已为你铺开 <b>{justImported.maps}</b> 张知识地图、<b>{justImported.pts}</b> 个知识点——全是「未开始」，慢慢点亮就好。不需要的领域可在「📋 列表 → ✎ 编辑」里删掉。</span>
+          <button onClick={() => setJustImported(null)}>知道了</button>
+        </div>
+      )}
 
       {/* 地图库：内置课程图谱，一键并入（追加为新轨道，可再删） */}
       {showLib && (
@@ -427,9 +448,19 @@ function QuickAdd({ placeholder, onAdd, wide }) {
 
 const CSS = `
 .am-root{--fog:#8E7CC3;}
-.am-mission{position:relative;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:16px 210px 16px 18px;margin-bottom:16px;}
-.am-mbtns{position:absolute;top:14px;right:14px;display:flex;gap:6px;}
-.am-mbtns .am-editbtn{position:static;}
+.am-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.am-seg{display:inline-flex;border:1px solid var(--bd-2);border-radius:9px;overflow:hidden;}
+.am-seg button{border:none;background:var(--surface);padding:7px 16px;font-size:12.5px;cursor:pointer;color:var(--text-2);font-family:var(--sans);transition:.15s;}
+.am-seg button+button{border-left:1px solid var(--bd-2);}
+.am-seg button:hover{background:var(--surface-2);color:var(--text);}
+.am-seg button.on{background:var(--accent-soft);color:var(--accent-2);font-weight:600;}
+.am-tb-right{display:flex;gap:6px;}
+.am-mission{position:relative;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:16px 18px;margin-bottom:16px;}
+.am-imported{display:flex;align-items:center;gap:12px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:11px 15px;margin-bottom:16px;font-size:12.5px;color:var(--text);line-height:1.6;animation:amvfade2 .4s ease;}
+.am-imported b{color:var(--accent-2);}
+.am-imported button{flex:none;border:1px solid var(--accent);background:var(--surface);border-radius:8px;padding:5px 13px;font-size:12px;cursor:pointer;color:var(--accent-2);font-family:var(--sans);}
+.am-imported button:hover{background:var(--accent);color:#fff;}
+@keyframes amvfade2{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
 .am-lib{background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:14px 18px;margin-bottom:16px;}
 .am-lib-lead{font-size:12px;color:var(--text-2);line-height:1.6;margin-bottom:6px;}
 .am-lib-err{font-size:12px;color:var(--danger);margin-bottom:6px;}
@@ -445,7 +476,7 @@ const CSS = `
 .am-lib-done{flex:none;font-size:12px;color:var(--success);font-weight:500;}
 .am-mtext{font-family:var(--serif);font-size:14.5px;line-height:1.7;color:var(--text);}
 .am-manchor{font-size:11.5px;color:var(--text-3);margin-top:6px;font-variant-numeric:tabular-nums;}
-.am-editbtn{position:absolute;top:14px;right:14px;border:1px solid var(--bd-2);background:var(--surface-2);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-2);transition:.15s;}
+.am-editbtn{border:1px solid var(--bd-2);background:var(--surface-2);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-2);transition:.15s;font-family:var(--sans);}
 .am-editbtn:hover{border-color:var(--accent);color:var(--accent-2);}
 .am-editbtn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);font-weight:500;}
 .am-survey{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:16px;}

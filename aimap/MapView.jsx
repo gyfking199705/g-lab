@@ -41,6 +41,8 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
   const aiCfg = useMemo(() => loadAIConfig(), [selId]);
   const aiReady = aiCfg && aiCfg.enabled !== false && isConfigured(aiCfg);
 
+  const [hintGone, setHintGone] = useState(() => { try { return localStorage.getItem('aimap-hint-seen') === '1'; } catch (e) { return false; } });
+  const dismissHint = () => { if (!hintGone) { setHintGone(true); try { localStorage.setItem('aimap-hint-seen', '1'); } catch (e) { /* 静默 */ } } };
   const [quiz, setQuiz] = useState(null); // {items:[], checked:bool[]} 自检过关中
   const [batch, setBatch] = useState(null); // {done,total} 整组生成中
   const batchRef = useRef({ cancel: false });
@@ -147,6 +149,7 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
   };
 
   const onPointerDown = (e) => {
+    dismissHint();
     drag.current = { sx: e.clientX, sy: e.clientY, ox: view.current.x, oy: view.current.y };
     moved.current = false;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* 静默 */ }
@@ -214,6 +217,9 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
         ))}
       </div>
       <button className="amv-continue" onClick={continueLearning} title="跳到下一个该学的点：进行中 → 迷雾 → 未开始">▶ 继续学习</button>
+      {!hintGone && !sel && (
+        <div className="amv-hint">🖐 拖拽漫游 · 🔍 滚轮缩放 · 👆 点格子开学 · ▶ 不知从哪开始就点「继续学习」</div>
+      )}
 
       {/* 悬停浮签 */}
       {tip && !sel && (
@@ -384,10 +390,15 @@ export const MAP_CSS = `
 .amv-study-btn.primary:hover:not(:disabled){background:var(--accent-2);color:#fff;}
 .amv-study-btn.on{border-color:var(--accent);color:var(--accent-2);background:var(--accent-soft);}
 .amv-study-hint{font-size:10px;color:var(--text-3);line-height:1.5;}
-.amv-continue{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:3;border:1px solid var(--accent);
-  background:var(--accent);color:#fff;border-radius:999px;padding:7px 18px;font-size:12.5px;font-weight:500;cursor:pointer;
+.amv-continue{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:3;border:1px solid var(--accent);
+  background:var(--accent);color:#fff;border-radius:999px;padding:6px 18px;font-size:12.5px;font-weight:500;cursor:pointer;
   box-shadow:0 6px 18px rgba(204,120,92,.35);transition:.15s;font-family:var(--sans);}
 .amv-continue:hover{background:var(--accent-2);}
+.amv-hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:3;max-width:calc(100% - 28px);
+  background:color-mix(in srgb,var(--surface) 90%,transparent);border:1px solid var(--bd-2);border-radius:999px;
+  padding:6px 15px;font-size:11px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:0 4px 14px rgba(38,36,31,.1);backdrop-filter:blur(4px);animation:amvfade .4s ease;}
+@keyframes amvfade{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;transform:translate(-50%,0);}}
 .amv-batch{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--accent-2);font-variant-numeric:tabular-nums;}
 .amv-quiz{margin-top:10px;background:color-mix(in srgb,var(--accent-soft) 60%,var(--surface));border:1px solid var(--accent);
   border-radius:10px;padding:11px 13px;}
