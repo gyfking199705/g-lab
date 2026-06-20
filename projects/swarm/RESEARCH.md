@@ -127,6 +127,17 @@
 
 业界三种审批位：**执行前审批 / 执行后复核 / 风险触发升级**。LangGraph：`interrupt()` 暂停并 checkpoint，`Command(resume=...)` 恢复，支持 approve/edit/reject；需 checkpointer + thread_id。Microsoft Agent Framework：`ApprovalRequiredAIFunction` + `RequestInfoExecutor/Event`，checkpoint 后挂起请求可在重启后重发。**只在不可逆、高影响动作上中断**，不是每步都问。
 
+### 4.6 通信协议（互操作的两层）
+
+2024 下半年起出现一波**标准化协议**，核心心智是**纵向 vs 横向、互补不冲突**：MCP 接「agent ↔ 工具/上下文」（纵向），A2A 接「agent ↔ agent」（横向）。
+
+- **MCP（Model Context Protocol，Anthropic，2024-11）**：解决 M×N 集成问题。Host/Client/Server 架构，**JSON-RPC 2.0** 传输；三个 server 原语：**Tools**（可调用动作）/ **Resources**（可读数据）/ **Prompts**（可复用模板）；传输支持 **stdio**（本地）与 **Streamable HTTP**（2025-03 起取代旧的 HTTP+SSE）。已被 OpenAI、Google 采纳，事实上成为「接工具」的开放标准。
+- **A2A（Agent2Agent，Google，2025-04；2025-06 捐 Linux 基金会）**：跨厂商/跨框架的 agent 互操作，**不暴露内部记忆与逻辑**。原语：**Agent Card**（JSON 能力/端点/鉴权发现文档，常放 `/.well-known/...`）、**Task**（带生命周期的有状态工作）、能力发现 + 模态协商；HTTP(S) + JSON-RPC 2.0，支持 OAuth2/API-Key/mTLS。与 MCP 不同，A2A 假设对端是**能推理、能澄清的完整 agent**（对等、双向）。
+- **ACP（IBM/BeeAI）**：REST/OpenAPI 风格，单端点路由到不同框架的 agent 运行时；**已并入 A2A，2025-08 仓库归档只读**。
+- **ANP（Agent Network Protocol）**：面向开放互联网的**去中心、免信任**「agent 互联网」，三层（W3C DID 身份 / 元协议协商 / JSON-LD 应用描述），与 A2A/ACP 的企业中心化假设互补。
+
+> 取舍：企业内/跨厂商协作走 **A2A**，接工具走 **MCP**，两者叠用（A2A 谈协作、各 agent 内部用 MCP 调工具）；强去中心场景看 ANP。
+
 ---
 
 ## 5. 成本与失败模式（反方观点，必须正视）
@@ -134,9 +145,11 @@
 - **token 经济学**：agent ~4× chat；多智能体 ~15× chat；token 解释 ~80% 效果方差 → **只对高价值任务划算**。
 - **级联误差数学**：每步 95% 可靠，10 步 ≈ 60%，20 步 ≈ 36%，~50 步≈抛硬币；且误差**会被下游当作 ground truth 放大**，实际比 p^n 更糟。
 - **MAST 失败学**（2503.13657，NeurIPS'25）：14 种失败模式归 3 类——规范/系统设计 ~41.8%、智能体间错位/协调 ~36.9%、任务验证/终止 ~21.3%。即 **~79% 的失败是结构/协调问题，不是模型能力**。多智能体框架失败率 41%–86.7%。
-- **Cognition「别造多智能体」**（2025.06）：子体看不到彼此工作 → 对变量名/架构/选库做**冲突决策**，对账成本超过并行收益；尤其编码「深且顺序」，建议**单线程连续上下文 + 上下文压缩**优先于 fan-out。
+- **Cognition「别造多智能体」**（2025.06）：两条原则——①**共享上下文**（agent 要看到同一份信息/完整轨迹）；②**动作隐含决策，冲突决策必出坏结果**。子体看不到彼此工作 → 对变量名/架构/选库做**冲突决策**（经典「Flappy Bird 例子」：一个子体画了马里奥风背景、另一个画了不搭的小鸟，最后还得返工对账），对账成本超过并行收益；尤其编码「深且顺序」，建议**单线程连续上下文 + 上下文压缩**（专门的模型压缩历史）优先于 fan-out，「先上单体（monolith first）」。
+  - **后续软化**（Cognition《Multi-Agents: What's Actually Working》）：多智能体并非不能用——当**写操作保持单线程、额外 agent 只「加智能、不加动作」**（如并行的只读探索/评审）时是可行的。这与 Anthropic 的边界判断殊途同归。
+- **中间立场（LangChain）**：两派一旦按任务类型区分就基本一致——**读/可并行**的活（独立探索、隔离上下文）适合多智能体，**写/会冲突**的活（共享状态、决策相互依赖）会被反噬。本质是**上下文工程问题，而非立场之争**。
 
-> **结论**：多智能体不是银弹。**调研/检索类「广度优先、可并行、弱耦合」任务**最适合多智能体；**编码类「深度、强耦合、顺序」任务**应谨慎，优先单线程 + 压缩或严格共享上下文。
+> **结论**：多智能体不是银弹。**调研/检索类「广度优先、可并行、弱耦合、读为主」任务**最适合多智能体；**编码类「深度、强耦合、顺序、写为主」任务**应谨慎，优先单线程 + 压缩或严格共享上下文，并把**写操作收敛到单线程**。
 
 ---
 
@@ -181,7 +194,8 @@
 
 **标杆与工程博客**
 - Anthropic, *How we built our multi-agent research system* — https://www.anthropic.com/engineering/multi-agent-research-system
-- Cognition, *Don't Build Multi-Agents* — https://cognition.ai/blog/dont-build-multi-agents ；Devin 2.0 — https://cognition.ai/blog/devin-2
+- Cognition, *Don't Build Multi-Agents* — https://cognition.ai/blog/dont-build-multi-agents ；*Multi-Agents: What's Actually Working* — https://cognition.ai/blog/multi-agents-working ；Devin 2.0 — https://cognition.ai/blog/devin-2
+- LangChain, *How and when to build multi-agent systems* — https://blog.langchain.com/how-and-when-to-build-multi-agent-systems/
 - Manus, *Context Engineering for AI Agents* — https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus ；Wide Research — https://manus.im/docs/features/wide-research
 
 **框架文档**
@@ -192,6 +206,12 @@
 - Bedrock 多智能体协作 GA — https://aws.amazon.com/blogs/machine-learning/amazon-bedrock-announces-general-availability-of-multi-agent-collaboration/
 - Google ADK — https://developers.googleblog.com/en/agent-development-kit-easy-to-build-multi-agent-applications/ ；A2A — https://github.com/a2aproject/A2A
 - OpenHands SDK — https://github.com/OpenHands/software-agent-sdk
+
+**协议**
+- MCP — https://www.anthropic.com/news/model-context-protocol
+- A2A（Google → Linux 基金会）— https://github.com/a2aproject/A2A ；https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/
+- ACP（IBM/BeeAI，已并入 A2A）— https://github.com/i-am-bee/acp ；ANP — https://github.com/agent-network-protocol/AgentNetworkProtocol
+- MCP vs A2A 对比 — https://auth0.com/blog/mcp-vs-a2a/
 
 **论文（arXiv）**
 - 多智能体协作综述 2501.06322；通信中心综述 2502.14321；图增强综述 2507.21407
