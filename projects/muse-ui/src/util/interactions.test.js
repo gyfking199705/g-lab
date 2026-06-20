@@ -8,8 +8,28 @@ import {
   countAt,
   formatNumber,
   meshGradient,
+  typedSlice,
+  typeDone,
+  linearGradient,
 } from './interactions.js';
 import { easings } from './anim.js';
+
+test('typedSlice / typeDone：按时间推进切片', () => {
+  assert.equal(typedSlice('hello', 0, 22), '');
+  assert.equal(typedSlice('hello', 0.1, 20), 'he'); // floor(2)
+  assert.equal(typedSlice('hello', 100, 20), 'hello'); // 不越界
+  assert.equal(typedSlice('', 5, 20), '');
+  assert.equal(typeDone('hi', 0, 20), false);
+  assert.equal(typeDone('hi', 1, 20), true);
+});
+
+test('linearGradient：含每个颜色与角度、空兜底', () => {
+  const g = linearGradient(['#111111', '#222222'], 45);
+  assert.match(g, /linear-gradient\(45deg/);
+  assert.match(g, /#111111/);
+  assert.match(g, /#222222/);
+  assert.match(linearGradient(null), /linear-gradient/);
+});
 
 test('tiltTransform：中心无倾斜、四角到极值、越界裁剪', () => {
   const c = tiltTransform(50, 50, 100, 100, 12);
