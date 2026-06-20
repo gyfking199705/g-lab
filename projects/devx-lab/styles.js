@@ -87,6 +87,8 @@ export const CSS = `
 .dx-detail{margin-top:12px;border-top:1px solid var(--bd-2);padding-top:12px;}
 .dx-detail h4{font-size:11px;color:var(--t3);letter-spacing:.5px;text-transform:uppercase;margin:0 0 6px;font-weight:600;}
 .dx-detail ul{margin:0 0 12px;padding-left:18px;}
+.dx-ev{font-size:12.5px;color:var(--t2);font-style:italic;margin:0 0 12px;padding-left:10px;
+  border-left:2px solid var(--accent-soft);}
 .dx-detail li{font-size:13px;color:var(--t2);margin-bottom:3px;}
 .dx-src{font-size:12px;}
 

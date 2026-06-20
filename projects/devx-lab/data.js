@@ -132,6 +132,8 @@ export const PRACTICES = [
   // —— AI 辅助研发 ——
   {
     id: 'ai-pairing',
+    evidence:
+      '行业实践与 DevEx 研究表明，AI 辅助能显著压缩样板代码、单测与脚手架的编写时间，并降低认知负荷。',
     title: 'AI 结对编程（Copilot / Claude Code）',
     category: 'ai',
     frameworks: ['devex', 'core4'],
@@ -152,6 +154,8 @@ export const PRACTICES = [
   },
   {
     id: 'ai-review',
+    evidence:
+      'AI 先做机械检查可减少评审者的上下文重建成本，让人聚焦设计与正确性（SPACE 的沟通维度）。',
     title: 'AI 辅助代码评审与摘要',
     category: 'ai',
     frameworks: ['space', 'devex'],
@@ -174,6 +178,8 @@ export const PRACTICES = [
   // —— 持续交付 ——
   {
     id: 'cicd',
+    evidence:
+      'DORA 多年研究将持续交付列为同时预测交付速度与稳定性的核心能力。',
     title: '持续集成 / 持续交付（CI/CD）',
     category: 'cd',
     frameworks: ['dora'],
@@ -192,6 +198,8 @@ export const PRACTICES = [
   },
   {
     id: 'tbd',
+    evidence:
+      'Accelerate/DORA 发现主干开发（短分支、频繁集成）与高交付效能正相关。',
     requires: ['cicd'],
     title: '主干开发（Trunk-Based Development）',
     category: 'cd',
@@ -211,6 +219,8 @@ export const PRACTICES = [
   },
   {
     id: 'flags',
+    evidence:
+      '将部署与发布解耦、配合渐进放量，被 DORA 列为降低变更失败影响的关键实践。',
     requires: ['cicd'],
     title: '功能开关与渐进发布',
     category: 'cd',
@@ -232,6 +242,8 @@ export const PRACTICES = [
   // —— 代码与评审 ——
   {
     id: 'small-pr',
+    evidence:
+      'Google 工程实践指出小而聚焦的改动评审更快、缺陷更少、回滚更容易。',
     title: '小批量提交 / 小 PR',
     category: 'code',
     frameworks: ['dora', 'devex'],
@@ -252,6 +264,8 @@ export const PRACTICES = [
   },
   {
     id: 'review-sla',
+    evidence:
+      'Google 工程实践强调评审速度：快速首响能消除隐性等待、保护协作心流。',
     title: '代码评审 SLA 与轮值',
     category: 'code',
     frameworks: ['space', 'devex'],
@@ -272,6 +286,8 @@ export const PRACTICES = [
   },
   {
     id: 'conv-commits',
+    evidence:
+      '统一提交规范让变更日志、版本号与发布说明可自动生成，减少手工与沟通成本。',
     title: '约定式提交 + 语义化版本',
     category: 'code',
     frameworks: ['core4'],
@@ -295,6 +311,8 @@ export const PRACTICES = [
   // —— 测试与质量 ——
   {
     id: 'test-pyramid',
+    evidence:
+      'DevEx 指出快速、可信的测试是缩短反馈回路、让人敢于频繁改动的关键。',
     title: '测试金字塔与快测试',
     category: 'quality',
     frameworks: ['devex', 'dora'],
@@ -315,6 +333,8 @@ export const PRACTICES = [
   },
   {
     id: 'shift-left',
+    evidence:
+      'DORA 将自动化测试与安全左移列为提升稳定性的能力——问题越早暴露修复越便宜。',
     requires: ['cicd'],
     title: '质量左移（静态检查 / pre-commit）',
     category: 'quality',
@@ -334,6 +354,8 @@ export const PRACTICES = [
   },
   {
     id: 'dora-cfr',
+    evidence:
+      'DORA 把可回滚与故障演练与更短的故障恢复时间相联系。',
     requires: ['cicd'],
     title: '可回滚 + 演练故障恢复',
     category: 'quality',
@@ -355,6 +377,8 @@ export const PRACTICES = [
   // —— 平台工程 ——
   {
     id: 'golden-path',
+    evidence:
+      'CNCF 平台白皮书主张用有主见的黄金路径把最佳实践产品化，降低团队认知负荷。',
     title: '黄金路径（Golden Path）脚手架',
     category: 'platform',
     frameworks: ['platform', 'topologies'],
@@ -375,6 +399,8 @@ export const PRACTICES = [
   },
   {
     id: 'idp-portal',
+    evidence:
+      '内部开发者门户用统一服务目录与自助入口减少“东西在哪、归谁、怎么用”的找寻成本。',
     requires: ['golden-path'],
     title: '内部开发者门户（Backstage 等）',
     category: 'platform',
@@ -394,6 +420,8 @@ export const PRACTICES = [
   },
   {
     id: 'twelve-factor',
+    evidence:
+      '十二要素让应用在任意环境一致运行，降低环境差异带来的排障成本。',
     title: '十二要素 / 云原生应用规范',
     category: 'platform',
     frameworks: ['platform'],
@@ -414,6 +442,8 @@ export const PRACTICES = [
   // —— 协作与流程 ——
   {
     id: 'wip-limit',
+    evidence:
+      '精益/看板表明限制在制品能减少上下文切换与排队，缩短前置时间。',
     title: '限制在制品（WIP）与拉式流',
     category: 'flow',
     frameworks: ['space', 'topologies'],
@@ -434,6 +464,8 @@ export const PRACTICES = [
   },
   {
     id: 'team-cognitive',
+    evidence:
+      'Team Topologies 主张按认知负荷划分团队边界，让流式团队端到端快速交付。',
     title: '按认知负荷划分团队边界',
     category: 'flow',
     frameworks: ['topologies'],
@@ -452,6 +484,8 @@ export const PRACTICES = [
   },
   {
     id: 'docs-async',
+    evidence:
+      'DevEx 指出异步沟通与文档优先能保护专注时段、让知识可检索。',
     title: '异步沟通 + 文档优先',
     category: 'flow',
     frameworks: ['devex', 'space'],
@@ -474,6 +508,8 @@ export const PRACTICES = [
   // —— 度量与反馈 ——
   {
     id: 'four-keys',
+    evidence:
+      'DORA 四项指标是被大样本研究验证、与组织绩效相关的交付效能度量。',
     requires: ['cicd'],
     title: '度量 DORA 四项指标',
     category: 'metrics',
@@ -493,6 +529,8 @@ export const PRACTICES = [
   },
   {
     id: 'space-mix',
+    evidence:
+      'SPACE 主张混合主客观、避免单一指标驱动行为，绕开“指标即目标”陷阱。',
     title: '混合主客观度量（SPACE）',
     category: 'metrics',
     frameworks: ['space', 'core4'],
@@ -513,6 +551,8 @@ export const PRACTICES = [
   },
   {
     id: 'observability',
+    evidence:
+      '统一的指标/日志/链路标准（如 OpenTelemetry）能加快定位、缩短故障恢复时间。',
     title: '可观测性（OpenTelemetry）',
     category: 'metrics',
     frameworks: ['dora'],
@@ -533,6 +573,8 @@ export const PRACTICES = [
   // —— 开发者体验 ——
   {
     id: 'fast-onboard',
+    evidence:
+      'DevEx 把上手时间（首次提交耗时）作为开发者体验的重要观测点。',
     title: '一键环境 / 十分钟上手',
     category: 'devex',
     frameworks: ['devex', 'platform'],
@@ -553,6 +595,8 @@ export const PRACTICES = [
   },
   {
     id: 'fast-build',
+    evidence:
+      'DevEx 指出更短的构建/测试反馈回路直接改善心流与产出。',
     title: '快构建 / 增量与远端缓存',
     category: 'devex',
     frameworks: ['devex'],
@@ -573,6 +617,8 @@ export const PRACTICES = [
   },
   {
     id: 'flow-protect',
+    evidence:
+      'DevEx 将“心流状态”列为三大核心维度之一——完整专注时间是高产出的前提。',
     title: '保护心流（减少中断与会议）',
     category: 'devex',
     frameworks: ['devex', 'space'],
@@ -595,6 +641,8 @@ export const PRACTICES = [
   // —— 补充批次 ——
   {
     id: 'ai-agents',
+    evidence:
+      'Anthropic 的实践指南建议从边界清晰、可验证的任务起步让智能体自主多步执行，并保留人审。',
     title: 'AI 智能体工作流（Agentic）',
     category: 'ai',
     frameworks: ['devex', 'core4'],
@@ -615,6 +663,8 @@ export const PRACTICES = [
   },
   {
     id: 'iac',
+    evidence:
+      'DORA 将基础设施即代码列为提升交付与稳定的能力，消除环境漂移与“雪花服务器”。',
     title: '基础设施即代码（IaC）',
     category: 'platform',
     frameworks: ['dora', 'platform'],
@@ -635,6 +685,8 @@ export const PRACTICES = [
   },
   {
     id: 'db-migration',
+    evidence:
+      'DORA 把数据库变更管理（版本化、可回滚）列为避免数据库成为交付瓶颈的能力。',
     requires: ['cicd'],
     title: '数据库变更管理',
     category: 'cd',
@@ -656,6 +708,8 @@ export const PRACTICES = [
   },
   {
     id: 'tdd',
+    evidence:
+      'Martin Fowler 等指出 TDD 用红-绿-重构逼出可测试设计并形成快速回归网。',
     title: '测试驱动开发（TDD）',
     category: 'quality',
     frameworks: ['devex', 'dora'],
@@ -676,6 +730,8 @@ export const PRACTICES = [
   },
   {
     id: 'contract-testing',
+    evidence:
+      '消费者驱动契约（如 Pact）以独立验证替代脆弱的端到端测试，支撑独立部署。',
     requires: ['test-pyramid'],
     title: '契约测试（Consumer-Driven Contracts）',
     category: 'quality',
@@ -695,6 +751,8 @@ export const PRACTICES = [
   },
   {
     id: 'chaos',
+    evidence:
+      '混沌工程通过受控注入故障提前暴露脆弱点，提升对稳定与快速恢复的信心。',
     requires: ['observability', 'slo'],
     title: '混沌工程',
     category: 'quality',
@@ -714,6 +772,8 @@ export const PRACTICES = [
   },
   {
     id: 'slo',
+    evidence:
+      'Google SRE 用 SLO 与错误预算量化可靠性，并据此平衡发布速度与稳定。',
     requires: ['observability'],
     title: 'SLO 与错误预算',
     category: 'metrics',
@@ -735,6 +795,8 @@ export const PRACTICES = [
   },
   {
     id: 'blameless',
+    evidence:
+      'DORA 发现 Westrum“生成式”文化与高交付表现强相关，是诸多能力得以落地的土壤。',
     title: '无指责复盘 / 生成式文化',
     category: 'flow',
     frameworks: ['dora', 'space'],
@@ -755,6 +817,8 @@ export const PRACTICES = [
   },
   {
     id: 'policy-as-code',
+    evidence:
+      '把护栏写成可执行策略（如 OPA）让“正确的事”成为默认、低摩擦的路径。',
     requires: ['iac'],
     title: '策略即代码 / 默认合规',
     category: 'platform',
@@ -774,6 +838,8 @@ export const PRACTICES = [
   },
   {
     id: 'dep-automation',
+    evidence:
+      '小步频繁的自动依赖升级（Dependabot/Renovate）替代高风险的一次性大升级，并缩短漏洞暴露时长。',
     title: '依赖自动升级与软件供应链安全',
     category: 'quality',
     frameworks: ['dora', 'devex'],
@@ -794,6 +860,8 @@ export const PRACTICES = [
   },
   {
     id: 'docs-as-code',
+    evidence:
+      '用代码工具链管理文档（版本控制、评审、CI 发布）能降低查找与维护成本、避免文档过期。',
     title: '文档即代码（Docs as Code）',
     category: 'devex',
     frameworks: ['devex'],

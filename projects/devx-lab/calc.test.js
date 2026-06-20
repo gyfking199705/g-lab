@@ -25,6 +25,7 @@ import {
   prerequisitesOf,
   unlocksOf,
   curesOf,
+  adoptionChecklistMarkdown,
 } from './calc.js';
 import { PRACTICES, CATEGORIES, FRAMEWORKS, ANTIPATTERNS } from './data.js';
 
@@ -38,6 +39,7 @@ test('数据自洽：每条范式的类别都在 CATEGORIES 内，评分在 1..5
       assert.ok(s >= 1 && s <= 5, `${p.id} 评分越界`);
     }
     assert.ok(p.id && p.title && p.summary, `${p.id} 字段缺失`);
+    assert.ok(typeof p.evidence === 'string' && p.evidence.length > 8, `${p.id} 缺证据点`);
   }
   // id 唯一
   assert.equal(new Set(PRACTICES.map((p) => p.id)).size, PRACTICES.length);
@@ -368,6 +370,21 @@ test('teamReportMarkdown: 含五节标题与评级', () => {
   // 全 Elite 无第五节
   const elite = teamReportMarkdown({ bands: { deploy: 0, lead: 0, cfr: 0, mttr: 0 } });
   assert.doesNotMatch(elite, /## 五、优先处方/);
+});
+
+test('adoptionChecklistMarkdown: 按状态分组、checkbox 正确', () => {
+  const p0 = PRACTICES[0].id, p1 = PRACTICES[1].id;
+  const md = adoptionChecklistMarkdown(PRACTICES, { [p0]: 'done', [p1]: 'doing' });
+  assert.match(md, /# 提效范式采纳清单/);
+  assert.match(md, /## 已落地（1）/);
+  assert.match(md, /## 进行中（1）/);
+  assert.match(md, /## 未开始（\d+）/);
+  assert.match(md, /- \[x\] /); // 已落地用 [x]
+  assert.match(md, /- \[ \] /); // 其余 [ ]
+  // 全未开始时无已落地/进行中段
+  const empty = adoptionChecklistMarkdown(PRACTICES, {});
+  assert.doesNotMatch(empty, /## 已落地/);
+  assert.match(empty, /## 未开始（34）/);
 });
 
 test('doraMarkdown: 含评级、四指标行与口径说明', () => {

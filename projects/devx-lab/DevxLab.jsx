@@ -5,7 +5,7 @@
 import React, { useRef, useState } from 'react';
 import { CSS } from './styles.js';
 import { PRACTICES, FRAMEWORKS } from './data.js';
-import { summaryStats, adoptionStats, buildExport, parseImport, buildSnapshot, upsertSnapshot } from './calc.js';
+import { summaryStats, adoptionStats, buildExport, parseImport, buildSnapshot, upsertSnapshot, adoptionChecklistMarkdown } from './calc.js';
 import { load, save } from './store.js';
 import Practices from './Practices.jsx';
 import Frameworks from './Frameworks.jsx';
@@ -78,6 +78,17 @@ export default function DevxLab() {
   }
 
   const fileRef = useRef(null);
+
+  function exportChecklist() {
+    const md = adoptionChecklistMarkdown(PRACTICES, statuses);
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `devx-checklist-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function exportData() {
     const snap = buildExport({ favs, statuses, bands, snaps });
@@ -178,7 +189,8 @@ export default function DevxLab() {
       )}
 
       <div className="dx-data">
-        <span className="dx-data-h">我的数据（收藏 / 采纳状态 / 自评）</span>
+        <span className="dx-data-h">我的数据（收藏 / 采纳状态 / 自评 / 趋势）</span>
+        <button className="dx-copy" onClick={exportChecklist}>采纳清单 .md</button>
         <button className="dx-copy" onClick={exportData}>导出备份</button>
         <button className="dx-copy" onClick={() => fileRef.current && fileRef.current.click()}>导入</button>
         <input

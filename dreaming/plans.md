@@ -203,3 +203,24 @@
   1. 画廊每区块加「可调 props 控件 + 实时代码片段 + 一键复制」
   2. README/独立页补发布指南；校验 npm pack 内容(dist+index.d.ts+README)
 - 验收: playground 可调 props 实时预览并复制代码；npm pack 产物正确完整
+## P-13 · 采纳清单导出 + 范式证据点
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 都为内容/导出增强，纯前端纯函数；证据点为每条范式补一句'研究怎么说'，导出清单复用 statusOf/adoptionStats
+- 步骤:
+  1. data 给每条范式加 evidence（一句话、归因到其出处，不杜撰数字）
+  2. calc 加 adoptionChecklistMarkdown(按状态分组的 Markdown checklist) 并单测；强化数据自洽测试要求 evidence 齐全
+  3. Practices 详情加『研究怎么说』；DevxLab 数据栏加『导出采纳清单(.md)』
+- 验收: 每条范式详情显示证据点；一键导出按状态分组的 checklist；node --test 全绿
+
+## P-14 · devx-lab 英文界面（i18n 语言切换）
+- 状态: proposed
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 仓库已有 DESIGN.en/AGENTS.en 双语先例；加语言切换让界面可中英；UI 文案外置、数据补英文字段、回退中文
+- 步骤:
+  1. i18n.js 放 UI 文案 zh/en + t() 取词；数据加英文字段；组件接 lang
+  2. header 加 中/EN 切换并持久化；各视图改用 t()
+  3. SSR 验证两种语言渲染 + 单测
+- 验收: 切到 EN 后界面文案为英文、数据有英文则显示英文否则回退；node --test 全绿

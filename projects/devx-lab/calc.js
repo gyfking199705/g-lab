@@ -362,6 +362,33 @@ export function topoOrder(practices = PRACTICES) {
   return { waves, hasCycle };
 }
 
+/**
+ * 采纳清单 Markdown：按状态（已落地 / 进行中 / 未开始）分组的 checklist，贴团队 wiki 用。
+ * 已落地用 [x]，其余用 [ ]。
+ */
+export function adoptionChecklistMarkdown(practices = PRACTICES, statuses = {}) {
+  const groups = { done: [], doing: [], todo: [] };
+  for (const p of practices || []) groups[statusOf(statuses, p.id)].push(p);
+  const a = adoptionStats(practices, statuses);
+  const L = [
+    '# 提效范式采纳清单',
+    '',
+    `落地率 ${a.percent}% · 已落地 ${a.done} / 进行中 ${a.doing} / 未开始 ${a.todo} · 共 ${a.total}`,
+    '',
+  ];
+  const sec = (title, arr, checked) => {
+    if (!arr.length) return;
+    L.push(`## ${title}（${arr.length}）`, '');
+    for (const p of arr) L.push(`- [${checked ? 'x' : ' '}] ${p.title}`);
+    L.push('');
+  };
+  sec('已落地', groups.done, true);
+  sec('进行中', groups.doing, false);
+  sec('未开始', groups.todo, false);
+  L.push('> 由 devx-lab 生成 · 仅用于团队自评。');
+  return L.join('\n');
+}
+
 // ── DORA 自评导出 ───────────────────────────────────────────────────
 
 /** 把自评结果渲染成可粘贴的 Markdown（贴周报/文档用）。 */

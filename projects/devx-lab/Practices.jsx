@@ -98,6 +98,12 @@ function Card({ p, fav, onFav, onFramework, status, onStatus, onGotoPractice, on
 
       {open && (
         <div className="dx-detail">
+          {p.evidence && (
+            <>
+              <h4>研究怎么说</h4>
+              <p className="dx-ev">{p.evidence}</p>
+            </>
+          )}
           <h4>落地步骤</h4>
           <ul>{p.how.map((h, i) => <li key={i}>{h}</li>)}</ul>
           <h4>关注信号</h4>
