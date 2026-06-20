@@ -1,0 +1,10 @@
+{
+  "name": "agent-cli",
+  "version": "1.0.0",
+  "description": "Agent CLI 交互研究：复刻并对比业界 coding-agent CLI（Claude Code / Codex / Gemini CLI）的交互方式 —— 纯逻辑引擎 + React 终端 + BYOK AI + 调研对比。",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.mjs"
+  }
+}
