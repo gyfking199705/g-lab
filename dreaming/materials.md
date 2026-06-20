@@ -230,3 +230,10 @@
 - 子项目: mock-lab
 - 重点: codegen 新增 pytestFixture/pythonRequestsMock/vcrCassette 三个纯函数生成器并注册到工坊，+4 单测共 30 全绿，重建 bundle
 - 解决的问题: 原 6 种产物偏 responses/respx；补齐 pytest 复用 fixture、requests-mock、离线可回放磁带，强化 Python 优先与可植入
+
+## M-29 · 2026-06-20 · muse-ui v0.5：CommandPalette 与 Typewriter 打磨
+- 作者: claude
+- 提交: 496d13e
+- 子项目: muse-ui
+- 重点: CommandPalette 分组/最近/高亮；Typewriter 多句循环+退格（纯函数 typewriterState）。
+- 解决的问题: 把两核心组件打磨到好用，逻辑保持纯函数可测。
