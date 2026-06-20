@@ -136,6 +136,32 @@ export const CSS = `
 .pl-foot{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--bd);
   padding:14px 22px;display:flex;justify-content:flex-end;gap:9px;}
 
+/* version history + diff */
+.pl-hist{display:flex;flex-direction:column;gap:8px;}
+.pl-hist-item{border:1px solid var(--bd);border-radius:10px;background:var(--surface);padding:9px 11px;}
+.pl-hist-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--t2);}
+.pl-hist-head b{color:var(--t1);font-weight:500;}
+.pl-hist-time{color:var(--t3);font-size:11.5px;margin-left:8px;}
+.pl-diff{border:1px solid var(--bd);border-radius:8px;overflow:hidden;font-family:var(--mono);
+  font-size:12px;line-height:1.55;margin-top:6px;}
+.pl-diff-row{display:flex;gap:8px;padding:1px 8px;white-space:pre-wrap;word-break:break-word;}
+.pl-diff-gut{flex:0 0 12px;color:var(--t3);user-select:none;}
+.pl-diff-txt{flex:1;}
+.pl-diff-eq{color:var(--t2);}
+.pl-diff-add{background:rgba(110,144,121,.13);color:#3f5a48;}
+.pl-diff-del{background:rgba(188,96,85,.12);color:#8d3b33;}
+
+/* batch compare */
+.pl-batch{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.pl-batch-col{border:1px solid var(--bd);border-radius:10px;background:var(--surface);padding:10px;display:flex;flex-direction:column;gap:7px;}
+.pl-batch-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--t2);font-weight:500;}
+.pl-batch-field{display:flex;flex-direction:column;gap:3px;}
+.pl-batch-field label{font-family:var(--mono);font-size:11.5px;color:var(--accent-2);}
+.pl-batch-field input{border:1px solid var(--bd);border-radius:6px;padding:5px 8px;font-family:var(--sans);
+  font-size:12.5px;background:var(--surface-2);outline:none;}
+.pl-batch-field input:focus{border-color:var(--accent);}
+.pl-batch-out{font-size:11.5px;max-height:200px;overflow:auto;margin-top:2px;}
+
 /* toast */
 .pl-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#33302A;color:#fff;
   font-size:13px;padding:9px 16px;border-radius:10px;z-index:100;display:flex;align-items:center;gap:7px;

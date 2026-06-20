@@ -5,6 +5,7 @@ import { loadState, saveState } from './store.js';
 import { SEEDS } from './seeds.js';
 import {
   normalizePrompt,
+  commitEdit,
   filterPrompts,
   sortPrompts,
   buildExport,
@@ -61,14 +62,24 @@ export default function App() {
     setPrompts((ps) => ps.map((p) => (p.id === id ? { ...p, favorite: !p.favorite } : p)));
 
   const save = (data) => {
-    const norm = normalizePrompt(data);
+    let savedId = null;
     setPrompts((ps) => {
-      const exists = ps.some((p) => p.id === norm.id);
-      return exists ? ps.map((p) => (p.id === norm.id ? norm : p)) : [norm, ...ps];
+      const prev = data.id ? ps.find((p) => p.id === data.id) : null;
+      const norm = prev ? commitEdit(prev, data) : normalizePrompt(data);
+      savedId = norm.id;
+      return prev ? ps.map((p) => (p.id === norm.id ? norm : p)) : [norm, ...ps];
     });
     setEditing(null);
-    setOpenId(norm.id);
+    setOpenId(savedId);
     showToast(data.id ? '已保存修改' : '已添加 Prompt');
+  };
+
+  // 从历史版本恢复：把选中快照的正文/角色写回（恢复动作本身也记一版历史）。
+  const restore = (id, snapshot) => {
+    setPrompts((ps) =>
+      ps.map((p) => (p.id === id ? commitEdit(p, { content: snapshot.content, system: snapshot.system }) : p))
+    );
+    showToast(`已恢复到 ${snapshot.version || '历史版本'}`);
   };
 
   const remove = (p) => {
@@ -203,6 +214,7 @@ export default function App() {
           }}
           onDelete={remove}
           onToggleFav={toggleFav}
+          onRestore={restore}
           onToast={showToast}
         />
       ) : null}
