@@ -17,6 +17,7 @@ export { default as ConfettiButton } from './ConfettiButton.jsx';
 export { default as StickyCanvas } from './StickyCanvas.jsx';
 export { default as Sketchy } from './Sketchy.jsx';
 export { default as Sparkles } from './Sparkles.jsx';
+export { default as Parallax } from './Parallax.jsx';
 
 // 纯工具（高级用法）
 export * from './util/anim.js';
@@ -25,4 +26,5 @@ export { fuzzyScore, filterCommands, fuzzyMatchIndices, groupCommands, pickByIds
 export { makeParticles, stepParticle } from './util/particles.js';
 export { clampNote, snap, reorderToFront, cascadeXY } from './util/board.js';
 export { mulberry32, roughRectPath, makeSparkles } from './util/sketch.js';
+export { parallaxOffset, pointerToNorm } from './util/parallax.js';
 export { useRaf, usePrefersReducedMotion, useInjectedStyle } from './util/hooks.js';

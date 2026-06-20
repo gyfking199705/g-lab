@@ -173,6 +173,15 @@ export interface SparklesProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 export const Sparkles: React.FC<SparklesProps>;
 
+export interface ParallaxProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * depth=1 时子层的最大位移像素，默认 24。
+   * 子元素通过 data-depth 属性指定深度系数（建议 0..1，负值反向）。
+   */
+  maxPx?: number;
+}
+export const Parallax: React.FC<ParallaxProps>;
+
 /* ============================ 纯函数 ============================ */
 export function clamp(v: number, min: number, max: number): number;
 export function lerp(a: number, b: number, t: number): number;
@@ -209,6 +218,8 @@ export function clampNote(x: number, y: number, w: number, h: number, bounds: { 
 export function snap(v: number, grid: number): number;
 export function reorderToFront<T extends { id: string }>(notes: T[], id: string): T[];
 export function cascadeXY(count: number, step?: number, base?: number): { x: number; y: number };
+export function parallaxOffset(nx: number, ny: number, depth: number, maxPx?: number): { x: number; y: number };
+export function pointerToNorm(px: number, py: number, w: number, h: number): { nx: number; ny: number };
 export function mulberry32(seed: number): () => number;
 export function roughRectPath(w: number, h: number, opts?: { roughness?: number; inset?: number; segments?: number; passes?: number; seed?: number }): string;
 export interface Sparkle { x: number; y: number; size: number; delay: number; dur: number }

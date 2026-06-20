@@ -3,7 +3,7 @@
  * 仅用于演示，不打进库；库入口是 ../src/index.js。
  */
 import React, { useState, useEffect } from 'react';
-import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp, GradientText, Typewriter, CommandPalette, ScrambleText, Marquee, ConfettiButton, StickyCanvas, Sketchy, Sparkles } from '../src/index.js';
+import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp, GradientText, Typewriter, CommandPalette, ScrambleText, Marquee, ConfettiButton, StickyCanvas, Sketchy, Sparkles, Parallax } from '../src/index.js';
 
 const CSS = `
 .gx{--accent:#CC785C;--ink:#33312C;--t2:#6B675E;--t3:#9B978C;--bd:#E5E1D8;--surface:#FBFAF6;
@@ -82,7 +82,7 @@ export default function Gallery() {
         <p>UI 组件脑爆 + research 实验室 · 零依赖、复制即用、自带样式、支持「减少动效」</p>
         <div className="gx-stats">
           <div className="gx-stat">
-            <b><CountUp value={15} duration={1.2} /></b>
+            <b><CountUp value={16} duration={1.2} /></b>
             <span>组件</span>
           </div>
           <div className="gx-stat">
@@ -223,9 +223,29 @@ export default function Gallery() {
         </Sparkles>
       </Section>
 
+      <Section title="指针视差分层" tag="<Parallax>" desc="子元素通过 data-depth 设置深度系数，鼠标移动时各层产生不同幅度的平移，营造立体视差感。把鼠标移进来试试。">
+        <Parallax maxPx={28} className="gx-card gx-dark" style={{ minHeight: 160, overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div data-depth="0.15" style={{ position: 'absolute', width: 120, height: 120, borderRadius: '50%', background: 'rgba(110,131,196,0.18)', top: '10%', left: '8%' }} />
+          <div data-depth="0.4" style={{ position: 'absolute', width: 80, height: 80, borderRadius: '50%', background: 'rgba(204,120,92,0.22)', bottom: '12%', right: '10%' }} />
+          <div data-depth="0.8" style={{ position: 'relative', textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>depth=0.8</div>
+            <div style={{ fontSize: 12.5, opacity: 0.7, marginTop: 4 }}>前景层移动最多</div>
+          </div>
+          <div data-depth="0.2" style={{ position: 'absolute', bottom: 12, left: 16, fontSize: 12, opacity: 0.5 }}>depth=0.2 背景层</div>
+        </Parallax>
+        <Parallax maxPx={36} className="gx-card" style={{ minHeight: 160, overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#F3E7E0,#fff)' }}>
+          <div data-depth="-0.3" style={{ position: 'absolute', fontSize: 56, top: 8, right: 16, opacity: 0.12, userSelect: 'none' }}>✦</div>
+          <div data-depth="0.6" style={{ position: 'absolute', fontSize: 32, bottom: 8, left: 16, opacity: 0.15, userSelect: 'none' }}>◆</div>
+          <div data-depth="1" style={{ position: 'relative', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#CC785C' }}>depth=1</div>
+            <div style={{ fontSize: 12.5, color: '#9B978C', marginTop: 4 }}>负 depth 反向漂移</div>
+          </div>
+        </Parallax>
+      </Section>
+
       <div className="gx-foot">
         <code>npm i muse-ui</code> · <code>import {'{ TiltCard }'} from 'muse-ui'</code>
-        <br />15 个组件 · 零运行时依赖 · 自带样式无需引 CSS · 尊重 prefers-reduced-motion
+        <br />16 个组件 · 零运行时依赖 · 自带样式无需引 CSS · 尊重 prefers-reduced-motion
       </div>
     </div>
   );
