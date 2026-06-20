@@ -159,6 +159,7 @@ export default function DevxLab() {
           statuses={statuses}
           onSetStatus={setStatus}
           focus={focus}
+          onGotoAntipatterns={() => setTab('antipatterns')}
         />
       )}
       {tab === 'antipatterns' && <AntiPatterns onGoto={gotoPractice} />}

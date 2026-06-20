@@ -86,6 +86,17 @@ export const CSS = `
 .dx-detail li{font-size:13px;color:var(--t2);margin-bottom:3px;}
 .dx-src{font-size:12px;}
 
+/* relations in card detail */
+.dx-rel{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
+.dx-rel-row{display:flex;gap:8px;align-items:flex-start;}
+.dx-rel-row .rl{font-size:11px;color:var(--t3);min-width:30px;padding-top:4px;flex-shrink:0;}
+.dx-rel-row .rc{display:flex;flex-wrap:wrap;gap:5px;}
+.dx-rel-chip{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--accent-2);
+  background:var(--surface-2);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;transition:all .15s;}
+.dx-rel-chip:hover{border-color:var(--accent);background:var(--accent-soft);}
+.dx-rel-chip.cure{color:var(--danger);}
+.dx-rel-chip.cure:hover{border-color:var(--danger);background:#FBEEEC;}
+
 .dx-empty{text-align:center;color:var(--t3);padding:50px 0;font-size:14px;}
 
 /* frameworks */

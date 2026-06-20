@@ -2,7 +2,15 @@
  * devx-lab 纯逻辑层：范式筛选/排序/统计 + DORA 自评分级。
  * 全部为纯函数，可 `node --test` 单测，与 UI 解耦。
  */
-import { PRACTICES, CATEGORIES, FRAMEWORKS, DORA_METRICS, DORA_LEVELS, ADOPTION_STATUS } from './data.js';
+import {
+  PRACTICES,
+  CATEGORIES,
+  FRAMEWORKS,
+  DORA_METRICS,
+  DORA_LEVELS,
+  ADOPTION_STATUS,
+  ANTIPATTERNS,
+} from './data.js';
 
 const STATUS_IDS = ADOPTION_STATUS.map((s) => s.id);
 
@@ -253,6 +261,25 @@ export function parseImport(text) {
     bands: isObj(o.bands) ? o.bands : {},
     snaps: Array.isArray(o.snaps) ? o.snaps.filter((s) => s && typeof s === 'object') : [],
   };
+}
+
+// ── 范式关系网（前置 / 解锁 / 可对治反模式） ────────────────────────
+
+/** 该范式的前置依赖（它 requires 的范式）。 */
+export function prerequisitesOf(p, practices = PRACTICES) {
+  const map = new Map((practices || []).map((x) => [x.id, x]));
+  return ((p && p.requires) || []).map((id) => map.get(id)).filter(Boolean);
+}
+
+/** 该范式解锁的后续范式（哪些范式 requires 它）。 */
+export function unlocksOf(p, practices = PRACTICES) {
+  const id = p && p.id;
+  return (practices || []).filter((x) => (x.requires || []).includes(id));
+}
+
+/** 该范式能对治的反模式（哪些反模式把它列为解药）。 */
+export function curesOf(practiceId, antipatterns = ANTIPATTERNS) {
+  return (antipatterns || []).filter((a) => (a.antidotes || []).includes(practiceId));
 }
 
 // ── 落地路线：处方式推荐 + 拓扑排序 ─────────────────────────────────

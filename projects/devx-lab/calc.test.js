@@ -22,6 +22,9 @@ import {
   teamReportMarkdown,
   buildSnapshot,
   upsertSnapshot,
+  prerequisitesOf,
+  unlocksOf,
+  curesOf,
 } from './calc.js';
 import { PRACTICES, CATEGORIES, FRAMEWORKS, ANTIPATTERNS } from './data.js';
 
@@ -233,6 +236,22 @@ test('upsertSnapshot: 同日覆盖、按时间排序、限长', () => {
   }
   assert.equal(acc.length, 60);
   assert.equal(acc[acc.length - 1].percent, 69); // 保留最新
+});
+
+test('范式关系网: prerequisitesOf / unlocksOf / curesOf', () => {
+  const byId = Object.fromEntries(PRACTICES.map((p) => [p.id, p]));
+  // tbd 前置 cicd
+  assert.deepEqual(prerequisitesOf(byId.tbd).map((p) => p.id), ['cicd']);
+  // cicd 解锁包含 tbd / flags / shift-left 等（都 requires cicd）
+  const unlocks = unlocksOf(byId.cicd).map((p) => p.id);
+  assert.ok(unlocks.includes('tbd') && unlocks.includes('flags'));
+  // 无前置的范式返回空
+  assert.deepEqual(prerequisitesOf(byId.cicd), []);
+  // curesOf：tbd 是「长期特性分支」的解药
+  const cures = curesOf('tbd').map((a) => a.id);
+  assert.ok(cures.includes('long-branches'));
+  // 不被任何反模式引用的范式 → 空
+  assert.deepEqual(curesOf('__none__'), []);
 });
 
 test('prescribe: 弱项出处方、已落地剔除、全 Elite 无处方', () => {

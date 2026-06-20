@@ -3,7 +3,16 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { PRACTICES, CATEGORIES, FRAMEWORKS, ADOPTION_STATUS } from './data.js';
-import { filterPractices, sortPractices, roi, categoryCounts, statusOf } from './calc.js';
+import {
+  filterPractices,
+  sortPractices,
+  roi,
+  categoryCounts,
+  statusOf,
+  prerequisitesOf,
+  unlocksOf,
+  curesOf,
+} from './calc.js';
 
 const CAT_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 const FW_MAP = Object.fromEntries(FRAMEWORKS.map((f) => [f.id, f]));
@@ -38,9 +47,13 @@ function StatusControl({ value, onChange }) {
   );
 }
 
-function Card({ p, fav, onFav, onFramework, status, onStatus }) {
+function Card({ p, fav, onFav, onFramework, status, onStatus, onGotoPractice, onGotoAntipatterns }) {
   const [open, setOpen] = useState(false);
   const cat = CAT_MAP[p.category];
+  const pre = prerequisitesOf(p);
+  const unlocks = unlocksOf(p);
+  const cures = curesOf(p.id);
+  const hasRel = pre.length || unlocks.length || cures.length;
   return (
     <article className="dx-card">
       <div className="dx-card-h">
@@ -89,6 +102,49 @@ function Card({ p, fav, onFav, onFramework, status, onStatus }) {
           <ul>{p.how.map((h, i) => <li key={i}>{h}</li>)}</ul>
           <h4>关注信号</h4>
           <ul>{p.signals.map((s, i) => <li key={i}>{s}</li>)}</ul>
+          {hasRel && (
+            <>
+              <h4>关系</h4>
+              <div className="dx-rel">
+                {pre.length > 0 && (
+                  <div className="dx-rel-row">
+                    <span className="rl">前置</span>
+                    <span className="rc">
+                      {pre.map((x) => (
+                        <button key={x.id} className="dx-rel-chip" onClick={() => onGotoPractice(x.title)}>
+                          {CAT_MAP[x.category]?.icon} {x.title}
+                        </button>
+                      ))}
+                    </span>
+                  </div>
+                )}
+                {unlocks.length > 0 && (
+                  <div className="dx-rel-row">
+                    <span className="rl">解锁</span>
+                    <span className="rc">
+                      {unlocks.map((x) => (
+                        <button key={x.id} className="dx-rel-chip" onClick={() => onGotoPractice(x.title)}>
+                          {CAT_MAP[x.category]?.icon} {x.title}
+                        </button>
+                      ))}
+                    </span>
+                  </div>
+                )}
+                {cures.length > 0 && (
+                  <div className="dx-rel-row">
+                    <span className="rl">对治</span>
+                    <span className="rc">
+                      {cures.map((a) => (
+                        <button key={a.id} className="dx-rel-chip cure" onClick={onGotoAntipatterns}>
+                          ⚠️ {a.name}
+                        </button>
+                      ))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
           <h4>来源</h4>
           <div className="dx-src">
             {p.sources.map((s, i) => (
@@ -104,7 +160,7 @@ function Card({ p, fav, onFav, onFramework, status, onStatus }) {
   );
 }
 
-export default function Practices({ favs, onToggleFav, statuses, onSetStatus, focus }) {
+export default function Practices({ favs, onToggleFav, statuses, onSetStatus, focus, onGotoAntipatterns }) {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState('all');
   const [framework, setFramework] = useState('all');
@@ -121,6 +177,16 @@ export default function Practices({ favs, onToggleFav, statuses, onSetStatus, fo
     setStatus('all');
     setFavOnly(false);
   }, [focus && focus.nonce]);
+
+  // 卡片关系网内就地跳转：用标题搜索并清掉其它筛选
+  function gotoLocal(title) {
+    setQ(title);
+    setCategory('all');
+    setFramework('all');
+    setStatus('all');
+    setFavOnly(false);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   const counts = useMemo(() => categoryCounts(PRACTICES), []);
 
@@ -194,6 +260,8 @@ export default function Practices({ favs, onToggleFav, statuses, onSetStatus, fo
               onFramework={(fid) => setFramework(fid)}
               status={statusOf(statuses, p.id)}
               onStatus={onSetStatus}
+              onGotoPractice={gotoLocal}
+              onGotoAntipatterns={onGotoAntipatterns}
             />
           ))}
         </div>

@@ -139,3 +139,14 @@
   3. Profile 加『进度趋势』区：SVG 双线（落地率 + DORA 评分）+ 保存今日快照按钮 + 与上次的变化
   4. 补 buildSnapshot/upsertSnapshot 单测并重打包、SSR 验证
 - 验收: 保存多次快照后能看到落地率/评分随时间的趋势线；同日重存覆盖；node --test 全绿
+
+## P-11 · 范式关系网：详情展示前置/解锁/可对治反模式并互链
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: requires 依赖与反模式解药数据已就绪，把它们在卡片详情里互链即可，无需新数据；让范式库从孤立卡片变成连通图，自包含于子项目内
+- 步骤:
+  1. calc 加 prerequisitesOf/unlocksOf/curesOf 三个纯函数并单测
+  2. Practices 卡片详情加『关系』块：前置/解锁 chip 点击就地搜索该范式，可对治反模式 chip 跳反模式页
+  3. DevxLab 传 onGotoAntipatterns；SSR 验证 + 重打包
+- 验收: 展开任一有依赖的范式能看到前置/解锁/对治反模式并可点击跳转；node --test 全绿
