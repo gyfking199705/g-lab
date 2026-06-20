@@ -2,8 +2,8 @@
  * muse-ui 演示画廊（独立页 /ui/）。逐个展示组件 + 一句话用法。
  * 仅用于演示，不打进库；库入口是 ../src/index.js。
  */
-import React from 'react';
-import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp } from '../src/index.js';
+import React, { useState, useEffect } from 'react';
+import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp, GradientText, Typewriter, CommandPalette } from '../src/index.js';
 
 const CSS = `
 .gx{--accent:#CC785C;--ink:#33312C;--t2:#6B675E;--t3:#9B978C;--bd:#E5E1D8;--surface:#FBFAF6;
@@ -33,6 +33,8 @@ const CSS = `
 .gx-num .l{font-size:12.5px;color:var(--t3);}
 .gx-foot{text-align:center;color:var(--t3);font-size:12.5px;margin:46px 0 24px;line-height:1.8;}
 .gx-foot code{background:#F1EFE8;padding:1px 6px;border-radius:5px;}
+.gx kbd{background:#F1EFE8;border:1px solid #E5E1D8;border-radius:5px;padding:1px 6px;font-size:12px;font-family:inherit;}
+.gx-kbd-note{font-size:13px;color:var(--t3);}
 `;
 
 function Section({ title, tag, desc, children }) {
@@ -48,7 +50,29 @@ function Section({ title, tag, desc, children }) {
   );
 }
 
+const DEMO_COMMANDS = (run) => [
+  { id: 'new', label: '新建任务', hint: '⌘N', keywords: 'add task create xinjian', onRun: () => run('新建任务') },
+  { id: 'search', label: '全局搜索', hint: '⌘F', keywords: 'find search sousuo', onRun: () => run('全局搜索') },
+  { id: 'theme', label: '切换深/浅色主题', hint: '', keywords: 'dark light theme zhuti', onRun: () => run('切换主题') },
+  { id: 'sync', label: '同步到云端', hint: '', keywords: 'cloud drive sync tongbu', onRun: () => run('同步到云端') },
+  { id: 'export', label: '导出数据', hint: '', keywords: 'backup json export daochu', onRun: () => run('导出数据') },
+];
+
 export default function Gallery() {
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [lastCmd, setLastCmd] = useState('');
+
+  useEffect(() => {
+    const f = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    };
+    window.addEventListener('keydown', f);
+    return () => window.removeEventListener('keydown', f);
+  }, []);
+
   return (
     <div className="gx">
       <style>{CSS}</style>
@@ -58,7 +82,7 @@ export default function Gallery() {
         <p>UI 组件脑爆 + research 实验室 · 零依赖、复制即用、自带样式、支持「减少动效」</p>
         <div className="gx-stats">
           <div className="gx-stat">
-            <b><CountUp value={6} duration={1.2} /></b>
+            <b><CountUp value={9} duration={1.2} /></b>
             <span>组件</span>
           </div>
           <div className="gx-stat">
@@ -66,7 +90,7 @@ export default function Gallery() {
             <span>运行时依赖</span>
           </div>
           <div className="gx-stat">
-            <b><CountUp value={11} duration={1.6} />+</b>
+            <b><CountUp value={17} duration={1.6} />+</b>
             <span>纯函数单测</span>
           </div>
         </div>
@@ -127,6 +151,27 @@ export default function Gallery() {
       <Section title="动态网格渐变" tag="<MeshGradient>" desc="多色径向渐变缓慢漂移的背景，纯 CSS、无 canvas。即上面的 Hero 背景。">
         <MeshGradient style={{ height: 150, flex: 1, minWidth: 260 }} colors={['#6E83C4', '#CC785C', '#5C8A6B']} />
         <MeshGradient style={{ height: 150, flex: 1, minWidth: 260 }} colors={['#C0584A', '#C9A14A']} speed={0.09} />
+      </Section>
+
+      <Section title="渐变文字" tag="<GradientText>" desc="渐变填充文字、缓慢流动，适合标题与强调。">
+        <GradientText colors={['#CC785C', '#6E83C4', '#5C8A6B', '#C9A14A']} style={{ fontSize: 36, fontWeight: 800 }}>
+          Make it pop ✨
+        </GradientText>
+      </Section>
+
+      <Section title="打字机" tag="<Typewriter>" desc="文字逐字打出 + 闪烁光标；开启「减少动效」时直接显示完整文本。">
+        <div className="gx-card" style={{ fontSize: 18 }}>
+          <Typewriter text="一套任务，三种看法：日程 · 甘特 · 番茄。" cps={16} />
+        </div>
+      </Section>
+
+      <Section title="命令面板 ⌘K" tag="<CommandPalette>" desc="模糊搜索 + 方向键移动 + 回车执行 + Esc 关闭。非受控时自带 ⌘K/Ctrl+K 热键。">
+        <RippleButton onClick={() => setCmdOpen(true)}>打开命令面板</RippleButton>
+        <span className="gx-kbd-note">
+          或按 <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>K</kbd>
+          {lastCmd && ` · 上次执行：${lastCmd}`}
+        </span>
+        <CommandPalette open={cmdOpen} hotkey={false} onClose={() => setCmdOpen(false)} commands={DEMO_COMMANDS(setLastCmd)} />
       </Section>
 
       <div className="gx-foot">
