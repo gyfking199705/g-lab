@@ -280,3 +280,10 @@
 - 重点: lint.js 每项检查带 field(system/content/exampleInput/summary)；LintPanel 未通过项可点击→关闭详情、打开编辑器、滚动到该字段、聚焦并短暂高亮(pl-field-flash)；把『诊断→改进』合成一步；新增 field 映射单测，node --test 32 全过，Puppeteer 实测点击角色项跳转聚焦 System 字段无报错
 - 解决的问题: 体检只给分与建议，用户仍要自己找字段改——补上一键定位，让符合业界标准的改进真正可执行
 - 遗留/副作用: 一个检查只映射一个主字段(如 format/guardrails 都落到 content)，非全部相关字段
+
+## M-36 · 2026-06-20 · devx-lab 范式关系网：详情互链前置/解锁/可对治反模式（落地 P-11）
+- 作者: claude
+- 提交: 436d560
+- 子项目: devx-lab
+- 重点: 纯逻辑 prerequisitesOf/unlocksOf/curesOf；Practices 卡片详情加『关系』块：前置(requires)与解锁(被依赖)范式 chip 点击就地搜索、对治反模式 chip 跳反模式页；DevxLab 传 onGotoAntipatterns；单测 22→23 全过
+- 解决的问题: 范式卡片彼此孤立——依赖图与反模式数据已有却没在卡片层暴露，连成关系网才能顺着'前置→解锁→对治'探索
