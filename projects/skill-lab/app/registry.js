@@ -18,6 +18,8 @@ export function normalizeSkill(raw, slug) {
     author: meta.author || data.author || '',
     tags: toList(meta.tags || data.tags),
     path: data.path || ('skills/' + (slug || slugify(data.name || '')) + '/SKILL.md'),
+    score: data.score != null ? Number(data.score) : null,
+    grade: data.grade || '',
   };
 }
 
@@ -77,6 +79,57 @@ export function validateSkill(skill) {
 export function slugify(s) {
   return String(s || '').toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/**
+ * 给一条技能打「质量分」（0–100），用于画廊展示与贡献者自检。
+ * body 可选；缺 body 时与正文相关的检查记为未通过。返回 { score, grade, checks }。
+ * 评分维度对齐 SPEC.md：触发线索是否清晰、是否有示例、元数据是否完整。
+ */
+export function scoreSkill(skill, body) {
+  const s = skill || {};
+  const name = s.name || '';
+  const desc = s.description || '';
+  const text = String(body || '');
+  const hasWhenCue = /\b(use when|when |用于|何时|场景)\b/i.test(desc);
+  const checks = [
+    { label: 'name 为 kebab-case', weight: 10, ok: /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name) && name.length <= 64,
+      hint: 'name 用小写短横线，≤64 字符' },
+    { label: 'description 长度合规', weight: 10, ok: desc.length >= 16 && desc.length <= 1024,
+      hint: 'description 长度应在 16–1024' },
+    { label: 'description 含触发线索', weight: 15, ok: hasWhenCue,
+      hint: '在 description 里写清「何时用」（如 "Use when …"）' },
+    { label: '有分类 category', weight: 5, ok: !!s.category && s.category !== 'Uncategorized',
+      hint: '在 metadata.category 标注分类' },
+    { label: '有标签 tags', weight: 10, ok: (s.tags || []).length > 0,
+      hint: '在 metadata.tags 加 1+ 个标签' },
+    { label: '声明 allowed-tools', weight: 10, ok: (s.allowedTools || []).length > 0,
+      hint: '用 allowed-tools 限定可用工具' },
+    { label: '正文有小标题', weight: 10, ok: /^#{1,6}\s/m.test(text),
+      hint: '正文用 Markdown 小标题组织（When to use / Workflow…）' },
+    { label: '正文含示例', weight: 15, ok: /```|例如|example/i.test(text),
+      hint: '至少给一个正例（代码块或 Example）' },
+    { label: '正文足够充实', weight: 15, ok: text.length >= 400,
+      hint: '正文展开「怎么做」，≥400 字符' },
+  ];
+  const max = checks.reduce((n, c) => n + c.weight, 0);
+  const got = checks.reduce((n, c) => n + (c.ok ? c.weight : 0), 0);
+  const score = Math.round((got / max) * 100);
+  return { score, grade: gradeOf(score), checks };
+}
+
+function gradeOf(score) {
+  if (score >= 90) return 'A';
+  if (score >= 75) return 'B';
+  if (score >= 60) return 'C';
+  return 'D';
+}
+
+/** 生成把技能装到 agent 技能目录的安装命令（从仓库克隆拷贝到用户级目录）。 */
+export function installCommand(slug, scope) {
+  const safe = slugify(slug) || 'skill';
+  const dest = scope === 'project' ? '.claude/skills' : '~/.claude/skills';
+  return `mkdir -p ${dest} && cp -r projects/skill-lab/skills/${safe} ${dest}/${safe}`;
 }
 
 function toList(v) {

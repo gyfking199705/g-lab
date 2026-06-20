@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Icon } from '../icons.jsx';
-import { categoryLabel, techniqueLabel, renderTemplate } from '../schema.js';
+import { categoryLabel, techniqueLabel, renderTemplate, promptToMarkdown } from '../schema.js';
 import HistoryPanel from './HistoryPanel.jsx';
 import BatchPanel from './BatchPanel.jsx';
+import LintPanel from './LintPanel.jsx';
 
 function CopyBtn({ text, onCopied, label = '复制' }) {
   const [done, setDone] = useState(false);
@@ -45,7 +46,7 @@ export async function writeClipboard(text) {
 }
 
 /** prompt 详情抽屉：展示元信息、可填变量预览、一键复制、编辑/删除。 */
-export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onToggleFav, onRestore, onToast }) {
+export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onClone, onToggleFav, onRestore, onToast }) {
   const [vals, setVals] = useState({});
   const [batch, setBatch] = useState(false);
   if (!prompt) return null;
@@ -98,6 +99,8 @@ export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onTogg
               ))}
             </div>
           ) : null}
+
+          <LintPanel prompt={prompt} />
 
           {prompt.system ? (
             <div className="pl-block">
@@ -166,8 +169,12 @@ export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onTogg
 
           <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
             <CopyBtn text={fullPrompt} onCopied={onCopied} label="复制完整（System+User）" />
+            <CopyBtn text={promptToMarkdown(prompt)} onCopied={onCopied} label="复制为 Markdown" />
             <button className="pl-btn pl-btn-sm" onClick={() => onEdit(prompt)}>
               <Icon.edit width={14} height={14} /> 编辑
+            </button>
+            <button className="pl-btn pl-btn-sm" onClick={() => onClone(prompt)}>
+              <Icon.copy width={14} height={14} /> 克隆
             </button>
             <button className="pl-btn pl-btn-sm pl-danger" onClick={() => onDelete(prompt)}>
               <Icon.trash width={14} height={14} /> 删除

@@ -105,6 +105,43 @@ export interface CommandPaletteProps {
 }
 export const CommandPalette: React.FC<CommandPaletteProps>;
 
+export interface ScrambleTextProps extends React.HTMLAttributes<HTMLSpanElement> {
+  text: string;
+  /** 解码时长(秒)，默认 1.2 */
+  duration?: number;
+  /** 乱码字符集 */
+  charset?: string;
+}
+export const ScrambleText: React.FC<ScrambleTextProps>;
+
+export interface MarqueeProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** 速度(px/秒)，默认 60 */
+  speed?: number;
+  /** 内容间距(px)，默认 40 */
+  gap?: number;
+}
+export const Marquee: React.FC<MarqueeProps>;
+
+export interface ConfettiButtonProps extends React.HTMLAttributes<HTMLElement> {
+  /** 粒子数，默认 26 */
+  count?: number;
+  as?: keyof JSX.IntrinsicElements | React.ComponentType<any>;
+}
+export const ConfettiButton: React.FC<ConfettiButtonProps>;
+
+export interface StickyNote { id: string; x: number; y: number; text: string; color: string }
+export interface StickyCanvasProps {
+  initialNotes?: StickyNote[];
+  /** 画板高度(px)，默认 360 */
+  height?: number;
+  /** 可选颜色板 */
+  colors?: string[];
+  onChange?: (notes: StickyNote[]) => void;
+  className?: string;
+  style?: React.CSSProperties;
+}
+export const StickyCanvas: React.FC<StickyCanvasProps>;
+
 /* ============================ 纯函数 ============================ */
 export function clamp(v: number, min: number, max: number): number;
 export function lerp(a: number, b: number, t: number): number;
@@ -124,8 +161,18 @@ export function meshGradient(colors?: string[] | null, t?: number, opts?: { spre
 export function typedSlice(text: string, elapsedSec: number, cps?: number): string;
 export function typeDone(text: string, elapsedSec: number, cps?: number): boolean;
 export function linearGradient(colors?: string[] | null, angle?: number): string;
+export function marqueeOffset(elapsedSec: number, speed: number, width: number): number;
+export function revealCount(total: number, progress: number): number;
+export function scrambleText(target: string, revealed: number, charset?: string, rand?: () => number): string;
 export function fuzzyScore(query: string, text: string): number;
 export function filterCommands<T extends { label?: string; hint?: string; keywords?: string }>(commands: T[], query: string): T[];
+export interface Particle { x: number; y: number; vx: number; vy: number; rot: number; vr: number; color: string; size: number }
+export function makeParticles(n?: number, opts?: { rand?: () => number; colors?: string[]; speed?: number; spread?: number; angle?: number }): Particle[];
+export function stepParticle(p: Particle, dt: number, gravity?: number): Particle;
+export function clampNote(x: number, y: number, w: number, h: number, bounds: { width: number; height: number }): { x: number; y: number };
+export function snap(v: number, grid: number): number;
+export function reorderToFront<T extends { id: string }>(notes: T[], id: string): T[];
+export function cascadeXY(count: number, step?: number, base?: number): { x: number; y: number };
 
 /* ============================ hooks ============================ */
 export function useRaf(cb: (elapsedSec: number, ts: number) => void, active?: boolean): void;

@@ -89,6 +89,13 @@ export default function App() {
     showToast('已删除');
   };
 
+  const clone = (p) => {
+    const copy = normalizePrompt({ ...p, id: undefined, title: `${p.title} (副本)`, favorite: false, history: [] });
+    setPrompts((ps) => [copy, ...ps]);
+    setOpenId(copy.id);
+    showToast('已克隆为副本');
+  };
+
   // 导入 / 导出 ----------------------------------------------------------
   const exportJSON = () => {
     const blob = new Blob([JSON.stringify(buildExport(prompts), null, 2)], { type: 'application/json' });
@@ -213,6 +220,7 @@ export default function App() {
             setEditing(p);
           }}
           onDelete={remove}
+          onClone={clone}
           onToggleFav={toggleFav}
           onRestore={restore}
           onToast={showToast}

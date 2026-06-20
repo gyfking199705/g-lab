@@ -1,6 +1,9 @@
 /**
  * AI Coding 研究室 · 知识库（纯数据，无依赖，可被 Node 单测引用）。
  *
+ * ⚠️ AI agent 注意：新增/修改条目前请先读同级 ../AGENTS.md（含字段口径、模板与提交前自检）。
+ *    每条改动后须：node --test 全绿 → node build.mjs 重建 dist 与 index.html 的 ?v= → 一起提交。
+ *
  * 收录「业界正在用的 AI Coding 范式 / 工作流 / 提效技巧 / 工具生态 / 质量护栏」。
  * 每条目尽量给出：为什么有效（why）、怎么落地（how）、何时用（whenToUse）、
  * 常见坑（pitfalls）、成熟度（maturity）、提效幅度（impact）、落地成本（effort）、权威出处（refs）。
@@ -1233,5 +1236,197 @@ export const ITEMS = [
     tags: ['security', 'ci', 'quality'],
     maturity: 'established', impact: 'high', effort: 'medium',
     refs: [{ label: 'GitHub · CodeQL', url: 'https://codeql.github.com/' }],
+  },
+
+  // ════════════════ 第五批补充 ════════════════
+
+  // ── 范式 paradigm ──
+  {
+    id: 'test-strategy-ai-era',
+    title: 'AI 时代的测试策略 (Test Strategy in the AI Era)',
+    category: 'paradigm',
+    summary: 'AI 让写测试变便宜，更要守住测试金字塔：大量快而稳的单测打底，少量端到端兜顶，而非堆一堆脆测试。',
+    why: '生成测试容易，但「测试多」不等于「测得好」。失衡的测试（一堆慢而脆的 E2E、或只覆盖 happy path）会拖慢反馈、制造假安全感。AI 时代更需有意识地经营测试结构与有效性。',
+    how: [
+      '守金字塔：单测为主、集成适量、E2E 精而少',
+      '让 AI 补的是有意义的断言与边界，而非凑数',
+      '关注测试有效性（能否抓住真实缺陷）而非数量',
+      '把慢/脆测试当债务治理，保持反馈快而稳',
+    ],
+    whenToUse: '规划测试体系、用 AI 大量补测试时的总纲。',
+    pitfalls: ['以覆盖率/数量为唯一目标', '堆砌慢而脆的端到端', '生成空断言制造假安全'],
+    tags: ['testing', 'strategy', 'quality'],
+    maturity: 'established', impact: 'medium', effort: 'medium',
+    refs: [{ label: 'Martin Fowler · The Practical Test Pyramid', url: 'https://martinfowler.com/articles/practical-test-pyramid.html' }],
+  },
+
+  // ── 工作流 workflow ──
+  {
+    id: 'i18n-l10n',
+    title: '国际化与本地化 (i18n / l10n with AI)',
+    category: 'workflow',
+    summary: '用 AI 抽取文案、生成多语言翻译与本地化适配，但保留术语表与人工校对守住质量与一致性。',
+    why: '国际化涉及大量重复抽取与翻译，且易漏边界（复数、日期、RTL）。AI 能加速文案抽取与初翻，把人力集中到术语一致性、文化适配与质量校对上。',
+    how: [
+      '让 AI 抽取硬编码文案、接入 i18n 框架与占位',
+      '生成多语言初翻，受术语表（glossary）约束',
+      '处理复数/日期/货币/RTL 等本地化细节',
+      '关键语种保留母语者/专业译者校对',
+    ],
+    whenToUse: '产品出海、多语言支持、补齐国际化债务时。',
+    pitfalls: ['机翻不校对伤体验', '忽略复数/RTL/日期等本地化细节', '术语前后不一致'],
+    tags: ['i18n', 'localization', 'generation'],
+    maturity: 'growing', impact: 'low', effort: 'medium',
+    refs: [{ label: 'W3C · Internationalization', url: 'https://www.w3.org/International/' }],
+  },
+  {
+    id: 'chatops',
+    title: 'ChatOps（协作工具内的 AI）',
+    category: 'workflow',
+    summary: '把 AI 助手接进 Slack/IM 与 issue/PR：在团队对话里直接查状态、跑命令、起草改动，降低工具切换。',
+    why: '把能力带到团队已经待着的地方（聊天、issue），比让人切换到另一个工具更顺手，也让操作与讨论留痕、可协作、可审计。AI 助手在此能承接问答、触发流程、汇总信息。',
+    how: [
+      '在 IM/issue/PR 中以提及或命令触发 AI 助手',
+      '让它查状态、汇总讨论、起草 PR/回复',
+      '危险/对外动作仍需人工确认，操作留痕',
+      '收敛权限，避免聊天通道成为越权入口',
+    ],
+    whenToUse: '团队协作重度依赖 IM/issue、希望减少工具切换时。',
+    pitfalls: ['给聊天机器人过大权限', '把不可信消息当指令执行', '噪声打扰团队频道'],
+    tags: ['collaboration', 'automation', 'agent'],
+    maturity: 'growing', impact: 'low', effort: 'medium',
+    refs: [{ label: 'PagerDuty · What is ChatOps', url: 'https://www.pagerduty.com/resources/learn/what-is-chatops/' }],
+  },
+
+  // ── 提效技巧 technique ──
+  {
+    id: 'mutation-testing',
+    title: '变异测试与测试有效性 (Mutation Testing)',
+    category: 'technique',
+    summary: '用变异测试检验「测试到底有没有用」：故意改坏代码，看测试能否发现——再让 AI 补上漏网的用例。',
+    why: '高覆盖率可能是假象——测试跑过了代码却没真正断言行为。变异测试通过注入缺陷衡量测试的「杀伤力」，精准暴露薄弱断言，是 AI 大量生成测试时校验有效性的利器。',
+    how: [
+      '用变异工具注入缺陷，统计被测试「杀死」的比例',
+      '定位存活变异，说明该处测试断言不足',
+      '让 AI 针对存活变异补强断言/用例',
+      '聚焦核心逻辑，避免对全量盲目追求高变异分',
+    ],
+    whenToUse: '关键模块要确认测试真有效、覆盖率虚高存疑时。',
+    pitfalls: ['只看行覆盖忽视断言强度', '对全仓盲跑变异成本高', '为分数补无意义断言'],
+    tags: ['testing', 'quality', 'verification'],
+    maturity: 'growing', impact: 'medium', effort: 'medium',
+    refs: [{ label: 'Stryker · Mutation Testing', url: 'https://stryker-mutator.io/' }],
+  },
+  {
+    id: 'iac-with-ai',
+    title: '基础设施即代码 (IaC with AI)',
+    category: 'technique',
+    summary: '用 AI 生成/修改 Terraform、K8s、CI 配置等基础设施代码，但务必经 plan/dry-run 审阅再应用。',
+    why: '基础设施配置繁琐、样板多、易错且后果重。AI 能快速产出 IaC 骨架与改动，但基础设施变更影响大、可逆性差，必须靠 plan 预览、策略校验与人工审阅兜底。',
+    how: [
+      '让 AI 生成/修改 IaC（Terraform/K8s/CI）骨架',
+      '务必 plan/dry-run 预览变更，人工审阅再 apply',
+      '加策略即代码（policy-as-code）与 lint 校验',
+      '最小权限执行，敏感资源变更需额外确认',
+    ],
+    whenToUse: '搭建/调整云资源、K8s、流水线等基础设施时。',
+    pitfalls: ['不 plan 直接 apply 出事', '把密钥写进 IaC 入库', '过大变更难评审与回滚'],
+    tags: ['infra', 'devops', 'generation'],
+    maturity: 'growing', impact: 'medium', effort: 'medium',
+    refs: [{ label: 'HashiCorp · Terraform Intro', url: 'https://developer.hashicorp.com/terraform/intro' }],
+  },
+
+  // ── 工具与生态 tooling ──
+  {
+    id: 'local-self-hosted-models',
+    title: '本地 / 自托管模型 (Local & Self-Hosted Models)',
+    category: 'tooling',
+    summary: '在本地或自有环境运行开源模型，用隐私、可控与离线换取（通常）较弱的能力——按场景权衡。',
+    why: '对数据敏感、合规严格或需离线的场景，把代码/数据发往外部不可行。本地/自托管模型让数据不出域、成本可控、可定制，代价是部署运维成本与（多数情况下）能力弱于旗舰云模型。',
+    how: [
+      '按敏感度分流：敏感场景用本地，通用任务用云端旗舰',
+      '用成熟运行时（如 Ollama / llama.cpp）降低部署门槛',
+      '评估硬件成本与能力差距，定清适用边界',
+      '需要时对开源模型做领域微调/适配',
+    ],
+    whenToUse: '强隐私/合规、离线、或对数据驻留有硬性要求的场景。',
+    pitfalls: ['盲目本地化牺牲能力与速度', '低估部署运维成本', '自托管却疏于安全加固'],
+    tags: ['privacy', 'self-hosted', 'cost'],
+    maturity: 'growing', impact: 'medium', effort: 'high',
+    refs: [{ label: 'Ollama · 本地运行模型', url: 'https://ollama.com/' }],
+  },
+  {
+    id: 'inline-completion',
+    title: '编辑器内联补全 (Inline Code Completion)',
+    category: 'tooling',
+    summary: '编辑器里随敲随出的灰字补全——AI 辅助的「内环」起点：高频、低门槛，但需养成审阅而非盲接的习惯。',
+    why: '内联补全是渗透率最高的 AI 编码形态，能消除大量样板与机械输入、维持心流。但它快到容易「无脑接受」，引入细微 bug 或不一致——把它当建议而非答案是关键。',
+    how: [
+      '把补全当建议：审一眼再接受，别盲按 Tab',
+      '让上下文文件/类型为补全提供更准信号',
+      '复杂逻辑切换到对话/智能体，别硬靠补全',
+      '对安全敏感代码尤其谨慎核对补全内容',
+    ],
+    whenToUse: '日常编码的样板、重复结构、已知模式补全。',
+    pitfalls: ['无脑接受引入隐蔽 bug', '用补全硬啃复杂逻辑', '补全与既有风格不一致不修'],
+    tags: ['ide', 'tools', 'inner-loop'],
+    maturity: 'established', impact: 'medium', effort: 'low',
+    refs: [{ label: 'GitHub · 在 IDE 中获取代码建议', url: 'https://docs.github.com/en/copilot/using-github-copilot/getting-code-suggestions-in-your-ide-with-github-copilot' }],
+  },
+
+  // ── 质量与护栏 guardrail ──
+  {
+    id: 'accessibility',
+    title: '可访问性保障 (Accessibility / a11y)',
+    category: 'guardrail',
+    summary: '让 AI 协助达成 WCAG：补语义标签、ARIA、对比度与键盘可达，并用自动化检查兜底——别让生成 UI 把残障用户挡在门外。',
+    why: 'AI 生成的 UI 常忽略可访问性（缺语义、对比度不足、不可键盘操作），把一部分用户排除在外，也带来合规风险。把 a11y 纳入生成要求与自动化检查，是质量与包容性的底线。',
+    how: [
+      '生成 UI 时明确要求语义化标签、ARIA、键盘可达',
+      '用自动化 a11y 检查（如 axe）纳入 CI',
+      '关注对比度、焦点顺序、替代文本、表单标签',
+      '自动检查之外辅以人工/读屏验证关键流程',
+    ],
+    whenToUse: '任何面向用户的前端——尤其用 AI 生成 UI 时。',
+    pitfalls: ['只追外观忽视可访问性', '只靠自动检查不做人工验证', 'ARIA 误用反而更糟'],
+    tags: ['frontend', 'a11y', 'quality'],
+    maturity: 'established', impact: 'medium', effort: 'low',
+    refs: [{ label: 'W3C · WCAG 标准', url: 'https://www.w3.org/WAI/standards-guidelines/wcag/' }],
+  },
+  {
+    id: 'privacy-pii-redaction',
+    title: '隐私与 PII 脱敏 (Privacy & PII Redaction)',
+    category: 'guardrail',
+    summary: '数据最小化原则：发给模型的上下文只给必要内容，敏感字段（PII）先脱敏/打码，并明确数据是否被留存。',
+    why: '把含个人信息的真实数据塞进提示词，可能泄露隐私、违反合规，且可能被服务留存或记录。坚持最小化与脱敏，是把 AI 接入真实业务数据时不可妥协的隐私护栏。',
+    how: [
+      '只把完成任务所必需的数据放进上下文',
+      '对 PII/机密字段做脱敏、打码或用合成替代',
+      '确认服务的数据留存/训练策略，按合规选通道',
+      '日志与追踪同样脱敏，避免二次泄露',
+    ],
+    whenToUse: '让 AI 处理用户数据、生产数据或受监管信息时。',
+    pitfalls: ['把生产个人数据原样贴进提示', '忽视服务端留存/训练条款', '日志里泄露未脱敏数据'],
+    tags: ['privacy', 'security', 'compliance'],
+    maturity: 'growing', impact: 'high', effort: 'medium',
+    refs: [{ label: 'OWASP · LLM02 Sensitive Information Disclosure', url: 'https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/' }],
+  },
+  {
+    id: 'ai-supply-chain-security',
+    title: 'AI 供应链安全 (AI Supply Chain Security)',
+    category: 'guardrail',
+    summary: '把模型、MCP server、插件、依赖都当供应链对象：核来源、验完整性、最小授权，防范被投毒或劫持。',
+    why: '智能体生态引入了新的供应链面——不可信的 MCP server、被投毒的模型/依赖、恶意插件都可能成为攻击入口。像对待软件供应链一样审来源、验完整性、限权限，才能守住信任边界。',
+    how: [
+      '只接入可信来源的模型 / MCP server / 插件',
+      '校验完整性（签名/哈希），锁定版本',
+      '给每个组件最小必要权限，隔离运行',
+      '持续跟踪依赖漏洞与组件更新',
+    ],
+    whenToUse: '接入第三方模型、MCP server、插件或 AI 依赖时。',
+    pitfalls: ['随意接入不可信 MCP server/插件', '不锁版本任其漂移', '给第三方组件过大权限'],
+    tags: ['security', 'supply-chain', 'safety'],
+    maturity: 'emerging', impact: 'high', effort: 'medium',
+    refs: [{ label: 'SLSA · 供应链完整性框架', url: 'https://slsa.dev/' }],
   },
 ];

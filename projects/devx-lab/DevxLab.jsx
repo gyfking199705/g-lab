@@ -2,10 +2,10 @@
  * devx-lab 主壳：hero + 三个标签页（范式库 / 业界框架 / DORA 自评）。
  * 收藏与自评档位持久化在 localStorage（仅本地）。
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { CSS } from './styles.js';
 import { PRACTICES, FRAMEWORKS } from './data.js';
-import { summaryStats, adoptionStats } from './calc.js';
+import { summaryStats, adoptionStats, buildExport, parseImport } from './calc.js';
 import { load, save } from './store.js';
 import Practices from './Practices.jsx';
 import Frameworks from './Frameworks.jsx';
@@ -54,6 +54,37 @@ export default function DevxLab() {
     });
   }
 
+  const fileRef = useRef(null);
+
+  function exportData() {
+    const snap = buildExport({ favs, statuses, bands });
+    const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `devx-lab-${snap.exportedAt.slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // 允许重复选同一文件
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const { favs: f, statuses: s, bands: b } = parseImport(String(reader.result));
+        setFavs(f); save('favs', f);
+        setStatuses(s); save('status', s);
+        setBands(b); save('dora', b);
+      } catch (err) {
+        window.alert('导入失败：' + (err && err.message ? err.message : '未知错误'));
+      }
+    };
+    reader.readAsText(file);
+  }
+
   return (
     <div className="dx">
       <style>{CSS}</style>
@@ -100,12 +131,25 @@ export default function DevxLab() {
       {tab === 'practices' && (
         <Practices favs={favs} onToggleFav={toggleFav} statuses={statuses} onSetStatus={setStatus} />
       )}
-      {tab === 'frameworks' && <Frameworks />}
+      {tab === 'frameworks' && <Frameworks statuses={statuses} />}
       {tab === 'assess' && <Assessment bands={bands} onSet={setBand} />}
 
-      <footer style={{ color: 'var(--t3)', fontSize: 12.5, margin: '40px 0 8px', lineHeight: 1.8 }}>
+      <div className="dx-data">
+        <span className="dx-data-h">我的数据（收藏 / 采纳状态 / 自评）</span>
+        <button className="dx-copy" onClick={exportData}>导出备份</button>
+        <button className="dx-copy" onClick={() => fileRef.current && fileRef.current.click()}>导入</button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          style={{ display: 'none' }}
+          onChange={importData}
+        />
+      </div>
+
+      <footer style={{ color: 'var(--t3)', fontSize: 12.5, margin: '20px 0 8px', lineHeight: 1.8 }}>
         数据为公开权威资料的整理（DORA · ACM Queue · CNCF · 经典著作），范式卡片内附原始来源链接。
-        收藏与自评仅存于本地浏览器，不上传。 · g-lab 子项目
+        收藏 / 采纳状态 / 自评仅存于本地浏览器，可随时导出备份或在团队间共享，不上传。 · g-lab 子项目
       </footer>
     </div>
   );

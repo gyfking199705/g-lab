@@ -13,8 +13,11 @@ import {
   statusOf,
   adoptionStats,
   doraMarkdown,
+  frameworkCoverage,
+  buildExport,
+  parseImport,
 } from './calc.js';
-import { PRACTICES, CATEGORIES } from './data.js';
+import { PRACTICES, CATEGORIES, FRAMEWORKS } from './data.js';
 
 test('数据自洽：每条范式的类别都在 CATEGORIES 内，评分在 1..5', () => {
   const catIds = new Set(CATEGORIES.map((c) => c.id));
@@ -141,6 +144,42 @@ test('adoptionStats: 计数、总数守恒与 done 占比', () => {
   assert.equal(s.todo + s.doing + s.done, s.total);
   assert.equal(s.percent, 50);
   assert.deepEqual(adoptionStats([], {}), { todo: 0, doing: 0, done: 0, total: 0, percent: 0 });
+});
+
+test('frameworkCoverage: 与 FRAMEWORKS 同序，统计对齐与落地数', () => {
+  const cov = frameworkCoverage(PRACTICES, {});
+  assert.equal(cov.length, FRAMEWORKS.length);
+  assert.equal(cov[0].id, FRAMEWORKS[0].id);
+  for (const c of cov) {
+    assert.ok(c.total > 0, `框架 ${c.id} 应至少有一条范式对齐`);
+    assert.equal(c.done, 0); // 无状态时已落地为 0
+    assert.equal(c.percent, 0);
+  }
+  // 标记某条 dora 范式为 done → dora 覆盖度 done 增加
+  const doraP = PRACTICES.find((p) => p.frameworks.includes('dora'));
+  const cov2 = frameworkCoverage(PRACTICES, { [doraP.id]: 'done' });
+  const dora = cov2.find((c) => c.id === 'dora');
+  assert.equal(dora.done, 1);
+  assert.ok(dora.percent > 0);
+});
+
+test('buildExport / parseImport: 往返一致', () => {
+  const snap = buildExport({ favs: ['a', 'b'], statuses: { a: 'done' }, bands: { deploy: 0 } });
+  assert.equal(snap.app, 'devx-lab');
+  assert.equal(snap.version, 1);
+  assert.ok(snap.exportedAt);
+  const parsed = parseImport(JSON.stringify(snap));
+  assert.deepEqual(parsed, { favs: ['a', 'b'], statuses: { a: 'done' }, bands: { deploy: 0 } });
+});
+
+test('parseImport: 拒绝非法/异源，字段降级', () => {
+  assert.throws(() => parseImport('not json'), /JSON/);
+  assert.throws(() => parseImport('{"app":"other"}'), /devx-lab/);
+  // 字段类型不符 → 安全降级
+  const p = parseImport('{"app":"devx-lab","favs":"x","statuses":[1],"bands":null}');
+  assert.deepEqual(p, { favs: [], statuses: {}, bands: {} });
+  // favs 内非字符串被过滤
+  assert.deepEqual(parseImport('{"app":"devx-lab","favs":["ok",1,null]}').favs, ['ok']);
 });
 
 test('doraMarkdown: 含评级、四指标行与口径说明', () => {

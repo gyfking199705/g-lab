@@ -11,6 +11,7 @@ import {
   buildExport,
   parseImport,
   categoryLabel,
+  promptToMarkdown,
   EXPORT_FORMAT,
 } from './schema.js';
 
@@ -124,4 +125,15 @@ test('normalizePrompt 保留并清洗 history', () => {
 test('categoryLabel 已知/未知', () => {
   assert.equal(categoryLabel('coding'), '编程 / 工程');
   assert.equal(categoryLabel('???'), '???');
+});
+
+test('promptToMarkdown 含标题/正文/System 代码块', () => {
+  const md = promptToMarkdown(
+    normalizePrompt({ title: 'T', summary: 'S', system: 'sys', content: 'body {{x}}', category: 'coding' })
+  );
+  assert.match(md, /^# T/);
+  assert.match(md, /> S/);
+  assert.match(md, /## System/);
+  assert.match(md, /## Prompt/);
+  assert.match(md, /```text\nbody \{\{x\}\}\n```/);
 });

@@ -5,6 +5,8 @@
 
 在线路径：`…/g-lab/projects/ai-coding-lab/`
 
+> 🤖 **AI agent 请先读 [`AGENTS.md`](AGENTS.md)**：那里有数据结构、字段口径、新增条目的步骤模板与提交前自检清单。
+
 ## 它解决什么
 
 AI Coding 领域演进极快、信息碎片化。本研究室把散落各处的厂商/社区工程实践，

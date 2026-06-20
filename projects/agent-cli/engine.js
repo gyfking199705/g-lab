@@ -21,6 +21,7 @@ export const SLASH_COMMANDS = [
   { name: '/ls', desc: '列出虚拟项目里的文件' },
   { name: '/cat', desc: '打印某个文件内容：/cat <file>' },
   { name: '/demo', desc: '运行一个内置的 agent 演示任务' },
+  { name: '/approval', desc: '切换审批模式：suggest / auto-edit / full-auto' },
   { name: '/theme', desc: '切换暖色 深 / 浅 主题' },
   { name: '/reset', desc: '重置虚拟项目文件' },
   { name: '/about', desc: '关于这个 Agent CLI 控制台' },
@@ -323,4 +324,103 @@ export function agentSystemPrompt() {
     'Prefer short paragraphs and tight bullet lists. Use fenced code blocks for code.',
     'When the user asks in Chinese, reply in Chinese.',
   ].join(' ');
+}
+
+/** 真实工具循环（function calling）的 system prompt：鼓励先看再改、跑测试。 */
+export function agentToolSystemPrompt() {
+  return [
+    'You are a terminal coding agent working in a small Node.js project via tools.',
+    'Work in a loop: read relevant files first, then make minimal edits, then run tests to verify.',
+    'Use the provided tools (read_file / list_files / grep / edit_file / write_file / run_bash) to act;',
+    'do not invent file contents — read before you edit. Keep going until the task is done, then give a short summary.',
+    'Reply in Chinese when the user writes Chinese.',
+  ].join(' ');
+}
+
+/* ----------------------------- 审批模式（分级放权） ----------------------------- */
+/** 三档审批模式，对应业界 Codex/Cline 等的「分级放权」。 */
+export const APPROVAL_MODES = [
+  { id: 'suggest', label: 'suggest', hint: '每个工具调用前都要批准（最严）' },
+  { id: 'auto-edit', label: 'auto-edit', hint: '自动改文件，跑命令前才批准' },
+  { id: 'full-auto', label: 'full-auto', hint: '全自动、不打断（隔离环境用）' },
+];
+
+/** 工具类别：read（只读）/ edit（改文件）/ exec（跑命令）。 */
+export function toolKind(name) {
+  const n = String(name || '').toLowerCase();
+  if (/(edit|write|create|apply|patch)/.test(n)) return 'edit';
+  if (/(bash|shell|run|exec|command|test)/.test(n)) return 'exec';
+  return 'read';
+}
+
+/** 给定审批模式与工具，是否需要人工批准。 */
+export function needsApproval(mode, toolName) {
+  const kind = toolKind(toolName);
+  if (mode === 'full-auto') return false;
+  if (mode === 'auto-edit') return kind === 'exec';
+  return kind === 'edit' || kind === 'exec'; // suggest
+}
+
+/* ----------------------------- 真实工具循环：工具集 + 执行器 ----------------------------- */
+/** 暴露给模型的工具定义（名字 + 描述 + JSON schema + 卡片显示名）。 */
+export const AGENT_TOOLS = [
+  { name: 'read_file', display: 'Read', desc: '读取一个文件的全部内容', schema: { type: 'object', properties: { path: { type: 'string', description: '文件路径，如 src/utils.js' } }, required: ['path'] } },
+  { name: 'list_files', display: 'Bash', desc: '列出项目里的所有文件', schema: { type: 'object', properties: {} } },
+  { name: 'grep', display: 'Grep', desc: '在所有文件里按子串搜索，返回命中数', schema: { type: 'object', properties: { pattern: { type: 'string' } }, required: ['pattern'] } },
+  { name: 'edit_file', display: 'Edit', desc: '把某文件里的 old_string 替换为 new_string（old_string 必须唯一匹配现有内容）', schema: { type: 'object', properties: { path: { type: 'string' }, old_string: { type: 'string' }, new_string: { type: 'string' } }, required: ['path', 'old_string', 'new_string'] } },
+  { name: 'write_file', display: 'Write', desc: '写入或覆盖一个文件的完整内容', schema: { type: 'object', properties: { path: { type: 'string' }, content: { type: 'string' } }, required: ['path', 'content'] } },
+  { name: 'run_bash', display: 'Bash', desc: '运行一条 shell 命令（演示沙箱，仅模拟 npm test / ls 等常见命令）', schema: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] } },
+];
+
+/** 工具名 → 卡片显示名。 */
+export function displayToolName(name) {
+  const t = AGENT_TOOLS.find((x) => x.name === name);
+  return t ? t.display : name;
+}
+
+/**
+ * 在内存文件系统上执行一个工具（纯函数）。
+ * @returns {{files:object, ok:boolean, result:string, content?:string, diff?:object[]}}
+ */
+export function executeTool(name, input, files) {
+  const fs = { ...files };
+  const a = input || {};
+  switch (name) {
+    case 'read_file': {
+      if (fs[a.path] == null) return { files: fs, ok: false, result: `no such file: ${a.path}` };
+      return { files: fs, ok: true, result: `Read ${lineCount(fs[a.path])} lines`, content: fs[a.path] };
+    }
+    case 'list_files':
+      return { files: fs, ok: true, result: `${Object.keys(fs).length} files`, content: Object.keys(fs).join('\n') };
+    case 'grep': {
+      const p = String(a.pattern || '');
+      let n = 0;
+      if (p) for (const k of Object.keys(fs)) for (const ln of fs[k].split('\n')) if (ln.includes(p)) n++;
+      return { files: fs, ok: true, result: `${n} matches` };
+    }
+    case 'edit_file': {
+      if (fs[a.path] == null) return { files: fs, ok: false, result: `no such file: ${a.path}` };
+      if (!a.old_string || !fs[a.path].includes(a.old_string)) return { files: fs, ok: false, result: 'old_string 未在文件中找到' };
+      const after = fs[a.path].split(a.old_string).join(a.new_string == null ? '' : a.new_string);
+      const diff = diffLines(fs[a.path], after);
+      const st = diffStat(diff);
+      fs[a.path] = after;
+      return { files: fs, ok: true, result: `+${st.added} -${st.removed}`, diff };
+    }
+    case 'write_file': {
+      const before = fs[a.path] || '';
+      const after = String(a.content == null ? '' : a.content);
+      const diff = diffLines(before, after);
+      const st = diffStat(diff);
+      fs[a.path] = after;
+      return { files: fs, ok: true, result: `+${st.added} -${st.removed}`, diff };
+    }
+    case 'run_bash': {
+      const cmd = String(a.command || '');
+      const out = /test/.test(cmd) ? '✓ all passing' : /(^|\s)(ls|find|tree)/.test(cmd) ? Object.keys(fs).join('  ') : 'done';
+      return { files: fs, ok: true, result: out };
+    }
+    default:
+      return { files: fs, ok: false, result: `unknown tool: ${name}` };
+  }
 }

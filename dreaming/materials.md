@@ -88,9 +88,66 @@
 - 重点: engine 调度循环里动态注入「执行者返工+复评」：评审未通过且未超轮次即扩展任务 DAG，汇总者顺延依赖最新复评；orchestrator 加 parseVerdict/reworkSpecs/injectRework 纯函数与 mock 首轮不通过/复评通过；24 单测全绿
 - 解决的问题: 原线性管线评审只给意见不返工——补上业界最被验证的 generator-critic 迭代质量闭环
 
-## M-12 · 2026-06-20 · swarm 流式输出 + BYOK 实跑链路（落地 P-4）
+## M-12 · 2026-06-20 · 新增 Prompt 研究室子项目（含版本历史/批量对照/精选库）
 - 作者: claude
-- 提交: e69598b
+- 提交: 8868fd5
+- 子项目: prompt-lab
+- 重点: 搭出 Prompt 收集与展示子项目：业界标准数据模型(角色/正文/{{变量}}/技巧/适用模型/示例/出处/许可/版本/history)，卡片画廊+详情抽屉+分类/技巧/收藏过滤+搜索，{{变量}}模板渲染与一键复制，变量批量对照，版本历史+行级diff对比+恢复，JSON导入导出(prompt-lab/v1)，localStorage持久化+迁移，内置14条精选示例；纯函数 schema/diff/store 共22单测，Puppeteer实测无报错
+- 解决的问题: 回答『业界标准的 Prompt 研究室怎么做』——给出可运行的收集/整理/展示/复用一体的参考实现，沉淀优质 prompt 与其工程范式
+
+## M-13 · 2026-06-20 · 目标按关联日程计数(scoped link)
+- 作者: claude
+- 提交: 9137447
+- 子项目: planner
+- 重点: links 增加目标上下文与 goal.scheduleDone scoped 来源，目标只统计挂到自己的已完成日程；不回写目标数据
+- 解决的问题: ③日程挂到目标缺少合理机制：全局来源不能体现某个目标自身的关联进度
+
+## M-14 · 2026-06-20 · prompt-lab 质量体检评分 + 克隆 + 复制为 Markdown
+- 作者: claude
+- 提交: 0aa4ebf
+- 子项目: prompt-lab
+- 重点: 纯函数 lint.js 按业界最佳实践给 prompt 打分（角色/任务清晰/输出格式/抗幻觉/示例/变量/可检索 7 项），详情用 SVG 评分环+逐项清单（未过项给建议）、编辑器底部实时显示得分；新增克隆副本、复制为 Markdown(promptToMarkdown)；node --test 增至 29 全过，Puppeteer 实测无报错
+- 解决的问题: 光收集展示还不够——作者需要即时可量化的「是否符合业界标准」反馈与改进建议，并能快速派生变体/对外分享
+- 遗留/副作用: 体检是启发式正则判断，偏宽松用于引导而非严格校验；评分与历史均只存 localStorage
+
+## M-15 · 2026-06-20 · muse-ui v0.3：+3 playful 动效组件
+- 作者: claude
+- 提交: 0525044
+- 子项目: muse-ui
+- 重点: ScrambleText/Marquee/ConfettiButton，逻辑视图解耦+纯函数单测+reduced-motion。
+- 解决的问题: 扩 playful 动效，验证粒子/解码/跑马灯也能零依赖+纯函数+可测。
+
+## M-16 · 2026-06-20 · muse-ui v0.4：StickyCanvas 便利贴白板
+- 作者: claude
+- 提交: 5301727
+- 子项目: muse-ui
+- 重点: 便利贴白板（双击/拖拽/换色/编辑/删除），拖拽几何纯函数 board.js+5 单测。
+- 解决的问题: 补脑爆实验室最核心交互组件，验证带拖拽复杂组件也能逻辑/视图解耦。
+## M-15 · 2026-06-20 · devx-lab 框架覆盖度 + 数据导出/导入（补记，原 M-13 并发丢失）
+- 作者: claude
+- 提交: 51d774b
+- 子项目: devx-lab
+- 重点: 业界框架页新增覆盖度进度条（每个框架对齐范式数 + 已落地/进行中，按 DORA/SPACE/DevEx 维度聚合）；底部'我的数据'栏支持收藏/采纳状态/自评的 JSON 导出备份与导入；纯逻辑 frameworkCoverage/buildExport/parseImport
+- 解决的问题: 采纳进度只能看总量看不出薄弱能力线；本地数据无法团队间共享/备份
+- 遗留/副作用: 原 M-13 capture 在 materials.md 并发 additive 合并中丢失，这里补记
+
+## M-16 · 2026-06-20 · devx-lab 范式库补充 11 条业界实践（23→34）
+- 作者: claude
+- 提交: 4dce7a4
+- 子项目: devx-lab
+- 重点: 新增 AI 智能体工作流/IaC/数据库变更管理/TDD/契约测试/混沌工程/SLO 与错误预算/无指责复盘/策略即代码/依赖自动升级/文档即代码，覆盖各能力线、均附权威出处
+- 解决的问题: 范式库覆盖面不足，缺少 IaC、TDD、SLO、契约测试、混沌工程、生成式文化等业界主流能力
+
+## M-17 · 2026-06-20 · agent-cli 落地 P-2 审批模式三档 + 真实工具循环 + 扩到六家
+- 作者: claude
+- 提交: 75cb88c
+- 子项目: agent-cli
+- 重点: 审批门 needsApproval/toolKind（纯函数+单测）离线与真实统一；状态栏可切 suggest/auto-edit/full-auto + /approval；ai.js runRealAgent（Anthropic/OpenAI function calling 循环，内存FS executeTool 执行→回填→续跑）真实模式出工具卡+diff；notes 扩到 Cline/Continue（卡片+矩阵列+来源）
+- 解决的问题: 让分级放权可亲手体验、真实 AI 真正 agentic、调研覆盖更全
+
+## M-18 · 2026-06-20 · swarm 流式输出 + BYOK 实跑链路（落地 P-4）
+- 作者: claude
+- 提交: a1858b0
 - 子项目: swarm
 - 重点: ai.js 加 callChatStream/extractDelta/streamSSE（SSE，Anthropic+OpenAI，纯函数可测）；engine 流式把分片实时写进 task.output 并 onUpdate；TaskCard running 态逐字显示+光标；30 单测全绿，含 mock fetch 全链路验证流式中间态
 - 解决的问题: 原产出一次性返回、体验差且 BYOK 未验证——补上流式 + 端到端验证（mock fetch）

@@ -12,10 +12,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   SLASH_COMMANDS, DEMO_PROMPT, parseInput, matchSlash, estimateTokens,
-  seedFiles, diffStat, planAgentRun, agentSystemPrompt,
+  seedFiles, diffStat, planAgentRun, agentSystemPrompt, agentToolSystemPrompt,
+  APPROVAL_MODES, needsApproval,
 } from './engine.js';
 import {
-  PROVIDERS, callChat, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
+  PROVIDERS, callChat, runRealAgent, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
 } from './ai.js';
 import { CLIS, MATRIX, PATTERNS, SOURCES } from './notes.js';
 
@@ -31,7 +32,7 @@ export default function AgentCli() {
         <h1>🖥️ Agent CLI 交互研究</h1>
         <p>把 Claude Code / Codex / Gemini CLI 这类「命令行 agent」的交互方式拆开来看，并做一个可上手把玩的复刻。</p>
         <div className="ac-herotags">
-          <span>终端式 REPL</span><span>斜杠命令</span><span>工具调用 + diff</span><span>流式 · 可中断</span><span>分级放权</span>
+          <span>终端式 REPL</span><span>斜杠命令</span><span>工具调用 + diff</span><span>流式 · 可中断</span><span>分级放权（审批模式）</span><span>真实工具循环</span>
         </div>
       </header>
 
@@ -42,8 +43,8 @@ export default function AgentCli() {
       </section>
 
       <section className="ac-section">
-        <div className="ac-sechead"><h2>② 调研：业界四家怎么做交互</h2>
-          <span className="ac-sub">Claude Code · Codex CLI · Gemini CLI · Aider</span></div>
+        <div className="ac-sechead"><h2>② 调研：业界六家怎么做交互</h2>
+          <span className="ac-sub">Claude Code · Codex CLI · Gemini CLI · Aider · Cline · Continue</span></div>
         <ResearchPanel />
       </section>
     </div>
@@ -60,6 +61,7 @@ function Console() {
   const [aiOpen, setAiOpen] = useState(false);
   const [, setAiTick] = useState(0);
   const [menuIdx, setMenuIdx] = useState(0);
+  const [approval, setApproval] = useState('auto-edit'); // 审批模式：suggest / auto-edit / full-auto
 
   const cfg = loadAIConfig();
   const aiReady = isConfigured(cfg);
@@ -71,6 +73,9 @@ function Console() {
   const abortRef = useRef(null);
   const cmdHistRef = useRef([]);
   const histPtrRef = useRef(-1);
+  const modeRef = useRef(approval);     // 给 async 闭包读最新审批模式
+  const approvalRef = useRef(null);     // 待决审批的 resolver
+  useEffect(() => { modeRef.current = approval; }, [approval]);
 
   const menu = matchSlash(input);
 
@@ -102,6 +107,22 @@ function Console() {
     update(id, { text: full, streaming: false });
   }, [update]);
 
+  // 审批门：按当前模式决定是否需要人工批准；返回是否放行
+  const requestApproval = useCallback((toolName, argStr) => new Promise((resolve) => {
+    const id = nid();
+    setHistory((h) => [...h, { id, type: 'approval', tool: toolName, arg: argStr, status: 'pending' }]);
+    approvalRef.current = (decision) => {
+      approvalRef.current = null;
+      update(id, { status: decision });
+      resolve(decision === 'approve');
+    };
+  }), [update]);
+  const gate = useCallback(async (toolName, argStr) => {
+    if (cancelRef.current) return false;
+    if (!needsApproval(modeRef.current, toolName)) return true;
+    return await requestApproval(toolName, argStr);
+  }, [requestApproval]);
+
   const playEvents = useCallback(async (events, finalFiles) => {
     for (const ev of events) {
       if (cancelRef.current) break;
@@ -109,6 +130,8 @@ function Console() {
         push({ type: 'thinking', text: ev.text });
         await sleep(420);
       } else if (ev.kind === 'tool') {
+        const ok = await gate(ev.tool, ev.arg);
+        if (!ok) { push({ type: 'system', text: `✗ 已拒绝 ${ev.tool}(${ev.arg})，停止本次任务。` }); break; }
         const id = nid();
         setHistory((h) => [...h, { id, type: 'tool', tool: ev.tool, arg: ev.arg, summary: ev.summary, status: 'running' }]);
         await sleep(ev.ms || 500);
@@ -124,20 +147,39 @@ function Console() {
       }
     }
     if (finalFiles && !cancelRef.current) setFiles(finalFiles);
-  }, [push, update, streamInto]);
+  }, [push, update, streamInto, gate]);
 
+  // 真实 AI：BYOK 直连用 function-calling 工具循环（工具卡 + diff + 审批门）；代理模式退回纯聊天
   const runReal = useCallback(async (prompt) => {
-    const id = nid();
-    push({ type: 'thinking', text: `调用你的模型（${model}）…` });
-    setHistory((h) => [...h, { id, type: 'assistant', text: '', streaming: true }]);
+    const liveCfg = loadAIConfig();
     abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
     try {
-      const text = await callChat({ config: loadAIConfig(), system: agentSystemPrompt(), user: prompt, maxTokens: 1500, signal: abortRef.current.signal });
-      await streamInto(id, text);
+      if (liveCfg.mode === 'proxy') {
+        const id = nid();
+        push({ type: 'thinking', text: `调用你的模型（${model}，代理模式·纯聊天）…` });
+        setHistory((h) => [...h, { id, type: 'assistant', text: '', streaming: true }]);
+        const text = await callChat({ config: liveCfg, system: agentSystemPrompt(), user: prompt, maxTokens: 1500, signal });
+        await streamInto(id, text);
+        return;
+      }
+      push({ type: 'thinking', text: `调用你的模型（${model}）·工具循环…` });
+      const { files: nf } = await runRealAgent({
+        config: liveCfg,
+        system: agentToolSystemPrompt(),
+        user: prompt,
+        files,
+        signal,
+        onText: (t) => { const id = nid(); setHistory((h) => [...h, { id, type: 'assistant', text: '', streaming: true }]); streamInto(id, t); },
+        onToolStart: (display, argStr) => { const id = nid(); setHistory((h) => [...h, { id, type: 'tool', tool: display, arg: argStr, status: 'running' }]); return id; },
+        onToolEnd: (id, r) => { update(id, { status: r.ok === false ? 'error' : 'done', detail: r.result }); if (r.diff && r.diff.length) push({ type: 'diff', file: '(edit)', diff: r.diff }); },
+        onApproval: (display, argStr) => gate(display, argStr),
+      });
+      if (nf && !cancelRef.current) setFiles(nf);
     } catch (e) {
-      update(id, { type: 'error', text: `调用失败：${e && e.message ? e.message : String(e)}`, streaming: false });
+      push({ type: 'error', text: `调用失败：${e && e.message ? e.message : String(e)}` });
     } finally { abortRef.current = null; }
-  }, [model, push, update, streamInto]);
+  }, [model, push, update, streamInto, files, gate]);
 
   const handlePrompt = useCallback(async (prompt) => {
     setRunning(true);
@@ -185,12 +227,21 @@ function Console() {
       case '/login': setAiOpen(true); break;
       case '/status': push({ type: 'system', text: [
         `模型      ${model}`,
-        `AI 状态   ${aiReady ? '已就绪（真实调用）' : '未配置（离线模拟）'}`,
+        `AI 状态   ${aiReady ? '已就绪（真实调用 · 工具循环）' : '未配置（离线模拟）'}`,
         `厂商      ${cfg.provider || 'anthropic'}`,
+        `审批模式  ${approval}`,
         `工作目录  ~/demo-app`,
         `文件      ${Object.keys(files).length} 个`,
         `消息      ${history.filter((h) => h.type === 'user' || h.type === 'assistant').length} 条`,
       ].join('\n') }); break;
+      case '/approval': {
+        const ids = APPROVAL_MODES.map((m) => m.id);
+        const next = ids[(ids.indexOf(modeRef.current) + 1) % ids.length];
+        setApproval(next);
+        const m = APPROVAL_MODES.find((x) => x.id === next);
+        push({ type: 'system', text: `审批模式 → ${next}：${m.hint}` });
+        break;
+      }
       case '/cost': { const tok = history.reduce((s, h) => s + estimateTokens(h.text || ''), 0); push({ type: 'system', text: `本次会话约 ${tok} tokens（粗略估算，仅供参考）。` }); break; }
       case '/init': handleInit(); break;
       case '/diff': { const last = [...history].reverse().find((h) => h.type === 'diff'); if (last) push({ type: 'diff', file: last.file, diff: last.diff }); else push({ type: 'system', text: '还没有改动可显示。试试 /demo 或描述一个改代码的诉求。' }); break; }
@@ -202,7 +253,7 @@ function Console() {
       case '/about': push({ type: 'about' }); break;
       default: push({ type: 'error', text: `未知命令：${name}（输入 /help 看全部）` });
     }
-  }, [push, model, aiReady, cfg.provider, files, history, handlePrompt]);
+  }, [push, model, aiReady, cfg.provider, files, history, handlePrompt, approval]);
 
   const submit = useCallback(() => {
     if (running) return;
@@ -230,7 +281,7 @@ function Console() {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); setInput(''); const cmd = menu[menuIdx].name; push({ type: 'cmd', text: cmd }); runSlash(cmd, []); return; }
     }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); return; }
-    if (e.key === 'Escape') { e.preventDefault(); if (running) interrupt(); else setInput(''); return; }
+    if (e.key === 'Escape') { e.preventDefault(); if (approvalRef.current) { approvalRef.current('reject'); } if (running) interrupt(); else setInput(''); return; }
     if (!menu.length) {
       if (e.key === 'ArrowUp') {
         const list = cmdHistRef.current;
@@ -256,7 +307,7 @@ function Console() {
       </div>
 
       <div className="cli-screen" ref={scrollRef}>
-        {history.map((it) => <Line key={it.id} it={it} />)}
+        {history.map((it) => <Line key={it.id} it={it} onDecide={(d) => approvalRef.current && approvalRef.current(d)} />)}
         {running && <div className="cli-runhint">运行中… <span className="cli-blink">▋</span> <span className="cli-dim">按 Esc 中断</span></div>}
       </div>
 
@@ -282,7 +333,11 @@ function Console() {
       <div className="cli-statusbar" onClick={(e) => e.stopPropagation()}>
         <span>{aiReady ? '● 真实 AI' : '○ 离线模拟'}</span>
         <span>{model}</span>
-        <span>{theme === 'dark' ? '暖色·深' : '暖纸·浅'}</span>
+        <span className="cli-approval" title="审批模式（分级放权）">
+          {APPROVAL_MODES.map((m) => (
+            <button key={m.id} className={approval === m.id ? 'on' : ''} title={m.hint} onClick={() => setApproval(m.id)}>{m.label}</button>
+          ))}
+        </span>
         <span className="cli-spacer" />
         <span>~/demo-app · {Object.keys(files).length} files</span>
         <span>≈{tokens} tok</span>
@@ -294,18 +349,35 @@ function Console() {
 }
 
 /* ----------------------------- 单行渲染 ----------------------------- */
-function Line({ it }) {
+function Line({ it, onDecide }) {
   switch (it.type) {
+    case 'approval':
+      return (
+        <div className={`cli-approvalrow ${it.status}`}>
+          <span className="cli-aprompt">⏸</span>
+          <span className="cli-atext">需要批准：<span className="cli-toolname">{it.tool}</span><span className="cli-toolarg">({it.arg})</span></span>
+          {it.status === 'pending' ? (
+            <span className="cli-apacts">
+              <button className="cli-apbtn ok" onClick={() => onDecide && onDecide('approve')}>批准 ↵</button>
+              <button className="cli-apbtn no" onClick={() => onDecide && onDecide('reject')}>拒绝 Esc</button>
+            </span>
+          ) : (
+            <span className={`cli-apdone ${it.status}`}>{it.status === 'approve' ? '✓ 已批准' : '✗ 已拒绝'}</span>
+          )}
+        </div>
+      );
     case 'banner':
       return (
         <div className="cli-banner">
           <div className="cli-banner-h">✻ Agent CLI <span className="cli-dim">— 终端式 agent 控制台</span></div>
           <div className="cli-banner-b">
             像 Claude Code / Codex / Gemini CLI 那样在终端里干活：描述诉求 → 看它「思考 · 调工具 · 改代码」。
-            {'\n'}默认<strong>离线模拟</strong>即可体验全部交互；配置 <code>/login</code> 接你自己的 AI 后即真实作答。
+            {'\n'}默认<strong>离线模拟</strong>即可体验；配置 <code>/login</code> 接你自己的 AI 后走<strong>真实工具循环</strong>（function calling）。
+            {'\n'}底部可切<strong>审批模式</strong>：suggest 每步批准 / auto-edit 改文件自动·命令批准 / full-auto 全自动——亲手体验「分级放权」。
           </div>
           <div className="cli-banner-tips">
             <span><code>/demo</code> 跑个示例任务</span><span><code>/help</code> 全部命令</span>
+            <span><code>/approval</code> 切审批档</span>
             <span><code>↑</code> 历史 · <code>Tab</code> 补全 · <code>Esc</code> 中断</span>
           </div>
         </div>
@@ -496,7 +568,7 @@ function ResearchPanel() {
         ))}
       </div>
 
-      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">速查矩阵</h2><span className="ac-sub">维度 × 四家 · 横向滚动可看全</span></div>
+      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">速查矩阵</h2><span className="ac-sub">维度 × 六家 · 横向滚动可看全</span></div>
       <div className="ac-matrixwrap">
         <table className="ac-matrix">
           <thead>
@@ -721,5 +793,24 @@ const CLI_CSS = `
 
 .cli-statusbar{display:flex;align-items:center;gap:14px;padding:6px 14px;background:var(--t-screen);border-top:1px solid var(--t-bd);color:var(--t-dim);font-size:11.5px;flex-wrap:wrap;}
 .cli-statusbar .cli-spacer{flex:1;}
-@media(max-width:600px){ .cli-root{max-height:none;} .cli-statusbar span:nth-child(3){display:none;} }
+/* 审批模式选择器（状态栏） */
+.cli-approval{display:inline-flex;gap:2px;align-items:center;}
+.cli-approval button{font-family:var(--mono);font-size:10.5px;background:none;border:1px solid var(--t-bd);color:var(--t-dim);border-radius:6px;padding:1px 7px;cursor:pointer;transition:.12s;}
+.cli-approval button:hover{color:var(--t-fg);}
+.cli-approval button.on{color:var(--t-accent);border-color:var(--t-accent);background:var(--t-card);}
+/* 审批请求行 */
+.cli-approvalrow{display:flex;align-items:center;gap:9px;margin:7px 0;padding:8px 11px;border:1px solid var(--t-accent);border-radius:9px;background:var(--t-card);flex-wrap:wrap;}
+.cli-approvalrow.approve{border-color:var(--t-green);opacity:.7;}
+.cli-approvalrow.reject{border-color:var(--t-red);opacity:.7;}
+.cli-aprompt{color:var(--t-accent);flex:none;}
+.cli-apacts{margin-left:auto;display:flex;gap:6px;}
+.cli-apbtn{font-family:var(--mono);font-size:12px;border:1px solid var(--t-bd);background:none;border-radius:7px;padding:3px 11px;cursor:pointer;color:var(--t-fg);}
+.cli-apbtn.ok{border-color:var(--t-green);color:var(--t-green);}
+.cli-apbtn.ok:hover{background:var(--t-green);color:var(--t-bg);}
+.cli-apbtn.no{border-color:var(--t-red);color:var(--t-red);}
+.cli-apbtn.no:hover{background:var(--t-red);color:var(--t-bg);}
+.cli-apdone{margin-left:auto;font-size:12px;}
+.cli-apdone.approve{color:var(--t-green);}
+.cli-apdone.reject{color:var(--t-red);}
+@media(max-width:600px){ .cli-root{max-height:none;} }
 `;
