@@ -27,6 +27,28 @@ A new feature module follows: `<Module>Planner.jsx` (UI, self-contained `<style>
 ## Adding a sub-project
 Create a self-contained project under `projects/<name>/` (source + index.html + build + artifacts), then add a card to the root portal `index.html` with `href="./projects/<name>/"`.
 
+## 💤 dreaming mechanism (cross-project, must follow)
+To give collaboration memory and let it self-evolve, keep a loop: **commit → material → brainstorm → plan → commit**. This is a lab-wide meta-mechanism shared by all sub-projects; the three stores live at the repo root under [`dreaming/`](dreaming/README.md):
+
+- **materials** `dreaming/materials.md` — after each commit, record what you did / which problem it solved.
+- **dreams** `dreaming/dreams.md` — brainstorm next steps from materials (wild ideas allowed).
+- **plans** `dreaming/plans.md` — the genuinely feasible ones, with steps, acceptance and a status.
+
+Write via the zero-dependency helper (consistent format, auto-incrementing ids); full spec in [`dreaming/README.md`](dreaming/README.md):
+
+```bash
+node scripts/dream.mjs capture --by claude --scope <project> \
+  --title "<title>" --focus "<what you did>" --problem "<problem solved>"  # after every commit
+node scripts/dream.mjs status                                              # before starting new work
+node scripts/dream.mjs dream --by claude --title "<topic>" --idea "<idea>" ...
+node scripts/dream.mjs plan  --by claude --title "<title>" --why "<feasibility>" --step "<step>" ...
+node scripts/dream.mjs plan --update P-n --status active                    # proposed→active→done/dropped
+```
+
+Rules: brainstorming is divergent and may be unrealistic — only entries in `plans.md` mean "actually intend to do". The three md files are append-only (never rewrite history); change plan status via `--update`. Claude can also use the `/dream-capture`, `/dream-brainstorm`, `/dream-plan` skills (same script underneath).
+
+**Enforced, not just convention**: two git hooks make this fire automatically — post-commit reminds you to capture after each commit, and pre-commit **blocks** the next code commit if the previous one has no material yet. Enable with `node scripts/dream.mjs enable-hooks` (**auto-enabled for Claude via `.claude/settings.json`**; Codex/local run it once). Bypass: `DREAM_SKIP=1 git commit ...` or `--no-verify`.
+
 ## Git
 - `main` is changed by multiple agents in parallel: **`git fetch origin main` and rebase/align to latest before you start**; keep changes small and focused.
 - Develop on a feature branch, merge to `main` via PR; run the relevant modules' `node --test` before merging.
