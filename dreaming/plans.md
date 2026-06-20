@@ -105,3 +105,15 @@
   3. DevxLab 加「团队画像」标签页，传 bands/statuses
   4. 补 categoryRadar/teamReportMarkdown 单测并重打包、SSR 验证
 - 验收: 雷达按 8 类别画出团队画像；一键可复制/下载含五节的 Markdown 报告；node --test 全绿
+
+## P-9 · 反模式库：效能杀手 + 对应解药（链到范式）
+- 状态: proposed
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 正反对照更有说服力；反模式是业界公认概念（英雄主义/长期分支/手工发布/会议过载/单指标考核…），解药复用现有范式 id + gotoPractice 跳转，纯前端纯数据可做
+- 步骤:
+  1. data 加 ANTIPATTERNS（症状/危害/解药范式 id/出处），解药 id 引用现有范式
+  2. calc/测试：校验所有 antidote id 在 PRACTICES 内、id 唯一
+  3. 新增 AntiPatterns 视图 + 「反模式」标签页，解药 chip 点击跳范式库对应条目
+  4. SSR 验证 + 重打包
+- 验收: 反模式页列出效能杀手，每个给症状/危害与可点击的解药范式；所有解药 id 合法；node --test 全绿
