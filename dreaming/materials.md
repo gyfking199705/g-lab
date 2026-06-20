@@ -342,3 +342,10 @@
 - 子项目: planner
 - 重点: 学习站、训练规划标题套 GradientText，相对引入打进各自 bundle，只提交受影响 bundle。
 - 解决的问题: 扩大 muse-ui→planner 复用覆盖面，验证多模块复用同组件链路。
+
+## M-44 · 2026-06-20 · muse-ui 新增 AGENTS.md 吸收指南
+- 作者: claude
+- 提交: 98d7e82
+- 子项目: muse-ui
+- 重点: 写 projects/muse-ui/AGENTS.md：5 条铁律 + TiltCard 范例 + 组件↔纯逻辑对照 + 加组件/复用两份配方 + 红线/自检；README 与根 AGENTS.md 加指引。
+- 解决的问题: 让别的 agent 能快速看懂 muse-ui 的范式并吸收复用——之前只有消费者向 README，缺 agent 向的模式与配方。
