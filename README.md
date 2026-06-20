@@ -18,7 +18,8 @@ g-lab/
 ├── .github/workflows/      # GitHub Pages 部署（整仓库原样上传）
 └── projects/
     ├── planner/            # 🎯 个人成长规划系统（详见 projects/planner/README.md）
-    └── popcorn-ui/         # 🍿 零依赖 React 创意交互组件库（可发 npm）
+    ├── popcorn-ui/         # 🍿 零依赖 React 创意交互组件库（可发 npm）
+    └── devx-lab/           # 🔬 研发提效研究室（提效范式库 + 业界框架 + DORA 自评）
 ```
 
 ## 📦 子项目
@@ -27,6 +28,7 @@ g-lab/
 | --- | --- | --- | --- |
 | **planner** | 个人成长规划系统：个人/学习/健身/财富/股市/日程/习惯/目标/减脂/论文… 一体化应用 | `…/g-lab/projects/planner/` | `cd projects/planner && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node scripts/build.mjs` |
 | **popcorn-ui** | 零依赖 React 创意交互组件库 + 画廊演示 | `…/g-lab/projects/popcorn-ui/` | `cd projects/popcorn-ui && npm i --no-save esbuild react react-dom && node build.mjs` |
+| **devx-lab** | 研发提效研究室：提效范式库（对齐 DORA/SPACE/DevEx）+ 业界框架 + DORA 自评 | `…/g-lab/projects/devx-lab/` | `cd projects/devx-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 
 ## 🚀 本地预览
 
@@ -37,6 +39,7 @@ python3 -m http.server 8000
 # 门户：    http://localhost:8000/
 # planner： http://localhost:8000/projects/planner/
 # popcorn-ui：http://localhost:8000/projects/popcorn-ui/
+# devx-lab：http://localhost:8000/projects/devx-lab/
 ```
 
 ## ➕ 新增一个子项目
