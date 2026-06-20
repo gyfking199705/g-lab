@@ -5,6 +5,8 @@
 
 > 纯前端、无后端，统一部署在 GitHub Pages。门户在站点根，子项目在各自子路径。
 
+> 🤝 贡献规范见 [`CONTRIBUTING.md`](CONTRIBUTING.md)；AI agent 工作约定见 [`AGENTS.md`](AGENTS.md)。
+
 ## 🗂️ 仓库结构
 
 ```
