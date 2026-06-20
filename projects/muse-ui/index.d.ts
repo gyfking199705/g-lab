@@ -129,6 +129,19 @@ export interface ConfettiButtonProps extends React.HTMLAttributes<HTMLElement> {
 }
 export const ConfettiButton: React.FC<ConfettiButtonProps>;
 
+export interface StickyNote { id: string; x: number; y: number; text: string; color: string }
+export interface StickyCanvasProps {
+  initialNotes?: StickyNote[];
+  /** 画板高度(px)，默认 360 */
+  height?: number;
+  /** 可选颜色板 */
+  colors?: string[];
+  onChange?: (notes: StickyNote[]) => void;
+  className?: string;
+  style?: React.CSSProperties;
+}
+export const StickyCanvas: React.FC<StickyCanvasProps>;
+
 /* ============================ 纯函数 ============================ */
 export function clamp(v: number, min: number, max: number): number;
 export function lerp(a: number, b: number, t: number): number;
@@ -156,6 +169,10 @@ export function filterCommands<T extends { label?: string; hint?: string; keywor
 export interface Particle { x: number; y: number; vx: number; vy: number; rot: number; vr: number; color: string; size: number }
 export function makeParticles(n?: number, opts?: { rand?: () => number; colors?: string[]; speed?: number; spread?: number; angle?: number }): Particle[];
 export function stepParticle(p: Particle, dt: number, gravity?: number): Particle;
+export function clampNote(x: number, y: number, w: number, h: number, bounds: { width: number; height: number }): { x: number; y: number };
+export function snap(v: number, grid: number): number;
+export function reorderToFront<T extends { id: string }>(notes: T[], id: string): T[];
+export function cascadeXY(count: number, step?: number, base?: number): { x: number; y: number };
 
 /* ============================ hooks ============================ */
 export function useRaf(cb: (elapsedSec: number, ts: number) => void, active?: boolean): void;
