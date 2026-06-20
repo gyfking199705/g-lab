@@ -1,7 +1,33 @@
 {
   "generatedAt": "2026-06-20",
-  "count": 20,
+  "count": 21,
   "skills": [
+    {
+      "slug": "agentic-cli-interaction",
+      "name": "agentic-cli-interaction",
+      "description": "Design and implement a terminal-style AI coding-agent interaction (REPL tool-loop, slash commands, streamed tool-call cards with diffs, tiered approval/sandbox, plan mode). Use when building a CLI/TUI coding agent or chat-in-terminal UX, or when asked how Claude Code / Codex / Gemini CLI / Aider / Cline-style tools structure their interaction.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Grep"
+      ],
+      "path": "skills/agentic-cli-interaction/SKILL.md",
+      "score": 100,
+      "grade": "A",
+      "metadata": {
+        "category": "AI & Agents",
+        "version": "1.0.0",
+        "author": "g-lab/agent-cli",
+        "tags": [
+          "agent",
+          "cli",
+          "tui",
+          "tool-use",
+          "ux",
+          "repl"
+        ]
+      }
+    },
     {
       "slug": "api-designer",
       "name": "api-designer",
