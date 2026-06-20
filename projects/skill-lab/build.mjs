@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { splitFrontmatter } from './app/frontmatter.js';
-import { normalizeSkill, validateSkill } from './app/registry.js';
+import { normalizeSkill, validateSkill, scoreSkill } from './app/registry.js';
 
 // ── 1) 生成技能登记表 skills/index.json ──────────────────────────────
 const SKILLS_DIR = 'skills';
@@ -20,13 +20,15 @@ const problems = [];
 
 if (existsSync(SKILLS_DIR)) {
   for (const name of readdirSync(SKILLS_DIR).sort()) {
+    if (name.startsWith('_') || name.startsWith('.')) continue; // _template / 隐藏目录不收录
     const dir = join(SKILLS_DIR, name);
     const file = join(dir, 'SKILL.md');
     if (!statSync(dir).isDirectory() || !existsSync(file)) continue;
-    const { data } = splitFrontmatter(readFileSync(file, 'utf8'));
+    const { data, body } = splitFrontmatter(readFileSync(file, 'utf8'));
     const skill = normalizeSkill({ ...data, slug: name, path: `skills/${name}/SKILL.md` }, name);
     const issues = validateSkill(skill);
     if (issues.length) problems.push(`  · ${name}: ${issues.join('；')}`);
+    const { score, grade } = scoreSkill(skill, body);
     entries.push({
       slug: skill.slug,
       name: skill.name,
@@ -34,6 +36,8 @@ if (existsSync(SKILLS_DIR)) {
       license: skill.license,
       'allowed-tools': skill.allowedTools,
       path: skill.path,
+      score,
+      grade,
       metadata: {
         category: skill.category,
         version: skill.version,

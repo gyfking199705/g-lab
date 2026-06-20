@@ -74,6 +74,37 @@ metadata:
 - `description` 存在，长度 16–1024；
 - 不满足者会在构建日志里以 ⚠️ 标出（不阻断构建，但应修复）。
 
+## 质量分（画廊展示 + 贡献者自检）
+
+除了硬性 `validateSkill` 校验，本仓库还给每个技能打一个 **0–100 的质量分**
+（见 `app/registry.js` 的 `scoreSkill`，构建期写入 `skills/index.json`，画廊里有
+评分面板与 A/B/C/D 徽章）。评分维度对齐本规范：
+
+| 维度 | 权重 | 说明 |
+| --- | --- | --- |
+| name 为 kebab-case | 10 | 合法命名 |
+| description 长度合规 | 10 | 16–1024 |
+| description 含触发线索 | 15 | 写清「何时用」（如 `Use when …`） |
+| 有分类 category | 5 | metadata.category |
+| 有标签 tags | 10 | metadata.tags ≥ 1 |
+| 声明 allowed-tools | 10 | 限定可用工具 |
+| 正文有小标题 | 10 | 用 `##` 组织结构 |
+| 正文含示例 | 15 | 至少一个正例（代码块 / Example） |
+| 正文足够充实 | 15 | ≥ 400 字符 |
+
+评级：A ≥ 90、B ≥ 75、C ≥ 60、D < 60。**目标：无 issue 且质量分 ≥ 75（B 及以上）。**
+
+## 本地校验与 CI
+
+```bash
+cd projects/skill-lab
+node validate.mjs              # 人类可读报告（issue + 质量分 + 平均分）
+node validate.mjs --strict --min 70   # CI 模式：有 issue 或低于阈值则非零退出
+```
+
+GitHub Actions（`.github/workflows/skill-lab-validate.yml`）会在改到 skill-lab 的
+PR 上自动跑纯逻辑单测 + `validate.mjs --strict --min 70`。
+
 ## 安装与使用（最终用户）
 
 把技能目录放到 agent 读取的技能目录即可，例如：
@@ -89,8 +120,10 @@ metadata:
 
 ## 贡献新技能
 
-1. 在 `skills/<name>/` 新建 `SKILL.md`，按上面格式填写。
-2. `cd projects/skill-lab && node build.mjs` —— 自动收录进 `skills/index.json` 并校验。
-3. 在画廊里自查：描述是否具体、正文是否可执行、校验是否通过。
+1. 复制模板 `skills/_template/SKILL.md` 到 `skills/<name>/SKILL.md`（`_` 开头的目录
+   不会被收录），按格式填写；目录名与 `name` 一致、用 kebab-case。
+2. `node validate.mjs` 自检 issue 与质量分；`node build.mjs` 自动收录进
+   `skills/index.json`。
+3. 在画廊里复核：描述是否具体、正文是否可执行、评分面板是否达 B 及以上。
 
 > 参考：Anthropic「Agent Skills」与社区 `SKILL.md` 实践。本规范是其在 g-lab 内的精简落地版。

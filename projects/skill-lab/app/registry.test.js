@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   normalizeSkill, parseIndex, filterSkills, categoriesOf, tagsOf,
-  validateSkill, slugify,
+  validateSkill, slugify, scoreSkill, installCommand,
 } from './registry.js';
 
 const RAW = {
@@ -71,4 +71,38 @@ test('validateSkill flags bad name and short description', () => {
 
 test('slugify', () => {
   assert.equal(slugify('Conventional Commits!'), 'conventional-commits');
+});
+
+test('scoreSkill gives full marks to a complete skill', () => {
+  const skill = normalizeSkill(
+    { ...RAW, description: 'Write structured commit messages. Use when committing changes.' },
+    'conventional-commits');
+  const body = `# Title\n\n## When to use\nUse when committing.\n\n` +
+    '```\nfeat: x\n```\n' + 'x'.repeat(400);
+  const r = scoreSkill(skill, body);
+  assert.equal(r.score, 100);
+  assert.equal(r.grade, 'A');
+  assert.ok(r.checks.every((c) => c.ok));
+});
+
+test('scoreSkill penalizes missing description cue, examples, body', () => {
+  const skill = normalizeSkill({ name: 'thin', description: 'does a thing somehow ok', metadata: {} });
+  const r = scoreSkill(skill, '');
+  assert.ok(r.score < 60);
+  assert.equal(r.grade, 'D');
+  assert.ok(r.checks.find((c) => c.label.includes('示例')).ok === false);
+});
+
+test('scoreSkill detects when-cue in description', () => {
+  const withCue = scoreSkill({ name: 'a', description: 'Do X. Use when you need Y.' }, '');
+  const noCue = scoreSkill({ name: 'a', description: 'Just does X and nothing else here.' }, '');
+  const cueCheck = (r) => r.checks.find((c) => c.label.includes('触发线索')).ok;
+  assert.equal(cueCheck(withCue), true);
+  assert.equal(cueCheck(noCue), false);
+});
+
+test('installCommand builds user and project scoped commands', () => {
+  assert.equal(installCommand('code-reviewer'),
+    'mkdir -p ~/.claude/skills && cp -r projects/skill-lab/skills/code-reviewer ~/.claude/skills/code-reviewer');
+  assert.match(installCommand('code-reviewer', 'project'), /^mkdir -p \.claude\/skills /);
 });

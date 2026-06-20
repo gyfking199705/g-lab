@@ -1,0 +1,26 @@
+# 校验 skill-lab 的技能与纯逻辑：PR 改到 skill-lab 时跑单测 + SKILL.md 标准校验。
+name: skill-lab validate
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["projects/skill-lab/**", ".github/workflows/skill-lab-validate.yml"]
+  pull_request:
+    paths: ["projects/skill-lab/**", ".github/workflows/skill-lab-validate.yml"]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/skill-lab
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 纯逻辑单测（frontmatter / markdown / registry）
+        run: node --test app/*.test.js
+      - name: 技能标准校验（无 issue 且平均分达标）
+        run: node validate.mjs --strict --min 70
