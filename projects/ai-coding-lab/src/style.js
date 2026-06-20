@@ -141,6 +141,37 @@ export const STYLE = `
 .acl-refs a{color:var(--accent-2);text-decoration:none;font-size:13px;}
 .acl-refs a:hover{text-decoration:underline;}
 
+/* count row + export */
+.acl-count{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.acl-export{border:1px solid var(--bd);background:var(--surface);color:var(--t2);border-radius:8px;
+  padding:6px 13px;font-size:12.5px;transition:all .15s;}
+.acl-export:hover:not(:disabled){border-color:var(--accent);color:var(--accent-2);}
+.acl-export:disabled{opacity:.45;cursor:not-allowed;}
+
+/* overview chart */
+.acl-ov{background:var(--surface);border:1px solid var(--bd);border-radius:16px;padding:18px 18px 12px;}
+.acl-ov-title{font-family:var(--serif);font-size:14px;font-weight:600;margin-bottom:10px;}
+.acl-ov-title span{font-family:var(--sans);font-weight:400;font-size:11.5px;color:var(--t3);margin-left:8px;}
+.acl-ov-row{cursor:pointer;}
+.acl-ov-row:hover .acl-ov-lbl{fill:var(--accent-2);}
+.acl-ov-lbl{font-size:12.5px;fill:var(--t1);font-family:var(--sans);}
+.acl-ov-lbl.on{fill:var(--accent-2);font-weight:600;}
+.acl-ov-seg{font-size:11px;fill:#fff;font-family:var(--sans);font-variant-numeric:tabular-nums;}
+.acl-ov-num{font-size:13px;fill:var(--t2);font-family:var(--serif);font-variant-numeric:tabular-nums;}
+.acl-ov-leg{font-size:11px;fill:var(--t2);font-family:var(--sans);}
+
+/* template block (drawer) */
+.acl-tpl-h{display:flex;align-items:center;justify-content:space-between;}
+.acl-tpl-label{font-size:12px;color:var(--t2);margin:8px 0 6px;display:flex;align-items:center;gap:8px;}
+.acl-tpl-lang{font-size:10px;color:var(--t3);border:1px solid var(--bd);border-radius:5px;padding:0 6px;
+  text-transform:uppercase;letter-spacing:.5px;}
+.acl-tpl{background:#33302A;color:#F3EFE7;border-radius:10px;padding:14px 15px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.65;
+  white-space:pre;margin:0;}
+.acl-copy{border:1px solid var(--bd);background:var(--surface);color:var(--t2);border-radius:7px;
+  padding:3px 11px;font-size:11.5px;transition:all .15s;}
+.acl-copy:hover{border-color:var(--accent);color:var(--accent-2);}
+
 /* empty + footer */
 .acl-empty{text-align:center;padding:70px 20px;color:var(--t2);}
 .acl-empty-ic{font-size:34px;margin-bottom:12px;}

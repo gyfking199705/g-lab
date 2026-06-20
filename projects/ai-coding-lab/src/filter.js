@@ -99,4 +99,25 @@ export function summarize(items) {
   };
 }
 
+/**
+ * 类别 × 成熟度 的二维计数矩阵（用于总览可视化）。
+ * @returns {{ rows: Array<{category, total, cells: Array<{maturity, count}>}>, maxRowTotal:number }}
+ */
+export function maturityMatrix(items, categoryIds, maturityKeys) {
+  const cats = categoryIds || [...new Set(items.map((i) => i.category))];
+  const mats = maturityKeys || Object.keys(MATURITY);
+  let maxRowTotal = 0;
+  const rows = cats.map((category) => {
+    const inCat = items.filter((i) => i.category === category);
+    const cells = mats.map((maturity) => ({
+      maturity,
+      count: inCat.filter((i) => i.maturity === maturity).length,
+    }));
+    const total = inCat.length;
+    if (total > maxRowTotal) maxRowTotal = total;
+    return { category, total, cells };
+  });
+  return { rows, maxRowTotal };
+}
+
 export { roi };
