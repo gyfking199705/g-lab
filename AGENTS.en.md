@@ -9,6 +9,7 @@ mini-project lives under `projects/<name>/`.
 - `projects/planner/` — Personal Growth Planner (multi-module single-page app)
 - `projects/muse-ui/` — zero-dependency React creative-interaction component library
 - `projects/swarm/` — multi-agent collaboration workspace prototype (requirement queue → role division → conclusion) + industry survey
+- `projects/skill-lab/` — Skill Lab: a curated, standards-compliant gallery of Agent Skills (`skills/<name>/SKILL.md` + gallery)
 
 ## Must follow
 1. **Code goes inside a sub-project dir** `projects/<name>/`. The repo root only holds the portal `index.html`, `README`, `DESIGN.md`, `AGENTS.md`, `CONTRIBUTING.md`, `assets/`, `.github/`. **Do not add app code to the root.**
