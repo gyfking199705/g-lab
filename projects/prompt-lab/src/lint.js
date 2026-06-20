@@ -57,6 +57,13 @@ export function lintPrompt(p = {}) {
   return { checks, passed, total, score, grade: gradeOf(score) };
 }
 
+/** 一组 prompt 的平均质量分（四舍五入；空数组返回 0）。 */
+export function averageScore(prompts = []) {
+  if (!prompts.length) return 0;
+  const sum = prompts.reduce((acc, p) => acc + lintPrompt(p).score, 0);
+  return Math.round(sum / prompts.length);
+}
+
 /** 分数到等级（配合 UI 配色）。 */
 export function gradeOf(score) {
   if (score >= 85) return { key: 'A', label: '优秀', tone: 'ok' };

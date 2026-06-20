@@ -11,6 +11,7 @@ import {
   buildExport,
   parseImport,
 } from './schema.js';
+import { averageScore } from './lint.js';
 import Sidebar from './components/Sidebar.jsx';
 import PromptCard from './components/PromptCard.jsx';
 import PromptDetail from './components/PromptDetail.jsx';
@@ -27,7 +28,7 @@ function useStyles() {
   }, []);
 }
 
-const DEFAULT_FILTER = { query: '', category: 'all', technique: 'all', model: 'all', favorite: false };
+const DEFAULT_FILTER = { query: '', category: 'all', technique: 'all', model: 'all', tag: 'all', favorite: false };
 
 export default function App() {
   useStyles();
@@ -39,11 +40,35 @@ export default function App() {
   const [editing, setEditing] = useState(null); // null=closed, {}=new, {id}=edit
   const [toast, setToast] = useState('');
   const fileRef = useRef(null);
+  const searchRef = useRef(null);
 
   // 任何变更即持久化
   useEffect(() => {
     saveState({ prompts });
   }, [prompts]);
+
+  // 键盘快捷键： / 聚焦搜索、n 新增、Esc 关闭当前层
+  useEffect(() => {
+    const onKey = (e) => {
+      const el = e.target;
+      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+      if (e.key === 'Escape') {
+        if (editing !== null) setEditing(null);
+        else if (openId) setOpenId(null);
+        return;
+      }
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        searchRef.current && searchRef.current.focus();
+      } else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setEditing({});
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editing, openId]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -55,6 +80,7 @@ export default function App() {
     () => sortPrompts(filterPrompts(prompts, filter), sort),
     [prompts, filter, sort]
   );
+  const avgScore = useMemo(() => averageScore(prompts), [prompts]);
   const open = openId ? prompts.find((p) => p.id === openId) : null;
 
   // CRUD ----------------------------------------------------------------
@@ -165,7 +191,8 @@ export default function App() {
               <div className="pl-search">
                 <Icon.search />
                 <input
-                  placeholder="搜索标题、正文、标签…"
+                  ref={searchRef}
+                  placeholder="搜索标题、正文、标签…  （按 / 聚焦）"
                   value={filter.query}
                   onChange={(e) => setFilter((f) => ({ ...f, query: e.target.value }))}
                 />
@@ -189,8 +216,16 @@ export default function App() {
               </button>
             </div>
 
-            <div className="pl-meta" style={{ marginBottom: 12 }}>
-              共 {visible.length} 条{visible.length !== prompts.length ? `（全部 ${prompts.length}）` : ''}
+            <div className="pl-meta" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span>
+                共 {visible.length} 条{visible.length !== prompts.length ? `（全部 ${prompts.length}）` : ''}
+              </span>
+              {prompts.length ? <span>· 平均质量 {avgScore}</span> : null}
+              {filter.tag && filter.tag !== 'all' ? (
+                <button className="pl-chip pl-on" onClick={() => setFilter((f) => ({ ...f, tag: 'all' }))}>
+                  #{filter.tag} ✕
+                </button>
+              ) : null}
             </div>
 
             {visible.length ? (

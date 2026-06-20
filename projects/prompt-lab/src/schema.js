@@ -176,6 +176,7 @@ export function filterPrompts(prompts = [], f = {}) {
     if (f.category && f.category !== 'all' && p.category !== f.category) return false;
     if (f.technique && f.technique !== 'all' && !(p.techniques || []).includes(f.technique)) return false;
     if (f.model && f.model !== 'all' && !(p.models || []).includes(f.model)) return false;
+    if (f.tag && f.tag !== 'all' && !(p.tags || []).includes(f.tag)) return false;
     if (f.favorite && !p.favorite) return false;
     if (!q) return true;
     const hay = [
