@@ -87,3 +87,10 @@
 - 子项目: swarm
 - 重点: engine 调度循环里动态注入「执行者返工+复评」：评审未通过且未超轮次即扩展任务 DAG，汇总者顺延依赖最新复评；orchestrator 加 parseVerdict/reworkSpecs/injectRework 纯函数与 mock 首轮不通过/复评通过；24 单测全绿
 - 解决的问题: 原线性管线评审只给意见不返工——补上业界最被验证的 generator-critic 迭代质量闭环
+
+## M-12 · 2026-06-20 · 新增 Prompt 研究室子项目（含版本历史/批量对照/精选库）
+- 作者: claude
+- 提交: 8868fd5
+- 子项目: prompt-lab
+- 重点: 搭出 Prompt 收集与展示子项目：业界标准数据模型(角色/正文/{{变量}}/技巧/适用模型/示例/出处/许可/版本/history)，卡片画廊+详情抽屉+分类/技巧/收藏过滤+搜索，{{变量}}模板渲染与一键复制，变量批量对照，版本历史+行级diff对比+恢复，JSON导入导出(prompt-lab/v1)，localStorage持久化+迁移，内置14条精选示例；纯函数 schema/diff/store 共22单测，Puppeteer实测无报错
+- 解决的问题: 回答『业界标准的 Prompt 研究室怎么做』——给出可运行的收集/整理/展示/复用一体的参考实现，沉淀优质 prompt 与其工程范式
