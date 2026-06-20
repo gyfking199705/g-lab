@@ -272,3 +272,11 @@
 - 子项目: agent-cli
 - 重点: engine 加 transcriptToMarkdown（用户/回答/工具卡/diff/审批轨迹→Markdown，纯函数+单测）；标题栏「⤓ 导出会话」按钮
 - 解决的问题: 一次 agent 会话无法复盘/分享——现在可一键导出整段交互
+
+## M-35 · 2026-06-20 · prompt-lab 质量体检未达标项点击直达编辑器字段
+- 作者: claude
+- 提交: 628a353
+- 子项目: prompt-lab
+- 重点: lint.js 每项检查带 field(system/content/exampleInput/summary)；LintPanel 未通过项可点击→关闭详情、打开编辑器、滚动到该字段、聚焦并短暂高亮(pl-field-flash)；把『诊断→改进』合成一步；新增 field 映射单测，node --test 32 全过，Puppeteer 实测点击角色项跳转聚焦 System 字段无报错
+- 解决的问题: 体检只给分与建议，用户仍要自己找字段改——补上一键定位，让符合业界标准的改进真正可执行
+- 遗留/副作用: 一个检查只映射一个主字段(如 format/guardrails 都落到 content)，非全部相关字段
