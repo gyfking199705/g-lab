@@ -202,3 +202,11 @@
 - 子项目: devx-lab
 - 重点: 第五个标签页 Profile：手写 SVG 雷达按 8 类别画团队画像（已落地% 实心 + 含进行中% 浅色两序列）+ 侧栏各类落地率条形；一键 teamReportMarkdown 聚合 DORA评级/采纳总览/能力画像/框架覆盖度/优先处方，可复制或下载 .md。纯逻辑 categoryRadar/teamReportMarkdown，单测 17→19 全过
 - 解决的问题: 团队缺少一眼看清强弱项的整体画像，也缺少能直接分享给管理层的汇总报告
+
+## M-26 · 2026-06-20 · prompt-lab 整库导出为 Markdown 文档 + 导出菜单
+- 作者: claude
+- 提交: 64d8020
+- 子项目: prompt-lab
+- 重点: 纯函数 libraryToMarkdown 把全库渲染成带分组目录(按分类)、逐条正文(分隔线、组内按标题稳定排序)的 Markdown 文档；头部导出改为下拉菜单 JSON 备份/Markdown 文档；新增单测，node --test 31 全过，Puppeteer 实测菜单与 md 内容正常无报错
+- 解决的问题: JSON 只能机器再导入，人看/分享/归档不便——补上可读的整库 Markdown 文档导出
+- 遗留/副作用: TOC 为纯文本大纲(CJK 锚点不可靠故不做页内跳转链接)
