@@ -183,6 +183,18 @@ export const CSS = `
 .pl-lint-bar{flex:1;height:5px;border-radius:3px;background:var(--fill);overflow:hidden;}
 .pl-lint-bar i{display:block;height:100%;border-radius:3px;transition:width .25s;}
 
+/* export dropdown */
+.pl-menu-wrap{position:relative;}
+.pl-menu-veil{position:fixed;inset:0;z-index:40;}
+.pl-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:41;background:var(--surface);
+  border:1px solid var(--bd);border-radius:10px;box-shadow:0 12px 30px -14px rgba(40,36,30,.3);
+  padding:5px;min-width:182px;display:flex;flex-direction:column;gap:2px;}
+.pl-menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;
+  border:none;background:transparent;cursor:pointer;font-family:var(--sans);font-size:13px;color:var(--t1);
+  padding:8px 10px;border-radius:7px;transition:background .15s;width:100%;}
+.pl-menu button:hover{background:var(--fill);}
+.pl-menu button span{font-size:11.5px;color:var(--t3);}
+
 /* toast */
 .pl-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#33302A;color:#fff;
   font-size:13px;padding:9px 16px;border-radius:10px;z-index:100;display:flex;align-items:center;gap:7px;

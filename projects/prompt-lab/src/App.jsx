@@ -10,6 +10,7 @@ import {
   sortPrompts,
   buildExport,
   parseImport,
+  libraryToMarkdown,
 } from './schema.js';
 import { averageScore } from './lint.js';
 import Sidebar from './components/Sidebar.jsx';
@@ -39,6 +40,7 @@ export default function App() {
   const [openId, setOpenId] = useState(null);
   const [editing, setEditing] = useState(null); // null=closed, {}=new, {id}=edit
   const [toast, setToast] = useState('');
+  const [exportMenu, setExportMenu] = useState(false);
   const fileRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -123,14 +125,25 @@ export default function App() {
   };
 
   // 导入 / 导出 ----------------------------------------------------------
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(buildExport(prompts), null, 2)], { type: 'application/json' });
+  const download = (text, ext, mime) => {
+    const blob = new Blob([text], { type: mime });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `prompt-lab-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `prompt-lab-${new Date().toISOString().slice(0, 10)}.${ext}`;
     a.click();
     URL.revokeObjectURL(a.href);
-    showToast(`已导出 ${prompts.length} 条`);
+  };
+
+  const exportJSON = () => {
+    download(JSON.stringify(buildExport(prompts), null, 2), 'json', 'application/json');
+    setExportMenu(false);
+    showToast(`已导出 ${prompts.length} 条（JSON 备份）`);
+  };
+
+  const exportMarkdown = () => {
+    download(libraryToMarkdown(prompts), 'md', 'text/markdown');
+    setExportMenu(false);
+    showToast(`已导出 ${prompts.length} 条（Markdown 文档）`);
   };
 
   const importJSON = (e) => {
@@ -173,9 +186,20 @@ export default function App() {
             <button className="pl-btn" onClick={() => fileRef.current && fileRef.current.click()}>
               <Icon.upload width={15} height={15} /> 导入
             </button>
-            <button className="pl-btn" onClick={exportJSON} disabled={!prompts.length}>
-              <Icon.download width={15} height={15} /> 导出
-            </button>
+            <div className="pl-menu-wrap">
+              <button className="pl-btn" onClick={() => setExportMenu((v) => !v)} disabled={!prompts.length}>
+                <Icon.download width={15} height={15} /> 导出 ▾
+              </button>
+              {exportMenu ? (
+                <>
+                  <div className="pl-menu-veil" onClick={() => setExportMenu(false)} />
+                  <div className="pl-menu">
+                    <button onClick={exportJSON}>JSON 备份<span>可再导入</span></button>
+                    <button onClick={exportMarkdown}>Markdown 文档<span>便于分享 / 归档</span></button>
+                  </div>
+                </>
+              ) : null}
+            </div>
             <button className="pl-btn pl-primary" onClick={() => setEditing({})}>
               <Icon.plus width={15} height={15} /> 新增 Prompt
             </button>

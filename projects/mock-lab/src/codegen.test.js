@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseBody, normalizeRoute, gmockConfig, pythonGmock, pythonResponses,
-  pythonRespx, wiremockMappings, openapiSpec, generateAll, GENERATORS,
+  pythonRespx, pytestFixture, pythonRequestsMock, vcrCassette,
+  wiremockMappings, openapiSpec, generateAll, GENERATORS,
 } from './codegen.js';
 
 const state = {
@@ -108,6 +109,51 @@ test('openapiSpec: valid 3.1 with paths, methods, examples, server', () => {
   );
 });
 
+test('pytestFixture: reusable g_mock fixture honoring source/mode', () => {
+  const py = pytestFixture(state);
+  assert.match(py, /import pytest/);
+  assert.match(py, /import g_mock/);
+  assert.match(py, /@pytest\.fixture/);
+  assert.match(py, /def mocked_api\(\):/);
+  assert.match(py, /g_mock\.bind_responses\(MOCK_SOURCE\)/);
+  assert.match(py, /https:\/\/config\.example\.com\/g-mock\.json/); // remote source
+});
+
+test('pythonRequestsMock: register_uri per route, json/text + status_code', () => {
+  const py = pythonRequestsMock(state);
+  assert.match(py, /import requests_mock/);
+  assert.match(py, /requests_mock\.Mocker\(\)/);
+  assert.match(py, /m\.register_uri\(/);
+  assert.match(py, /"GET",/);
+  assert.match(py, /"POST",/);
+  assert.match(py, /json=json\.loads\(/);
+  assert.match(py, /text=/);
+  assert.match(py, /status_code=401/);
+});
+
+test('pythonRequestsMock: empty routes still runnable', () => {
+  const py = pythonRequestsMock({ baseUrl: '', routes: [] });
+  assert.match(py, /requests_mock\.Mocker\(\)/);
+  assert.match(py, /\.\.\./);
+});
+
+test('vcrCassette: valid JSON cassette with interactions + reason phrase', () => {
+  const cas = JSON.parse(vcrCassette(state));
+  assert.equal(cas.version, 1);
+  assert.equal(cas.interactions.length, 2);
+  const first = cas.interactions[0];
+  assert.equal(first.request.method, 'GET');
+  assert.equal(first.request.uri, 'https://api.example.com/users/1');
+  assert.equal(first.response.status.code, 200);
+  assert.equal(first.response.status.message, 'OK');
+  assert.deepEqual(first.response.headers['Content-Type'], ['application/json']);
+  // body 序列化成字符串（VCR body.string 约定）
+  assert.equal(typeof first.response.body.string, 'string');
+  assert.deepEqual(JSON.parse(first.response.body.string), { id: 1, name: 'Ada' });
+  assert.equal(cas.interactions[1].response.status.message, 'Unauthorized'); // 401
+  assert.equal(cas.interactions[1].response.body.string, 'unauthorized');
+});
+
 test('generateAll: produces a string for every generator id', () => {
   const all = generateAll(state);
   for (const g of GENERATORS) {
@@ -121,4 +167,5 @@ test('JSON generators always emit parseable JSON even when empty', () => {
   assert.doesNotThrow(() => JSON.parse(gmockConfig(empty)));
   assert.doesNotThrow(() => JSON.parse(wiremockMappings(empty)));
   assert.doesNotThrow(() => JSON.parse(openapiSpec(empty)));
+  assert.doesNotThrow(() => JSON.parse(vcrCassette(empty)));
 });

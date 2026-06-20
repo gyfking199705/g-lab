@@ -43,8 +43,8 @@ export default function AgentCli() {
       </section>
 
       <section className="ac-section">
-        <div className="ac-sechead"><h2>② 调研：业界六家怎么做交互</h2>
-          <span className="ac-sub">Claude Code · Codex CLI · Gemini CLI · Aider · Cline · Continue</span></div>
+        <div className="ac-sechead"><h2>② 调研：业界八家怎么做交互</h2>
+          <span className="ac-sub">CLI：Claude Code · Codex · Gemini · Aider ｜ IDE/云端：Cline · Continue · Cursor · Devin</span></div>
         <ResearchPanel />
       </section>
     </div>
@@ -565,6 +565,39 @@ function LoopDiagram() {
   );
 }
 
+/* ============================ 任选两家并排对比 ============================ */
+function CompareTwo() {
+  const cols = MATRIX.cols;
+  const [a, setA] = useState(0);
+  const [b, setB] = useState(1);
+  return (
+    <div className="ac-cmp">
+      <div className="ac-cmpsel">
+        <select value={a} onChange={(e) => setA(+e.target.value)}>{cols.map((c, i) => <option key={i} value={i}>{c}</option>)}</select>
+        <span className="ac-cmpvs">vs</span>
+        <select value={b} onChange={(e) => setB(+e.target.value)}>{cols.map((c, i) => <option key={i} value={i}>{c}</option>)}</select>
+      </div>
+      <div className="ac-matrixwrap">
+        <table className="ac-matrix ac-cmptable">
+          <thead><tr><th>维度</th><th>{cols[a]}</th><th>{cols[b]}</th></tr></thead>
+          <tbody>
+            {MATRIX.rows.map((r) => {
+              const va = r[1 + a], vb = r[1 + b], same = va === vb;
+              return (
+                <tr key={r[0]} className={same ? 'same' : ''}>
+                  <th scope="row">{r[0]} <span className={`ac-eq ${same ? 'eq' : 'ne'}`}>{same ? '＝' : '≠'}</span></th>
+                  <td>{va}</td>
+                  <td>{vb}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 /* ============================ 调研对比面板 ============================ */
 function ResearchPanel() {
   const [copied, setCopied] = useState(false);
@@ -598,10 +631,13 @@ function ResearchPanel() {
         ))}
       </div>
 
+      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">任选两家并排对比</h2><span className="ac-sub">下拉选两家 · ≠ 表示该维度有差异</span></div>
+      <CompareTwo />
+
       <div className="ac-sechead" style={{ marginTop: 26 }}>
         <h2 className="ac-h3">速查矩阵</h2>
         <span className="ac-sub" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          维度 × 六家 · 横向滚动可看全
+          维度 × 八家 · 横向滚动可看全
           <button className="ac-copybtn" onClick={copyMatrix}>{copied ? '✓ 已复制' : '⧉ 复制为 Markdown'}</button>
         </span>
       </div>
@@ -683,6 +719,17 @@ const PAGE_CSS = `
 .ac-caption{font-size:12.5px;color:var(--t2);}
 .ac-copybtn{font-family:var(--sans);font-size:11.5px;cursor:pointer;border:1px solid var(--bd-2);background:var(--surface);color:var(--t2);border-radius:7px;padding:3px 10px;transition:.15s;}
 .ac-copybtn:hover{border-color:var(--accent);color:var(--accent-2);}
+
+/* 两家并排对比 */
+.ac-cmpsel{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.ac-cmpsel select{font-family:var(--sans);font-size:13px;color:var(--t1);background:var(--surface-2);border:1px solid var(--bd);border-radius:9px;padding:7px 11px;cursor:pointer;}
+.ac-cmpsel select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.ac-cmpvs{font-family:var(--serif);font-size:13px;color:var(--t3);}
+.ac-cmptable td{width:38%;}
+.ac-cmptable tr.same td{color:var(--t3);}
+.ac-eq{font-size:11px;margin-left:5px;}
+.ac-eq.ne{color:var(--accent-2);}
+.ac-eq.eq{color:var(--t3);}
 
 /* 速查矩阵 */
 .ac-matrixwrap{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);}

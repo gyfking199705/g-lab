@@ -236,6 +236,39 @@ export function promptToMarkdown(p = {}) {
   return lines.join('\n');
 }
 
+/**
+ * 把整个库渲染成一份可分享/归档的 Markdown 文档：标题 + 按分类分组的目录 +
+ * 逐条正文（每条间用分隔线）。纯函数，便于单测。
+ */
+export function libraryToMarkdown(prompts = [], title = 'Prompt 研究室') {
+  const lines = [];
+  lines.push(`# ${title} · 库导出`, '', `> 共 ${prompts.length} 条 · 导出于 ${new Date().toISOString().slice(0, 10)}`);
+
+  // 按 CATEGORIES 顺序分组，组内按标题排序，保证输出稳定
+  const byCat = new Map();
+  for (const p of prompts) {
+    const k = CATEGORY_IDS.has(p.category) ? p.category : 'other';
+    if (!byCat.has(k)) byCat.set(k, []);
+    byCat.get(k).push(p);
+  }
+  const orderedCats = CATEGORIES.filter((c) => (byCat.get(c.id) || []).length);
+
+  lines.push('', '## 目录', '');
+  for (const c of orderedCats) {
+    lines.push(`- **${c.label}**`);
+    for (const p of [...byCat.get(c.id)].sort((a, b) => a.title.localeCompare(b.title, 'zh'))) {
+      lines.push(`  - ${p.title}`);
+    }
+  }
+
+  for (const c of orderedCats) {
+    for (const p of [...byCat.get(c.id)].sort((a, b) => a.title.localeCompare(b.title, 'zh'))) {
+      lines.push('', '---', '', promptToMarkdown(p));
+    }
+  }
+  return lines.join('\n');
+}
+
 /** 可移植导出格式（带 schema 版本，便于他处导入/迁移）。 */
 export const EXPORT_FORMAT = 'prompt-lab/v1';
 
