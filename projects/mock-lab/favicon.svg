@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#D97757"/><stop offset="1" stop-color="#C4633F"/></linearGradient></defs>
+  <rect width="64" height="64" rx="15" fill="url(#g)"/>
+  <!-- JSON 花括号 { } 寓意可配置的 mock 响应 -->
+  <path d="M26 16 C20 16 22 28 15 32 C22 36 20 48 26 48" fill="none" stroke="#F7F3EC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M38 16 C44 16 42 28 49 32 C42 36 44 48 38 48" fill="none" stroke="#F7F3EC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 中心点：mock 的「替身」 -->
+  <circle cx="32" cy="32" r="3.6" fill="#F7F3EC"/>
+</svg>
