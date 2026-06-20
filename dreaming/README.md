@@ -56,6 +56,27 @@ node scripts/dream.mjs status
 
 ---
 
+## 强制：git 钩子（让机制必然触发）
+
+光靠自觉会漏，所以加了两道 git 钩子（都在 [`../scripts/hooks/`](../scripts/hooks/)）：
+
+- **post-commit（提醒）**：每次代码提交后，把预填好的 `capture` 命令顶到眼前——纯提醒、不阻断。
+- **pre-commit（拦截）**：要再提交一个代码改动时，若**上一个代码提交还没记素材**，直接挡住，逼你先补。素材/纯 `dreaming/` 提交不受限。
+
+启用（每个 clone/环境一次）：
+
+```bash
+node scripts/dream.mjs enable-hooks          # = git config core.hooksPath scripts/hooks
+```
+
+- **Claude**：仓库内 `.claude/settings.json` 的 SessionStart 钩子会**自动启用**，无需手动。
+- **Codex / 本地**：手动跑一次上面的命令即可。
+- **绕过**（确有必要时）：`DREAM_SKIP=1 git commit ...` 或 `git commit --no-verify`。
+
+> 被 pre-commit 拦下时，按提示 `capture` 后用 **`git commit dreaming/materials.md -m "..."`**（指定路径）只提交素材，不会裹挟已暂存的新改动。
+
+---
+
 ## 三种条目的格式（脚本自动生成，手写时照此对齐）
 
 **素材 `M-n`**

@@ -162,9 +162,19 @@ function status() {
   for (const p of open) console.log(`  ${p[1]}  [${p[3]}]  ${p[2]}`);
 }
 
+function enableHooks() {
+  execSync('git config core.hooksPath scripts/hooks', { cwd: ROOT });
+  for (const h of ['pre-commit', 'post-commit']) {
+    try { execSync(`chmod +x scripts/hooks/${h}`, { cwd: ROOT }); } catch {}
+  }
+  console.log('✓ 已启用 dreaming git 钩子 (core.hooksPath = scripts/hooks)');
+  console.log('  pre-commit 拦住没记素材的代码提交，post-commit 提醒记素材。');
+}
+
 const cmd = process.argv[2];
 const a = parseArgs(process.argv.slice(3));
-({ capture, dream, plan, status }[cmd] || (() => {
-  console.log('用法: node scripts/dream.mjs <capture|dream|plan|status> [flags]');
+const handlers = { capture, dream, plan, status, 'enable-hooks': enableHooks };
+(handlers[cmd] || (() => {
+  console.log('用法: node scripts/dream.mjs <capture|dream|plan|status|enable-hooks> [flags]');
   console.log('详见 dreaming/README.md');
 }))(a);

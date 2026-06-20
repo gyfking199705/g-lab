@@ -1,0 +1,21 @@
+#!/bin/sh
+# g-lab dreaming · post-commit（提醒式，永不阻断）
+# 代码提交后，若还没记素材，就把预填好的 capture 命令顶到眼前。
+[ -f dreaming/materials.md ] || exit 0
+
+short=$(git rev-parse --short HEAD 2>/dev/null) || exit 0
+subject=$(git log -1 --pretty=%s 2>/dev/null)
+
+changed=$(git diff-tree --no-commit-id --name-only -r HEAD)
+nonmeta=$(printf '%s\n' "$changed" | grep -v '^dreaming/' | grep -v '^$')
+# 素材/元提交不提醒
+[ -z "$nonmeta" ] && exit 0
+# 已记过就不啰嗦
+grep -q "$short" dreaming/materials.md 2>/dev/null && exit 0
+
+cat >&2 <<EOF
+💤 dreaming：别忘了给提交 $short 记素材——
+    node scripts/dream.mjs capture --by <claude|codex> --scope <子项目> \\
+      --title "$subject" --focus "<本次做了什么>" --problem "<解决了什么问题>"
+EOF
+exit 0

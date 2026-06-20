@@ -6,13 +6,14 @@
 
 ---
 
-## P-1 · git post-commit hook 自动提醒记素材
-- 状态: proposed
+## P-1 · git 钩子让机制必然触发（post-commit 提醒 + pre-commit 拦截）
+- 状态: done
 - 作者: claude
 - 来源脑爆: D-1
-- 可行性: 纯本地 shell hook，零依赖；不强制（只打印提醒 + 预填命令），不影响现有提交流程
+- 可行性: 纯本地 shell hook，零依赖；提醒不阻断、拦截可绕过，不破坏正常提交流程
 - 步骤:
-  1. 新增 `scripts/hooks/post-commit`，提交后打印本次 commit 的 hash/标题，并给出预填好的 `dream.mjs capture` 命令模板
-  2. 在 AGENTS.md/CLAUDE.md 说明：可选执行 `git config core.hooksPath scripts/hooks` 启用
-  3. README 补一句启用方式
-- 验收: 启用后每次 `git commit` 末尾出现「记得 capture」提醒及可直接补全的命令
+  1. 新增 `scripts/hooks/post-commit`（提交后预填 `capture` 命令提醒）✓
+  2. 新增 `scripts/hooks/pre-commit`（上一个代码提交没记素材就挡住下一次）✓
+  3. `dream.mjs enable-hooks` 一键启用；`.claude/settings.json` SessionStart 让 Claude 会话自动启用 ✓
+  4. AGENTS.md / AGENTS.en.md / dreaming/README.md 补充启用与绕过说明 ✓
+- 验收: 启用后忘记记素材会被 pre-commit 挡住、提交后有 post-commit 提醒；隔离副本已验证纪律流零摩擦、遗忘流可拦截可恢复

@@ -47,6 +47,8 @@ node scripts/dream.mjs plan --update P-n --status active                    # pr
 
 Rules: brainstorming is divergent and may be unrealistic — only entries in `plans.md` mean "actually intend to do". The three md files are append-only (never rewrite history); change plan status via `--update`. Claude can also use the `/dream-capture`, `/dream-brainstorm`, `/dream-plan` skills (same script underneath).
 
+**Enforced, not just convention**: two git hooks make this fire automatically — post-commit reminds you to capture after each commit, and pre-commit **blocks** the next code commit if the previous one has no material yet. Enable with `node scripts/dream.mjs enable-hooks` (**auto-enabled for Claude via `.claude/settings.json`**; Codex/local run it once). Bypass: `DREAM_SKIP=1 git commit ...` or `--no-verify`.
+
 ## Git
 - `main` is changed by multiple agents in parallel: **`git fetch origin main` and rebase/align to latest before you start**; keep changes small and focused.
 - Develop on a feature branch, merge to `main` via PR; run the relevant modules' `node --test` before merging.

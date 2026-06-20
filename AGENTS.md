@@ -53,6 +53,8 @@ node scripts/dream.mjs plan --update P-n --status active   # 推进状态
 规则：脑爆是发散、可不靠谱，只有进 `plans.md` 才代表真打算做；三个 md 只追加、不改写历史，计划状态变化用 `--update`。
 Claude 还可用 `/dream-capture`、`/dream-brainstorm`、`/dream-plan` 三个 skill（同样调用上面的脚本）。
 
+**强制触发**：两道 git 钩子保证机制不靠自觉——post-commit 提交后提醒记素材，pre-commit 在上一个代码提交没记素材时**挡住**下一次提交。启用 `node scripts/dream.mjs enable-hooks`（**Claude 会话由 `.claude/settings.json` 自动启用**；Codex/本地手动跑一次）。绕过：`DREAM_SKIP=1 git commit ...` 或 `--no-verify`。
+
 ## Git
 - `main` 被多个 agent 并行改动：**动手前先 `git fetch origin main` 并 rebase/对齐到最新**；改动小而聚焦。
 - 在功能分支开发，PR 合入 `main`；提交前跑相关模块 `node --test`。
