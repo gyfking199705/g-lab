@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { runJob } from '../core/engine.js';
 import { topoLayers, progress } from '../core/queue.js';
 import { getRole, roleList } from '../core/roles.js';
-import { classify } from '../core/orchestrator.js';
+import { classify, buildPlan, planToSpecs } from '../core/orchestrator.js';
 import { PROVIDERS, defaultAIConfig, isConfigured } from '../core/ai.js';
+import { estimateJobCost, formatUSD, formatTokens } from '../core/cost.js';
 import { mdToHtml } from './markdown.js';
 
 const LS_AI = 'swarm.ai.v1';
@@ -74,6 +75,16 @@ export default function App() {
 
   const stop = () => abortRef.current?.abort();
 
+  // 派单前预估：路由 + 步数/波次/token/花费（随输入与所选模型实时变化）
+  const preview = useMemo(() => {
+    const req = input.trim();
+    if (!req) return null;
+    const { plan, route } = buildPlan(req);
+    const specs = planToSpecs(plan, (n) => `p${n}`);
+    const model = (aiConfig.model || '').trim() || (aiConfig.provider === 'openai' ? 'gpt-4o-mini' : 'claude-sonnet-4-6');
+    return { route, est: estimateJobCost(specs, { requirement: req, model }) };
+  }, [input, aiConfig.model, aiConfig.provider]);
+
   return (
     <div className="sw">
       <Style />
@@ -112,6 +123,20 @@ export default function App() {
               <button className="sw-cta" onClick={submit} disabled={!input.trim()}>提交需求 →</button>
             )}
           </div>
+          {!running && preview && (
+            <div className="sw-preview">
+              <div className="sw-preview-top">
+                <span className={'sw-route ' + preview.route}>
+                  {preview.route === 'fast' ? '⚡ 快路径' : '🧭 全量编排'}
+                </span>
+                <span className="sw-preview-cost">~{formatUSD(preview.est.usd)}</span>
+              </div>
+              <div className="sw-preview-sub">
+                派单前预估 · {preview.est.steps} 步 / {preview.est.waves} 波 · ~{formatTokens(preview.est.totalTokens)} tok
+                <span className="sw-preview-model"> · 按 {preview.est.model} 计价</span>
+              </div>
+            </div>
+          )}
           <div className="sw-samples">
             {SAMPLES.map((s) => (
               <button key={s} className="sw-chip" onClick={() => setInput(s)} disabled={running}>{s}</button>
@@ -185,12 +210,22 @@ function Workspace({ job }) {
       <div className="sw-ws-head">
         <div className="sw-ws-req">
           <span className="sw-kind">{kindLabel(classify(job.requirement))}</span>
+          {job.route && (
+            <span className={'sw-route ' + job.route}>{job.route === 'fast' ? '⚡ 快路径' : '🧭 全量编排'}</span>
+          )}
           {job.requirement}
         </div>
         <div className="sw-progress">
           <div className="sw-progress-bar"><span style={{ width: p.pct + '%' }} /></div>
           <span className="sw-progress-txt">{p.done}/{p.total} · {STATUS_LABEL[job.status]}</span>
         </div>
+        {job.estimate && (
+          <div className="sw-estimate">
+            预估：{job.estimate.steps} 步 / {job.estimate.waves} 波 · ~{formatTokens(job.estimate.totalTokens)} tok
+            （入 {formatTokens(job.estimate.inTokens)} / 出 {formatTokens(job.estimate.outTokens)}）
+            · ~{formatUSD(job.estimate.usd)} <span className="sw-est-model">按 {job.estimate.model} 计价</span>
+          </div>
+        )}
       </div>
 
       {job.error && <div className="sw-err">⚠️ {job.error}</div>}
@@ -391,6 +426,16 @@ function Style() {
 .sw-ws-head{margin-bottom:20px;}
 .sw-ws-req{font-family:var(--serif);font-size:20px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
 .sw-kind{font-size:11px;font-weight:500;color:var(--accent-2);background:var(--accent-soft);padding:3px 9px;border-radius:20px;font-family:var(--sans);}
+.sw-route{font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;font-family:var(--sans);}
+.sw-route.fast{color:var(--ok);background:#EAF0EC;}
+.sw-route.full{color:var(--t2);background:var(--fill);}
+.sw-estimate{margin-top:8px;font-size:11.5px;color:var(--t2);font-variant-numeric:tabular-nums;}
+.sw-est-model{color:var(--t3);}
+.sw-preview{margin-top:10px;background:var(--surface-2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;}
+.sw-preview-top{display:flex;justify-content:space-between;align-items:center;}
+.sw-preview-cost{font-family:var(--serif);font-size:15px;color:var(--t1);font-variant-numeric:tabular-nums;}
+.sw-preview-sub{font-size:11px;color:var(--t2);margin-top:4px;font-variant-numeric:tabular-nums;}
+.sw-preview-model{color:var(--t3);}
 .sw-progress{display:flex;align-items:center;gap:12px;max-width:520px;}
 .sw-progress-bar{flex:1;height:6px;background:var(--fill);border-radius:6px;overflow:hidden;}
 .sw-progress-bar span{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .4s;}

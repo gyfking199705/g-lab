@@ -50,3 +50,14 @@
   3. App TaskCard 在 running 且有 output 时实时显示流式文本（带光标）
   4. 补单测：extractDelta(anthropic/openai/[DONE]) + streamSSE 用 ReadableStream 喂分片；重打包
 - 验收: node --test 全绿（含流式解析）；离线流程不受影响；填 Key 后产出逐字出现
+
+## P-5 · swarm 成本可预测：派单前预估 + 路由快路径
+- 状态: done
+- 作者: claude
+- 可行性: 调研反复强调多智能体 ~15× token、只对高价值任务划算；demo 缺『这单大概多贵/多少步』的决策辅助，也缺单一意图省钱的快路径(Bedrock 式)
+- 步骤:
+  1. core/cost.js：PRICING 价目 + estimateTokens + estimateJobCost(specs,model)→{步数/波次/in/out/总token/$}（纯函数+单测）
+  2. orchestrator：isSimpleIntent + routeDecompose（单一清晰意图→执行者+汇总者两步快路径）+ 单测
+  3. engine：简单意图走快路径并标 job.route；规划后算 job.estimate
+  4. App：输入框下实时预估、工作区头显示步数/波次/预估花费 + 快路径/全量编排徽章；重打包
+- 验收: node --test 全绿；简单需求显示『快路径·更少步数更低估价』，复杂需求显示全量编排估算；离线不受影响

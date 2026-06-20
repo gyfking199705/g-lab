@@ -13,10 +13,17 @@ import {
   createJob, loadTasks, runnableTasks, startTask, finishTask, failTask, hasPending, isDeadlocked,
 } from './queue.js';
 import {
-  decompose, planToSpecs, buildPlanMessages, parsePlan,
+  decompose, routeDecompose, isSimpleIntent, planToSpecs, buildPlanMessages, parsePlan,
   buildAgentMessages, buildSynthesisMessages, mockRun, injectRework,
 } from './orchestrator.js';
-import { isConfigured, callChatStream } from './ai.js';
+import { isConfigured, callChat, callChatStream } from './ai.js';
+import { estimateJobCost } from './cost.js';
+
+/** 估算用的定价模型：优先用户所选，否则按厂商默认。 */
+function pricingModel(config) {
+  if (config && config.model && config.model.trim()) return config.model.trim();
+  return config && config.provider === 'openai' ? 'gpt-4o-mini' : 'claude-sonnet-4-6';
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -40,8 +47,13 @@ export async function runJob({ requirement, config, onUpdate = () => {}, concurr
   onUpdate(job);
   await sleep(stepDelay);
 
+  // 路由：单一清晰意图走快路径（省 token）；否则全量编排（LLM 规划或离线拆解）
   let plan;
-  if (useLLM) {
+  let route = 'full';
+  if (isSimpleIntent(requirement)) {
+    plan = routeDecompose(requirement);
+    route = 'fast';
+  } else if (useLLM) {
     try {
       const { system, user } = buildPlanMessages(requirement);
       const text = await callChat({ config, system, user, maxTokens: 1200, signal });
@@ -56,7 +68,9 @@ export async function runJob({ requirement, config, onUpdate = () => {}, concurr
   let i = 0;
   const mkId = () => `t${job.id}_${i++}`;
   const specs = planToSpecs(plan, mkId);
+  const model = pricingModel(config);
   job = loadTasks(job, specs);
+  job = { ...job, route, estimate: estimateJobCost(specs, { requirement, model }) };
   onUpdate(job);
 
   // 2) 调度循环：每轮取出可并行的任务（集群波次），并发执行
@@ -111,6 +125,8 @@ export async function runJob({ requirement, config, onUpdate = () => {}, concurr
     if (expanded !== job) {
       job = expanded;
       if (job.status === 'synthesizing') job = { ...job, status: 'running' };
+      // 返工新增了任务，预估随之上调，保持与实际待跑量一致
+      job = { ...job, estimate: estimateJobCost(job.tasks, { requirement, model }) };
     }
     onUpdate(job);
   }

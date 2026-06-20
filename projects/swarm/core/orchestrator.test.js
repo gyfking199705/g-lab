@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   classify, decompose, planToSpecs, parsePlan, synthesize,
   buildPlanMessages, buildAgentMessages, buildSynthesisMessages, mockRun, depOutputs,
-  parseVerdict, reworkSpecs, injectRework, isRework,
+  parseVerdict, reworkSpecs, injectRework, isRework, isSimpleIntent, routeDecompose, buildPlan,
 } from './orchestrator.js';
 import { makeTask } from './queue.js';
 
@@ -182,4 +182,32 @@ test('injectRework：评审通过 / 已有下游 / 超轮次 时不注入', () =
     { ...makeTask({ id: 'c2', role: 'critic', title: '复评（第1轮）', deps: ['w2'] }), status: 'done', output: '未通过' },
   ] }, { maxRounds: 1, makeId: () => 'z' });
   assert.equal(capped.tasks.length, 2);
+});
+
+test('isSimpleIntent：单一清晰意图为真，复杂/长需求为假', () => {
+  assert.equal(isSimpleIntent('翻译这句话'), true);
+  assert.equal(isSimpleIntent('什么是闭包'), true);
+  assert.equal(isSimpleIntent('帮我做一个团队周报工具并对比几种方案'), false); // 含「并」「对比」
+  assert.equal(isSimpleIntent('调研多智能体框架'), false); // 含「调研」
+  assert.equal(isSimpleIntent(''), false);
+  assert.equal(isSimpleIntent('请基于我们现有的架构设计一个完整的迁移方案和步骤'), false); // 过长+复杂
+});
+
+test('buildPlan：简单→快路径(2步)，复杂→全量', () => {
+  const fast = buildPlan('翻译这句话');
+  assert.equal(fast.route, 'fast');
+  assert.equal(fast.plan.length, 2);
+  assert.ok(fast.plan.some((p) => p.role === 'worker'));
+  assert.ok(fast.plan.some((p) => p.role === 'synthesizer'));
+
+  const full = buildPlan('做一个团队周报工具并调研同类方案');
+  assert.equal(full.route, 'full');
+  assert.ok(full.plan.length >= 5);
+});
+
+test('routeDecompose：汇总者依赖执行者', () => {
+  const specs = planToSpecs(routeDecompose('翻译'), (n) => `r${n}`);
+  const synth = specs.find((s) => s.role === 'synthesizer');
+  const worker = specs.find((s) => s.role === 'worker');
+  assert.deepEqual(synth.deps, [worker.id]);
 });

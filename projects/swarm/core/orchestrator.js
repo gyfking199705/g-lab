@@ -65,6 +65,38 @@ export function decompose(requirement) {
   return base;
 }
 
+/* ---------------------- 路由快路径（Bedrock 式：单一清晰意图直达） ---------------------- */
+
+const COMPLEX_RE = /(并|和|然后|步骤|对比|调研|研究|系统|方案|架构|规划|计划|拆解|分别|以及|多个|，|,|、|;|；)/;
+const SIMPLE_RE = /(查|算一?下|翻译|解释|什么是|定义|列举|改写|润色|总结一?下|生成一句|起个?名)/;
+
+/**
+ * 是否「单一清晰意图」——可走快路径，跳过全量编排省 token。保守判断：
+ * 短、无并列/多步/调研等复杂信号，且像一句明确祈使。
+ */
+export function isSimpleIntent(requirement) {
+  const s = String(requirement || '').trim();
+  if (!s || s.length > 40) return false;
+  if (COMPLEX_RE.test(s)) return false;
+  return SIMPLE_RE.test(s) || s.length <= 12;
+}
+
+/** 快路径计划：执行者直接产出 → 汇总者收口（两步，省去多路调研/规划/返工）。 */
+export function routeDecompose(requirement) {
+  const req = String(requirement || '').trim();
+  return [
+    { key: 'w', role: 'worker', title: '直接完成需求', brief: `直接完成「${req}」并给出可用结果。`, depKeys: [] },
+    { key: 's', role: 'synthesizer', title: '汇总结论', brief: '把结果整理成面向用户的简洁结论。', depKeys: ['w'] },
+  ];
+}
+
+/** 统一入口：简单意图走快路径，否则全量拆解。返回 {plan, route}。 */
+export function buildPlan(requirement) {
+  return isSimpleIntent(requirement)
+    ? { plan: routeDecompose(requirement), route: 'fast' }
+    : { plan: decompose(requirement), route: 'full' };
+}
+
 /**
  * 把 decompose 的占位规格（带 depKeys）落成 makeTask 用的 spec（带真实 deps id）。
  * makeId: (i)=>id 的工厂，便于注入稳定 id。

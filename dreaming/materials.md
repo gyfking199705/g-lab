@@ -151,3 +151,10 @@
 - 子项目: swarm
 - 重点: ai.js 加 callChatStream/extractDelta/streamSSE（SSE，Anthropic+OpenAI，纯函数可测）；engine 流式把分片实时写进 task.output 并 onUpdate；TaskCard running 态逐字显示+光标；30 单测全绿，含 mock fetch 全链路验证流式中间态
 - 解决的问题: 原产出一次性返回、体验差且 BYOK 未验证——补上流式 + 端到端验证（mock fetch）
+
+## M-19 · 2026-06-20 · swarm 成本可预测 + 路由快路径（落地 P-5）
+- 作者: claude
+- 提交: 2cae151
+- 子项目: swarm
+- 重点: core/cost.js 价目+estimateTokens+estimateJobCost（步数/波次/in-out-token/$，纯函数）；orchestrator 加 isSimpleIntent/routeDecompose/buildPlan；engine 简单意图走 2 步快路径并标 job.route、规划后算 job.estimate（返工后上调）；App 输入框下实时预估+工作区头估算+快路径徽章；顺手修了 P-4 引入的 callChat 漏 import；39 单测全绿
+- 解决的问题: demo 缺『这单多贵/多少步』的派单前决策辅助，也缺单一意图省钱的快路径
