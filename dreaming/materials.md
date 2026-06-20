@@ -251,3 +251,10 @@
 - 子项目: agent-cli
 - 重点: engine 加 researchReportMarkdown（八家要点+矩阵+共性+来源→一篇 Markdown，纯函数+单测）；研究面板加导出按钮
 - 解决的问题: 研究做完要能整篇外带分享，不只是矩阵
+
+## M-32 · 2026-06-20 · 提质三件套：重点条目模板 + 类别×成熟度总览图 + Markdown 导出
+- 作者: claude
+- 提交: 2b6d4ee
+- 子项目: ai-coding-lab
+- 重点: TEMPLATES 10 个可复制骨架(详情页一键复制)；手写 SVG 总览图(maturityMatrix 纯函数+单测)与「总览」视图；exportMd 纯函数+测试与「导出 Markdown」按钮；node --test 26 全绿
+- 解决的问题: 知识库只能浏览、不便直接拿去用，也缺结构总览与带走能力——转向提质而非堆量
