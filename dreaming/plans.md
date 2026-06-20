@@ -119,7 +119,7 @@
 - 验收: 反模式页列出效能杀手，每个给症状/危害与可点击的解药范式；所有解药 id 合法；node --test 全绿
 
 ## P-10 · agent-cli 导出/分享一次控制台会话（Markdown transcript）
-- 状态: proposed
+- 状态: done
 - 作者: claude
 - 来源脑爆: D-4
 - 可行性: 纯前端可做：history 已是结构化事件（user/assistant/tool/diff/approval），序列化成 Markdown 即可；与已有的矩阵/报告导出一致，离线可用、可单测
