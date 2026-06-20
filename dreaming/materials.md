@@ -329,3 +329,9 @@
 - 子项目: devx-lab
 - 重点: 34 条范式各加一句 evidence（归因到出处、不杜撰数字），详情显示『研究怎么说』；纯逻辑 adoptionChecklistMarkdown 按状态分组导出 Markdown checklist，数据栏加按钮；数据自洽测试要求 evidence 齐全；单测 24→25 全过
 - 解决的问题: 范式只讲怎么做，缺'为什么有效'的证据；采纳状态也无法导成可贴 wiki 的清单
+## M-29 · 2026-06-20 · mock-lab 三向增强：导入闭环 / g_mock 服务化 / 多协议知识库
+- 作者: claude
+- 提交: 64bd4bd
+- 子项目: mock-lab
+- 重点: codegen 加 parseGmockConfig/parseOpenApi/importConfig + 工坊导入面板；g_mock.py 加 bind_requests_mock 与标准库 serve()+CLI(python -m g_mock serve/load)；知识库扩到 33 条(Microcks/云端 mock/gRPC/GraphQL/异步消息)；36 单测全绿，serve 实测通过
+- 解决的问题: 工坊只能单向输出、g_mock 只能在测试内绑定、知识库仅覆盖 REST——补上反向导入闭环、可运行的本地/远端 mock 服务、以及 gRPC/GraphQL/事件多协议覆盖
