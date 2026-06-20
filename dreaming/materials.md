@@ -356,3 +356,10 @@
 - 子项目: ai-coding-lab
 - 重点: 卡片加「📋 模板」徽章+「含模板」筛选；build.mjs 据 data 自动生成全量纯文本摘要 KNOWLEDGE.md(入库)；AGENTS.md/README 增加'只想吸收读 KNOWLEDGE.md / 想扩展读 AGENTS.md'指引
 - 解决的问题: 别的 agent 要吸收知识精华却得跑应用/读源码；模板不易被发现——给一份可直接通读的离线摘要 + 发现入口
+
+## M-46 · 2026-06-20 · 新增 llms.txt（业界标准）+ 根 README 露出 KNOWLEDGE.md 入口
+- 作者: claude
+- 提交: ed86b6e
+- 子项目: ai-coding-lab
+- 重点: build.mjs 据 data 自动生成符合 llmstxt.org 规范的 llms.txt(H1+摘要+知识库链接+分类计数+Optional)；toLlmsTxt 纯函数+单测；AGENTS.md/根 README 同步入口
+- 解决的问题: 缺一份给 LLM/agent 的标准化索引来快速理解并定位本知识库——本项目恰好收录 llms.txt 范式，自实践
