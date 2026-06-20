@@ -1358,9 +1358,9 @@ function exportJSON(obj, filename) {
 
 /* ============================ 样式 ============================ */
 const CSS = `
-.lp-root{--accent:#CC785C;--accent-2:#B5654A;--accent-soft:#F3E7E0;--g:#5C8A6B;--g-soft:#E7EFE8;
-  --surface:#FFFFFF;--surface-2:#FAF9F5;--surface-3:#EFEDE5;--bd:#E6E3DA;--bd-2:#D9D6CB;
-  --t1:#1F1E1C;--t2:#6F6E69;--t3:#9B9A92;--danger:#B4493E;--warn:#C08A3E;
+.lp-root{--accent:#CC785C;--accent-2:#B5654A;--accent-soft:#F5ECE5;--g:#6E9079;--g-soft:#E7EFE8;
+  --surface:#FFFFFF;--surface-2:#FBFAF6;--surface-3:#F1EFE8;--bd:#ECEAE2;--bd-2:#E3E0D7;
+  --t1:#26241F;--t2:#83827A;--t3:#B0AFA5;--danger:#BC6055;--warn:#BE9356;
   --serif:'Tiempos Text',Georgia,'Songti SC','STSong','Source Han Serif SC','Noto Serif CJK SC',serif;
   --sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
   --shadow:0 1px 2px rgba(40,36,30,.04);--shadow-2:0 8px 28px -10px rgba(40,36,30,.22);
