@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CLIS, MATRIX, PATTERNS, SOURCES } from './notes.js';
+import { matrixToMarkdown } from './engine.js';
 
 test('CLIS 结构完整且来源下标有效', () => {
   assert.ok(CLIS.length >= 4);
@@ -34,6 +35,18 @@ test('PATTERNS 都是 [标题, 说明] 二元组', () => {
     assert.equal(p.length, 2);
     assert.ok(p[0] && p[1]);
   }
+});
+
+test('matrixToMarkdown 生成合法表格', () => {
+  const md = matrixToMarkdown(MATRIX);
+  const lines = md.split('\n');
+  assert.ok(lines[0].startsWith('| 维度 |'));
+  for (const c of MATRIX.cols) assert.ok(lines[0].includes(c), `表头缺列 ${c}`);
+  assert.match(lines[1], /^\| --- \|/); // 分隔行
+  assert.equal(lines.length, 2 + MATRIX.rows.length); // 表头 + 分隔 + 每行
+  // 每行列数一致（| 数 = 列数 + 2）
+  const pipes = (lines[0].match(/\|/g) || []).length;
+  for (const l of lines.slice(2)) assert.equal((l.match(/\|/g) || []).length, pipes);
 });
 
 test('SOURCES 都有 label 与 https URL', () => {

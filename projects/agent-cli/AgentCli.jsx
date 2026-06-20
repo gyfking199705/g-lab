@@ -13,7 +13,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   SLASH_COMMANDS, DEMO_PROMPT, parseInput, matchSlash, estimateTokens,
   seedFiles, diffStat, planAgentRun, agentSystemPrompt, agentToolSystemPrompt,
-  APPROVAL_MODES, needsApproval,
+  APPROVAL_MODES, needsApproval, matrixToMarkdown,
 } from './engine.js';
 import {
   PROVIDERS, callChat, runRealAgent, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
@@ -502,53 +502,83 @@ function AISettings({ onClose }) {
   );
 }
 
-/* ============================ agentic 循环示意（手写 SVG，无图表库） ============================ */
+/* ============================ agentic 循环示意（手写 SVG，无图表库；可自动演示） ============================ */
+const LOOP_STEPS = [
+  { label: '诉求', sub: 'prompt', cx: 64, caption: '① 你给出诉求（自然语言）' },
+  { label: '推理', sub: 'reason', cx: 220, caption: '② 推理：想清楚下一步要做什么' },
+  { label: '调用工具', sub: 'act', cx: 376, caption: '③ 调用工具：经审批/沙箱后读文件·改代码·跑命令' },
+  { label: '观察', sub: 'observe', cx: 532, caption: '④ 观察工具返回，更新认知' },
+  { label: '回答', sub: 'answer', cx: 668, accent: true, caption: '⑤ 不够 → 回到②继续循环；够了 → 给出回答' },
+];
+
 function LoopDiagram() {
   const C = { bd: '#E3E0D7', t1: '#26241F', t2: '#83827A', t3: '#B0AFA5', accent: '#CC785C', accent2: '#B5654A', surf: '#FFFFFF', soft: '#F5ECE5' };
-  const boxes = [
-    { cx: 64, label: '诉求', sub: 'prompt' },
-    { cx: 220, label: '推理', sub: 'reason' },
-    { cx: 376, label: '调用工具', sub: 'act' },
-    { cx: 532, label: '观察', sub: 'observe' },
-    { cx: 668, label: '回答', sub: 'answer', accent: true },
-  ];
+  const [playing, setPlaying] = useState(false);
+  const [active, setActive] = useState(-1);
+  useEffect(() => {
+    if (!playing) return;
+    const t = setInterval(() => setActive((i) => (i + 1) % LOOP_STEPS.length), 1100);
+    return () => clearInterval(t);
+  }, [playing]);
+  const toggle = () => { if (playing) { setPlaying(false); setActive(-1); } else { setActive(0); setPlaying(true); } };
   const w = 104, h = 46, y = 78;
-  const Box = ({ cx, label, sub, accent }) => (
-    <g>
-      <rect x={cx - w / 2} y={y} width={w} height={h} rx={11} fill={accent ? C.soft : C.surf} stroke={accent ? C.accent : C.bd} strokeWidth={accent ? 1.4 : 1.2} />
-      <text x={cx} y={y + 20} textAnchor="middle" fontSize="14" fontFamily="Georgia, serif" fontWeight="600" fill={accent ? C.accent2 : C.t1}>{label}</text>
-      <text x={cx} y={y + 36} textAnchor="middle" fontSize="9.5" fill={C.t3} letterSpacing="0.5">{sub}</text>
-    </g>
-  );
-  const arrow = (x1, x2) => <line x1={x1} y1={y + h / 2} x2={x2} y2={y + h / 2} stroke={C.t3} strokeWidth="1.4" markerEnd="url(#ac-ah)" />;
-  return (
-    <svg viewBox="0 0 730 168" width="100%" style={{ display: 'block', minWidth: 560 }} role="img" aria-label="agentic ReAct 循环示意图">
-      <defs>
-        <marker id="ac-ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.t3} /></marker>
-        <marker id="ac-ah-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.accent} /></marker>
-      </defs>
-      {/* 直线箭头：诉求→推理→工具→观察→回答 */}
-      {arrow(64 + w / 2, 220 - w / 2)}
-      {arrow(220 + w / 2, 376 - w / 2)}
-      {arrow(376 + w / 2, 532 - w / 2)}
-      {arrow(532 + w / 2, 668 - w / 2)}
-      {/* 审批 / 沙箱门：在「推理→调用工具」之间 */}
-      <g>
-        <line x1={298} y1={y + h / 2 - 10} x2={298} y2={y + h / 2 + 10} stroke={C.accent} strokeWidth="1.4" strokeDasharray="3 2" />
-        <text x={298} y={y - 6} textAnchor="middle" fontSize="10" fill={C.accent2}>审批 · 沙箱</text>
+  const Box = ({ cx, label, sub, accent }, i) => {
+    const on = active === i;
+    return (
+      <g key={label} style={{ transition: 'opacity .2s' }} opacity={active >= 0 && !on ? 0.45 : 1}>
+        <rect x={cx - w / 2} y={y} width={w} height={h} rx={11}
+          fill={on ? C.soft : accent ? C.soft : C.surf} stroke={on || accent ? C.accent : C.bd} strokeWidth={on ? 2 : accent ? 1.4 : 1.2} />
+        <text x={cx} y={y + 20} textAnchor="middle" fontSize="14" fontFamily="Georgia, serif" fontWeight="600" fill={on || accent ? C.accent2 : C.t1}>{label}</text>
+        <text x={cx} y={y + 36} textAnchor="middle" fontSize="9.5" fill={C.t3} letterSpacing="0.5">{sub}</text>
       </g>
-      {/* 回环箭头：观察 → 推理（继续循环） */}
-      <path d={`M532,${y} C532,28 220,28 220,${y - 2}`} fill="none" stroke={C.accent} strokeWidth="1.5" strokeDasharray="4 3" markerEnd="url(#ac-ah-a)" />
-      <text x={376} y={22} textAnchor="middle" fontSize="11" fill={C.accent2}>继续循环（还需要更多信息 / 下一步动作）</text>
-      {/* 完成标注：观察 → 回答 */}
-      <text x={600} y={y + h + 20} textAnchor="middle" fontSize="10" fill={C.t2}>满足后才结束</text>
-      {boxes.map((b) => <Box key={b.label} {...b} />)}
-    </svg>
+    );
+  };
+  const arrow = (x1, x2) => <line x1={x1} y1={y + h / 2} x2={x2} y2={y + h / 2} stroke={C.t3} strokeWidth="1.4" markerEnd="url(#ac-ah)" />;
+  const loopOn = active === LOOP_STEPS.length - 1;
+  return (
+    <div>
+      <div className="ac-diagbar">
+        <button className="ac-playbtn" onClick={toggle}>{playing ? '⏸ 停止' : '▶ 自动演示'}</button>
+        <span className="ac-caption">{active >= 0 ? LOOP_STEPS[active].caption : '点「自动演示」逐步走一遍 agentic 循环'}</span>
+      </div>
+      <svg viewBox="0 0 730 168" width="100%" style={{ display: 'block', minWidth: 560 }} role="img" aria-label="agentic ReAct 循环示意图">
+        <defs>
+          <marker id="ac-ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.t3} /></marker>
+          <marker id="ac-ah-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.accent} /></marker>
+        </defs>
+        {arrow(64 + w / 2, 220 - w / 2)}
+        {arrow(220 + w / 2, 376 - w / 2)}
+        {arrow(376 + w / 2, 532 - w / 2)}
+        {arrow(532 + w / 2, 668 - w / 2)}
+        {/* 审批 / 沙箱门：在「推理→调用工具」之间 */}
+        <g>
+          <line x1={298} y1={y + h / 2 - 10} x2={298} y2={y + h / 2 + 10} stroke={C.accent} strokeWidth="1.4" strokeDasharray="3 2" />
+          <text x={298} y={y - 6} textAnchor="middle" fontSize="10" fill={C.accent2}>审批 · 沙箱</text>
+        </g>
+        {/* 回环箭头：观察 → 推理（继续循环），自动演示到末步时高亮 */}
+        <path d={`M532,${y} C532,28 220,28 220,${y - 2}`} fill="none" stroke={C.accent} strokeWidth={loopOn ? 2.4 : 1.5} strokeDasharray="4 3" markerEnd="url(#ac-ah-a)" opacity={loopOn ? 1 : 0.75} />
+        <text x={376} y={22} textAnchor="middle" fontSize="11" fill={C.accent2}>继续循环（还需要更多信息 / 下一步动作）</text>
+        <text x={600} y={y + h + 20} textAnchor="middle" fontSize="10" fill={C.t2}>满足后才结束</text>
+        {LOOP_STEPS.map((b, i) => Box(b, i))}
+      </svg>
+    </div>
   );
 }
 
 /* ============================ 调研对比面板 ============================ */
 function ResearchPanel() {
+  const [copied, setCopied] = useState(false);
+  const copyMatrix = async () => {
+    const md = matrixToMarkdown(MATRIX);
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch (e) {
+      // 退化：选中提示
+      window.prompt('复制下面的 Markdown：', md);
+    }
+  };
   return (
     <>
       <div className="ac-clis">
@@ -568,7 +598,13 @@ function ResearchPanel() {
         ))}
       </div>
 
-      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">速查矩阵</h2><span className="ac-sub">维度 × 六家 · 横向滚动可看全</span></div>
+      <div className="ac-sechead" style={{ marginTop: 26 }}>
+        <h2 className="ac-h3">速查矩阵</h2>
+        <span className="ac-sub" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          维度 × 六家 · 横向滚动可看全
+          <button className="ac-copybtn" onClick={copyMatrix}>{copied ? '✓ 已复制' : '⧉ 复制为 Markdown'}</button>
+        </span>
+      </div>
       <div className="ac-matrixwrap">
         <table className="ac-matrix">
           <thead>
@@ -641,6 +677,12 @@ const PAGE_CSS = `
 
 /* agentic 循环示意 */
 .ac-diagram{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);padding:14px 16px;}
+.ac-diagbar{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+.ac-playbtn{font-family:var(--sans);font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-2);border-radius:8px;padding:5px 13px;transition:.15s;flex:none;}
+.ac-playbtn:hover{background:var(--accent);color:#fff;}
+.ac-caption{font-size:12.5px;color:var(--t2);}
+.ac-copybtn{font-family:var(--sans);font-size:11.5px;cursor:pointer;border:1px solid var(--bd-2);background:var(--surface);color:var(--t2);border-radius:7px;padding:3px 10px;transition:.15s;}
+.ac-copybtn:hover{border-color:var(--accent);color:var(--accent-2);}
 
 /* 速查矩阵 */
 .ac-matrixwrap{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);}
