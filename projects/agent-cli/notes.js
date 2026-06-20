@@ -75,19 +75,49 @@ export const CLIS = [
     ],
     sources: [7, 8],
   },
+  {
+    id: 'cline',
+    name: 'Cline',
+    vendor: '开源（IDE 扩展 + CLI）',
+    glyph: '◑',
+    tagline: 'Plan/Act 双模式 + 每步批准的自治 agent',
+    loop: 'Plan（只读、对齐策略）↔ Act（执行，每个文件编辑/命令都要批准）；Tab 切 Plan/Act，Shift+Tab 切自动批准',
+    rows: [
+      ['双模式', 'Plan 读+推理不改动；Act 才执行；不能自行从 Plan 跳 Act，须你确认（防「AI 改了半个项目」）'],
+      ['审批', '每个文件编辑/终端命令都展示 diff/命令并等 Approve/Reject；可一键开「自动批准」放手跑'],
+      ['形态', 'VS Code / JetBrains 扩展，另有 Cline CLI 2.0；BYOK 自选模型'],
+      ['可扩展', 'MCP；多家模型可选；开源'],
+    ],
+    sources: [9, 10],
+  },
+  {
+    id: 'continue',
+    name: 'Continue',
+    vendor: '开源（IDE + cn CLI）',
+    glyph: '◒',
+    tagline: 'Chat 内置 Agent 模式 + @ 上下文 + / 命令',
+    loop: 'Agent 模式与 Chat 同一输入框：模型自行决定调工具/找上下文；@ 提供上下文、/ 触发命令',
+    rows: [
+      ['Agent 模式', '在 Chat 同一界面让模型用工具完成任务，省去手动找上下文/执行'],
+      ['上下文', '@ context providers：打开的文件 / git diff / 终端输出 / 文档 URL 等按需拉取'],
+      ['命令', '/ 斜杠命令（含自定义 /review /test 映射到 prompt 模板）；单一 JSON 配置'],
+      ['形态/扩展', 'IDE 扩展 + cn CLI；MCP 接外部工具'],
+    ],
+    sources: [11, 12],
+  },
 ];
 
 /** 维度 × 四家 的速查矩阵（cols 与 rows[i][1..] 一一对应）。 */
 export const MATRIX = {
-  cols: ['Claude Code', 'Codex CLI', 'Gemini CLI', 'Aider'],
+  cols: ['Claude Code', 'Codex CLI', 'Gemini CLI', 'Aider', 'Cline', 'Continue'],
   rows: [
-    ['放权 / 审批', 'default/acceptEdits/plan/bypass', 'Suggest/Auto-Edit/Full-Auto', '工具调用按需确认', '展示 diff 后应用'],
-    ['沙箱边界', '权限规则 + 目录范围', 'read-only/workspace-write/full', '本地执行', '本地执行（git 兜底）'],
-    ['上下文 / 记忆', 'CLAUDE.md', 'AGENTS.md + config.toml', 'GEMINI.md', '仓库地图 + /add 选文件'],
-    ['计划模式', 'plan mode（Shift+Tab）', '审批即门禁', '逐步 ReAct', 'architect（规划/实现分离）'],
-    ['Git 集成', '按权限调用 git', '按权限调用 git', '可调用 git', '自动 commit（核心特性）'],
-    ['扩展', 'MCP / hooks / subagents', 'MCP / profiles', 'MCP + 搜索接地', '多模型；开源自托管'],
-    ['开源', '否（商用）', '是（CLI 开源）', '是（Apache-2.0）', '是'],
+    ['放权 / 审批', 'default/acceptEdits/plan/bypass', 'Suggest/Auto-Edit/Full-Auto', '工具调用按需确认', '展示 diff 后应用', 'Plan/Act + 每步批准（可自动）', 'Agent 模式自行决定'],
+    ['沙箱边界', '权限规则 + 目录范围', 'read-only/workspace-write/full', '本地执行', '本地执行（git 兜底）', '本地执行', '本地 / IDE'],
+    ['上下文 / 记忆', 'CLAUDE.md', 'AGENTS.md + config.toml', 'GEMINI.md', '仓库地图 + /add 选文件', '规则 / 自定义指令', '@ context providers'],
+    ['计划模式', 'plan mode（Shift+Tab）', '审批即门禁', '逐步 ReAct', 'architect（规划/实现分离）', 'Plan 模式（核心）', 'Agent 自行规划'],
+    ['Git 集成', '按权限调用 git', '按权限调用 git', '可调用 git', '自动 commit（核心特性）', '可调用 git', '@ git diff 上下文'],
+    ['扩展', 'MCP / hooks / subagents', 'MCP / profiles', 'MCP + 搜索接地', '多模型；开源自托管', 'MCP；多模型', 'MCP + 自定义命令'],
+    ['开源', '否（商用）', '是（CLI 开源）', '是（Apache-2.0）', '是', '是', '是'],
   ],
 };
 
@@ -116,4 +146,8 @@ export const SOURCES = [
   { label: 'Google · Introducing Gemini CLI（官方博客）', url: 'https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemini-cli-open-source-ai-agent/' },
   { label: 'Aider · AI pair programming in your terminal（GitHub）', url: 'https://github.com/Aider-AI/aider' },
   { label: 'Aider · Setup, Architect Mode & Git workflow（指南）', url: 'https://www.deployhq.com/guides/aider' },
+  { label: 'Cline · Autonomous coding agent（GitHub）', url: 'https://github.com/cline/cline' },
+  { label: 'Cline · Plan/Act 与审批（指南）', url: 'https://www.deployhq.com/guides/cline' },
+  { label: 'Continue · Agent mode how-it-works（官方文档）', url: 'https://docs.continue.dev/agent/how-to-use-it' },
+  { label: 'Continue · CLI（cn）（官方文档）', url: 'https://docs.continue.dev/guides/cli' },
 ];

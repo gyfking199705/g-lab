@@ -12,6 +12,11 @@ import {
   deriveName,
   planAgentRun,
   SLASH_COMMANDS,
+  toolKind,
+  needsApproval,
+  executeTool,
+  displayToolName,
+  AGENT_TOOLS,
 } from './engine.js';
 
 test('parseInput 区分空 / 斜杠 / 自然语言', () => {
@@ -107,4 +112,64 @@ test('planAgentRun(explain) 只读不写', () => {
   const { events, finalFiles } = planAgentRun('解释这个项目', files);
   assert.ok(!events.some((e) => e.kind === 'tool' && (e.tool === 'Edit' || e.tool === 'Write')));
   assert.deepEqual(finalFiles, files);
+});
+
+test('toolKind 归类 read/edit/exec', () => {
+  assert.equal(toolKind('Read'), 'read');
+  assert.equal(toolKind('Grep'), 'read');
+  assert.equal(toolKind('Edit'), 'edit');
+  assert.equal(toolKind('Write'), 'edit');
+  assert.equal(toolKind('Bash'), 'exec');
+});
+
+test('needsApproval 三档放权语义', () => {
+  // full-auto：什么都不拦
+  assert.equal(needsApproval('full-auto', 'Edit'), false);
+  assert.equal(needsApproval('full-auto', 'Bash'), false);
+  // auto-edit：只拦命令
+  assert.equal(needsApproval('auto-edit', 'Edit'), false);
+  assert.equal(needsApproval('auto-edit', 'Bash'), true);
+  assert.equal(needsApproval('auto-edit', 'Read'), false);
+  // suggest：拦改文件 + 命令，读放行
+  assert.equal(needsApproval('suggest', 'Edit'), true);
+  assert.equal(needsApproval('suggest', 'Bash'), true);
+  assert.equal(needsApproval('suggest', 'Read'), false);
+});
+
+test('executeTool read/list/grep 只读不改文件', () => {
+  const files = seedFiles();
+  const r = executeTool('read_file', { path: 'src/utils.js' }, files);
+  assert.ok(r.ok && r.content.includes('export function sum'));
+  assert.equal(executeTool('read_file', { path: 'nope.js' }, files).ok, false);
+  assert.ok(executeTool('list_files', {}, files).content.includes('package.json'));
+  assert.match(executeTool('grep', { pattern: 'export' }, files).result, /matches/);
+  // 不改原文件
+  assert.deepEqual(r.files, files);
+});
+
+test('executeTool edit_file 命中替换并产出 diff', () => {
+  const files = seedFiles();
+  const r = executeTool('edit_file', { path: 'src/utils.js', old_string: 'Hello, ${name}!', new_string: 'Hi, ${name}~' }, files);
+  assert.ok(r.ok);
+  assert.ok(r.files['src/utils.js'].includes('Hi, ${name}~'));
+  assert.ok(Array.isArray(r.diff));
+  // old_string 不存在时报错、不改文件
+  const bad = executeTool('edit_file', { path: 'src/utils.js', old_string: 'NOPE', new_string: 'x' }, files);
+  assert.equal(bad.ok, false);
+});
+
+test('executeTool write_file / run_bash', () => {
+  const files = seedFiles();
+  const w = executeTool('write_file', { path: 'NEW.md', content: 'a\nb\n' }, files);
+  assert.ok(w.ok && w.files['NEW.md'] === 'a\nb\n');
+  assert.match(executeTool('run_bash', { command: 'npm test' }, files).result, /passing/);
+});
+
+test('AGENT_TOOLS 与 displayToolName 一致', () => {
+  assert.ok(AGENT_TOOLS.length >= 5);
+  for (const t of AGENT_TOOLS) {
+    assert.ok(t.name && t.desc && t.schema && t.display);
+    assert.equal(displayToolName(t.name), t.display);
+  }
+  assert.equal(displayToolName('unknown_x'), 'unknown_x');
 });
