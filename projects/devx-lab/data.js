@@ -585,6 +585,222 @@ export const PRACTICES = [
       { label: 'DevEx (ACM Queue, 2023)', url: 'https://queue.acm.org/detail.cfm?id=3595878' },
     ],
   },
+
+  // —— 补充批次 ——
+  {
+    id: 'ai-agents',
+    title: 'AI 智能体工作流（Agentic）',
+    category: 'ai',
+    frameworks: ['devex', 'core4'],
+    impact: 4,
+    effort: 3,
+    adoption: 3,
+    summary:
+      '让 AI 智能体按计划自主执行多步任务（查代码 → 改 → 跑测试 → 修），把重复的工程流程自动化，但保留人类对结果的把关。',
+    how: [
+      '从边界清晰、可验证的任务起步（迁移、批量重构）',
+      '给智能体可用的工具与明确的成功判据（测试通过）',
+      '保留人审与回滚，复杂任务才上多步自治',
+    ],
+    signals: ['前置时间', '重复劳动占比'],
+    sources: [
+      { label: 'Anthropic · Building effective agents', url: 'https://www.anthropic.com/research/building-effective-agents' },
+    ],
+  },
+  {
+    id: 'iac',
+    title: '基础设施即代码（IaC）',
+    category: 'platform',
+    frameworks: ['dora', 'platform'],
+    impact: 4,
+    effort: 3,
+    adoption: 4,
+    summary:
+      '用版本化的声明式代码描述并创建基础设施，让环境可复制、可评审、可回滚，消除「雪花服务器」与手工漂移。',
+    how: [
+      '基础设施定义进仓库、走评审与 CI',
+      '环境从代码一键重建，禁止手工改线上',
+      '配合策略检查，默认安全合规',
+    ],
+    signals: ['环境一致性', '变更前置时间'],
+    sources: [
+      { label: 'DORA · Infrastructure as code', url: 'https://dora.dev/capabilities/infrastructure-as-code/' },
+    ],
+  },
+  {
+    id: 'db-migration',
+    title: '数据库变更管理',
+    category: 'cd',
+    frameworks: ['dora'],
+    impact: 3,
+    effort: 3,
+    adoption: 3,
+    summary:
+      '把数据库 schema 变更纳入版本控制与自动化迁移，与应用一起评审、发布、回滚，避免数据库成为交付瓶颈与事故源。',
+    how: [
+      '迁移脚本进仓库、随流水线自动执行',
+      '变更向后兼容、可分步上线（扩展-收缩）',
+      '与功能开关配合，解耦发布与切换',
+    ],
+    signals: ['变更前置时间', '变更失败率'],
+    sources: [
+      { label: 'DORA · Database change management', url: 'https://dora.dev/capabilities/database-change-management/' },
+    ],
+  },
+  {
+    id: 'tdd',
+    title: '测试驱动开发（TDD）',
+    category: 'quality',
+    frameworks: ['devex', 'dora'],
+    impact: 4,
+    effort: 3,
+    adoption: 3,
+    summary:
+      '先写失败测试再写实现，用「红-绿-重构」小步推进。逼出可测试的设计，并形成快速回归网，缩短反馈回路。',
+    how: [
+      '红：先写一个会失败的测试',
+      '绿：写最小实现让它通过',
+      '重构：在测试保护下清理设计',
+    ],
+    signals: ['反馈回路', '缺陷率'],
+    sources: [
+      { label: 'Martin Fowler · TestDrivenDevelopment', url: 'https://martinfowler.com/bliki/TestDrivenDevelopment.html' },
+    ],
+  },
+  {
+    id: 'contract-testing',
+    title: '契约测试（Consumer-Driven Contracts）',
+    category: 'quality',
+    frameworks: ['dora'],
+    impact: 4,
+    effort: 3,
+    adoption: 3,
+    summary:
+      '微服务间用「消费者驱动契约」替代脆弱的端到端测试：各服务可独立验证接口兼容性，支持独立部署与高频交付。',
+    how: [
+      '消费者定义期望、生成契约',
+      '提供方在 CI 中校验是否满足契约',
+      '契约变更可见、破坏性变更提前拦截',
+    ],
+    signals: ['部署独立性', '变更失败率'],
+    sources: [{ label: 'Pact · Contract Testing', url: 'https://docs.pact.io/' }],
+  },
+  {
+    id: 'chaos',
+    title: '混沌工程',
+    category: 'quality',
+    frameworks: ['dora'],
+    impact: 3,
+    effort: 4,
+    adoption: 2,
+    summary:
+      '主动向系统注入故障，在可控范围内验证韧性、提前发现脆弱点，提升对线上稳定与快速恢复的信心。',
+    how: [
+      '先定义稳态指标与爆炸半径',
+      '在生产/类生产小范围注入故障并观测',
+      '把发现的弱点转成改进与演练',
+    ],
+    signals: ['故障恢复时间', '可用性'],
+    sources: [{ label: 'Principles of Chaos Engineering', url: 'https://principlesofchaos.org/' }],
+  },
+  {
+    id: 'slo',
+    title: 'SLO 与错误预算',
+    category: 'metrics',
+    frameworks: ['dora'],
+    impact: 4,
+    effort: 3,
+    adoption: 3,
+    summary:
+      '用服务等级目标（SLO）量化可靠性，用「错误预算」平衡发布速度与稳定：预算充足就大胆发，烧光就先补稳定性。',
+    how: [
+      '为关键用户旅程定义 SLI 与 SLO',
+      '用错误预算决定发布节奏与冻结',
+      'SLO 破线触发告警与复盘',
+    ],
+    signals: ['可用性', '变更失败率'],
+    sources: [
+      { label: 'Google SRE · Service Level Objectives', url: 'https://sre.google/sre-book/service-level-objectives/' },
+    ],
+  },
+  {
+    id: 'blameless',
+    title: '无指责复盘 / 生成式文化',
+    category: 'flow',
+    frameworks: ['dora', 'space'],
+    impact: 5,
+    effort: 2,
+    adoption: 3,
+    summary:
+      '事故后聚焦系统与流程而非追责个人。研究表明：Westrum「生成式」文化与高交付表现强相关，是诸多能力得以落地的土壤。',
+    how: [
+      '复盘对事不对人，产出可执行改进项',
+      '鼓励上报坏消息、共享失败学习',
+      '管理层示范心理安全',
+    ],
+    signals: ['满意度', '故障恢复时间', '学习速度'],
+    sources: [
+      { label: 'DORA · Generative culture', url: 'https://dora.dev/capabilities/generative-organizational-culture/' },
+    ],
+  },
+  {
+    id: 'policy-as-code',
+    title: '策略即代码 / 默认合规',
+    category: 'platform',
+    frameworks: ['platform', 'dora'],
+    impact: 3,
+    effort: 3,
+    adoption: 3,
+    summary:
+      '把安全、合规、成本等护栏写成可执行策略，在流水线与平台层自动校验，让「正确的事」成为默认、低摩擦的路径。',
+    how: [
+      '用策略引擎（如 OPA）在 CI/准入处校验',
+      '违规即时反馈、给出修复建议',
+      '护栏内置进黄金路径，开发者无感合规',
+    ],
+    signals: ['合规通过率', '认知负荷'],
+    sources: [{ label: 'Open Policy Agent', url: 'https://www.openpolicyagent.org/' }],
+  },
+  {
+    id: 'dep-automation',
+    title: '依赖自动升级与软件供应链安全',
+    category: 'quality',
+    frameworks: ['dora', 'devex'],
+    impact: 3,
+    effort: 2,
+    adoption: 4,
+    summary:
+      '自动检测并升级有漏洞/过期的依赖（Dependabot / Renovate），用小步频繁升级替代「一年一次大升级」的高风险积压。',
+    how: [
+      '开启自动依赖更新 PR 并配 CI 验证',
+      '小步频繁合入，控制单次升级风险',
+      '结合 SBOM 与漏洞扫描守供应链',
+    ],
+    signals: ['漏洞暴露时长', '升级成本'],
+    sources: [
+      { label: 'GitHub · Dependabot', url: 'https://docs.github.com/code-security/dependabot' },
+    ],
+  },
+  {
+    id: 'docs-as-code',
+    title: '文档即代码（Docs as Code）',
+    category: 'devex',
+    frameworks: ['devex'],
+    impact: 3,
+    effort: 2,
+    adoption: 3,
+    summary:
+      '用写代码的工具链管理文档：版本控制、评审、CI 发布、就近放在仓库里。降低查找与维护成本，文档不再过期。',
+    how: [
+      '文档与代码同仓、随 PR 一起评审',
+      '用 CI 校验链接/构建并自动发布',
+      '把「改代码顺手改文档」变成习惯',
+    ],
+    signals: ['上手时间', '认知负荷'],
+    sources: [
+      { label: 'Write the Docs · Docs as Code', url: 'https://www.writethedocs.org/guide/docs-as-code/' },
+    ],
+  },
 ];
 
 // ── DORA 自评：指标分级（业界 State of DevOps 通用口径） ──────────────
