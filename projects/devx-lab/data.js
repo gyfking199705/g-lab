@@ -192,6 +192,7 @@ export const PRACTICES = [
   },
   {
     id: 'tbd',
+    requires: ['cicd'],
     title: '主干开发（Trunk-Based Development）',
     category: 'cd',
     frameworks: ['dora'],
@@ -210,6 +211,7 @@ export const PRACTICES = [
   },
   {
     id: 'flags',
+    requires: ['cicd'],
     title: '功能开关与渐进发布',
     category: 'cd',
     frameworks: ['dora'],
@@ -313,6 +315,7 @@ export const PRACTICES = [
   },
   {
     id: 'shift-left',
+    requires: ['cicd'],
     title: '质量左移（静态检查 / pre-commit）',
     category: 'quality',
     frameworks: ['dora', 'devex'],
@@ -331,6 +334,7 @@ export const PRACTICES = [
   },
   {
     id: 'dora-cfr',
+    requires: ['cicd'],
     title: '可回滚 + 演练故障恢复',
     category: 'quality',
     frameworks: ['dora'],
@@ -371,6 +375,7 @@ export const PRACTICES = [
   },
   {
     id: 'idp-portal',
+    requires: ['golden-path'],
     title: '内部开发者门户（Backstage 等）',
     category: 'platform',
     frameworks: ['platform'],
@@ -469,6 +474,7 @@ export const PRACTICES = [
   // —— 度量与反馈 ——
   {
     id: 'four-keys',
+    requires: ['cicd'],
     title: '度量 DORA 四项指标',
     category: 'metrics',
     frameworks: ['dora', 'core4'],
@@ -629,6 +635,7 @@ export const PRACTICES = [
   },
   {
     id: 'db-migration',
+    requires: ['cicd'],
     title: '数据库变更管理',
     category: 'cd',
     frameworks: ['dora'],
@@ -669,6 +676,7 @@ export const PRACTICES = [
   },
   {
     id: 'contract-testing',
+    requires: ['test-pyramid'],
     title: '契约测试（Consumer-Driven Contracts）',
     category: 'quality',
     frameworks: ['dora'],
@@ -687,6 +695,7 @@ export const PRACTICES = [
   },
   {
     id: 'chaos',
+    requires: ['observability', 'slo'],
     title: '混沌工程',
     category: 'quality',
     frameworks: ['dora'],
@@ -705,6 +714,7 @@ export const PRACTICES = [
   },
   {
     id: 'slo',
+    requires: ['observability'],
     title: 'SLO 与错误预算',
     category: 'metrics',
     frameworks: ['dora'],
@@ -745,6 +755,7 @@ export const PRACTICES = [
   },
   {
     id: 'policy-as-code',
+    requires: ['iac'],
     title: '策略即代码 / 默认合规',
     category: 'platform',
     frameworks: ['platform', 'dora'],

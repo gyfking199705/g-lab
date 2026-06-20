@@ -16,6 +16,8 @@ import {
   frameworkCoverage,
   buildExport,
   parseImport,
+  prescribe,
+  topoOrder,
 } from './calc.js';
 import { PRACTICES, CATEGORIES, FRAMEWORKS } from './data.js';
 
@@ -180,6 +182,73 @@ test('parseImport: 拒绝非法/异源，字段降级', () => {
   assert.deepEqual(p, { favs: [], statuses: {}, bands: {} });
   // favs 内非字符串被过滤
   assert.deepEqual(parseImport('{"app":"devx-lab","favs":["ok",1,null]}').favs, ['ok']);
+});
+
+test('prescribe: 弱项出处方、已落地剔除、全 Elite 无处方', () => {
+  // 全 Low → 四项都弱，每项都应有推荐
+  const r = prescribe({ deploy: 3, lead: 3, cfr: 3, mttr: 3 }, PRACTICES, {});
+  assert.equal(r.hasWeak, true);
+  assert.equal(r.allElite, false);
+  assert.equal(r.items.length, 4);
+  const SIG = { deploy: '部署频率', lead: '变更前置时间', cfr: '变更失败率', mttr: '故障恢复时间' };
+  for (const it of r.items) {
+    assert.ok(it.practices.length > 0, `${it.name} 应有推荐范式`);
+    // 每条推荐都应在 signals 里命中该指标
+    assert.ok(it.practices.every((p) => p.signals.includes(SIG[it.key])));
+  }
+  // 全 Elite → 无处方
+  const elite = prescribe({ deploy: 0, lead: 0, cfr: 0, mttr: 0 }, PRACTICES, {});
+  assert.equal(elite.hasWeak, false);
+  assert.equal(elite.allElite, true);
+  assert.equal(elite.items.length, 0);
+
+  // Medium 才出处方；High(1) 不出
+  const onlyCfr = prescribe({ deploy: 0, lead: 0, cfr: 2, mttr: 1 }, PRACTICES, {});
+  assert.equal(onlyCfr.items.length, 1);
+  assert.equal(onlyCfr.items[0].key, 'cfr');
+
+  // 已落地的范式从推荐中剔除
+  const weak = prescribe({ deploy: 3, lead: 3, cfr: 3, mttr: 3 }, PRACTICES, {});
+  const someRec = weak.items[0].practices[0].id;
+  const after = prescribe({ deploy: 3, lead: 3, cfr: 3, mttr: 3 }, PRACTICES, { [someRec]: 'done' });
+  assert.ok(!after.items[0].practices.some((p) => p.id === someRec));
+});
+
+test('topoOrder: 前置先于依赖、无环、波内按性价比、缺依赖容错', () => {
+  const { waves, hasCycle } = topoOrder(PRACTICES);
+  assert.equal(hasCycle, false);
+  // 所有节点都被排入
+  assert.equal(waves.flat().length, PRACTICES.length);
+  // 计算每个 id 所在波次，验证 requires 都排在更早或同前的波之前
+  const waveOf = new Map();
+  waves.forEach((w, i) => w.forEach((p) => waveOf.set(p.id, i)));
+  for (const p of PRACTICES) {
+    for (const r of p.requires || []) {
+      if (waveOf.has(r)) assert.ok(waveOf.get(r) < waveOf.get(p.id), `${r} 应早于 ${p.id}`);
+    }
+  }
+  // cicd 是多者前置，应在第 0 波
+  assert.equal(waveOf.get('cicd'), 0);
+  // tbd 依赖 cicd，应晚于 cicd
+  assert.ok(waveOf.get('tbd') > waveOf.get('cicd'));
+
+  // 自定义小图：a←b←c 链 + 缺失依赖容错
+  const mini = [
+    { id: 'a', impact: 5, effort: 1, requires: [] },
+    { id: 'b', impact: 4, effort: 1, requires: ['a'] },
+    { id: 'c', impact: 3, effort: 1, requires: ['b', 'ghost'] }, // ghost 不在集合，忽略
+  ];
+  const r2 = topoOrder(mini);
+  assert.deepEqual(r2.waves.map((w) => w.map((p) => p.id)), [['a'], ['b'], ['c']]);
+  assert.equal(r2.hasCycle, false);
+
+  // 环检测兜底
+  const cyc = topoOrder([
+    { id: 'x', impact: 1, effort: 1, requires: ['y'] },
+    { id: 'y', impact: 1, effort: 1, requires: ['x'] },
+  ]);
+  assert.equal(cyc.hasCycle, true);
+  assert.equal(cyc.waves.flat().length, 2);
 });
 
 test('doraMarkdown: 含评级、四指标行与口径说明', () => {
