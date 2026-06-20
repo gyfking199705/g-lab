@@ -1079,9 +1079,10 @@ export const TEMPLATE_CATEGORIES = [
     id: 'mastery',
     label: '🎯 顶尖人才 · 全方位提升',
     hint: '一年期、十大维度的旗舰成长计划，按职业方向选择',
-    ids: [
-      'tpl-top-talent', 'tpl-founder', 'tpl-researcher', 'tpl-product',
-      'tpl-finance', 'tpl-growth', 'tpl-doctor', 'tpl-lawyer', 'tpl-teacher',
+    subgroups: [
+      { label: '商业向', ids: ['tpl-founder', 'tpl-finance', 'tpl-growth'] },
+      { label: '技术 · 研究向', ids: ['tpl-top-talent', 'tpl-researcher', 'tpl-product'] },
+      { label: '专业资格向', ids: ['tpl-doctor', 'tpl-lawyer', 'tpl-teacher'] },
     ],
   },
   {
@@ -1104,14 +1105,28 @@ export const TEMPLATE_CATEGORIES = [
   },
 ];
 
-/** 返回分组后的模板：[{ id, label, hint, templates:[...] }]，并把未归类模板兜底到「其他」。 */
+/**
+ * 返回分组后的模板。类别可为「扁平」或「带二级子分类」：
+ *   扁平： { id, label, hint, templates:[...] }
+ *   子类： { id, label, hint, subgroups:[{ label, templates:[...] }] }
+ * 未归类模板兜底到「其他」。
+ */
 export function groupedTemplates() {
   const used = new Set();
+  const resolve = (ids) => {
+    const list = (ids || []).map((id) => TEMPLATES.find((t) => t.id === id)).filter(Boolean);
+    list.forEach((t) => used.add(t.id));
+    return list;
+  };
   const groups = TEMPLATE_CATEGORIES.map((c) => {
-    const templates = c.ids.map((id) => TEMPLATES.find((t) => t.id === id)).filter(Boolean);
-    templates.forEach((t) => used.add(t.id));
-    return { ...c, templates };
-  }).filter((c) => c.templates.length);
+    if (c.subgroups) {
+      const subgroups = c.subgroups
+        .map((sg) => ({ label: sg.label, templates: resolve(sg.ids) }))
+        .filter((sg) => sg.templates.length);
+      return { id: c.id, label: c.label, hint: c.hint, subgroups };
+    }
+    return { id: c.id, label: c.label, hint: c.hint, templates: resolve(c.ids) };
+  }).filter((c) => (c.subgroups && c.subgroups.length) || (c.templates && c.templates.length));
   const rest = TEMPLATES.filter((t) => !used.has(t.id));
   if (rest.length) groups.push({ id: 'other', label: '📦 其他', hint: '', templates: rest });
   return groups;

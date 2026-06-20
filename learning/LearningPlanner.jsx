@@ -895,6 +895,19 @@ function Heatmap({ series }) {
 function Creator({ aiConfig, onClose, onCreate, onNeedAI }) {
   const [mode, setMode] = useState('template'); // template | ai | blank
 
+  const tplGrid = (templates) => (
+    <div className="lp-tplgrid">
+      {templates.map((t) => (
+        <button key={t.id} className="lp-tpl" onClick={() => onCreate(scaffoldPlan(t))}>
+          <div className="lp-tpl-icon">{t.icon}</div>
+          <div className="lp-tpl-title">{t.title}</div>
+          <div className="lp-tpl-sum">{t.summary}</div>
+          <div className="lp-tpl-meta">{t.modules.length} 模块 · 建议 {t.weeks} 周</div>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <Modal title="新建学习计划" onClose={onClose} wide>
       <div className="lp-modetabs">
@@ -912,16 +925,14 @@ function Creator({ aiConfig, onClose, onCreate, onNeedAI }) {
                 <span className="lp-tplgroup-label">{g.label}</span>
                 {g.hint && <span className="lp-tplgroup-hint">{g.hint}</span>}
               </div>
-              <div className="lp-tplgrid">
-                {g.templates.map((t) => (
-                  <button key={t.id} className="lp-tpl" onClick={() => onCreate(scaffoldPlan(t))}>
-                    <div className="lp-tpl-icon">{t.icon}</div>
-                    <div className="lp-tpl-title">{t.title}</div>
-                    <div className="lp-tpl-sum">{t.summary}</div>
-                    <div className="lp-tpl-meta">{t.modules.length} 模块 · 建议 {t.weeks} 周</div>
-                  </button>
-                ))}
-              </div>
+              {g.subgroups
+                ? g.subgroups.map((sg) => (
+                    <div className="lp-tplsub" key={sg.label}>
+                      <div className="lp-tplsub-label">{sg.label}</div>
+                      {tplGrid(sg.templates)}
+                    </div>
+                  ))
+                : tplGrid(g.templates)}
             </div>
           ))}
         </div>
@@ -1581,6 +1592,8 @@ const CSS = `
 .lp-modetabs button:hover{border-color:var(--bd-2);}
 .lp-modetabs button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);font-weight:600;}
 .lp-tplgroups{display:flex;flex-direction:column;gap:20px;}
+.lp-tplsub{margin-bottom:12px;}
+.lp-tplsub-label{font-size:12px;font-weight:600;color:var(--t2);margin:0 0 8px 2px;padding-left:8px;border-left:2px solid var(--accent);}
 .lp-tplgroup-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
 .lp-tplgroup-label{font-size:14px;font-weight:600;color:var(--t1);}
 .lp-tplgroup-hint{font-size:12px;color:var(--t3);}
