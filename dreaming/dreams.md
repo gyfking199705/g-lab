@@ -15,3 +15,13 @@
   - 给计划加优先级/工作量标签，`status` 能按「性价比」排序推荐下一步做哪个
   - 让素材能反向链接到具体 commit/PR，点开就能看 diff
   - 跨子项目主题聚类：把素材按子项目/主题聚合，发现哪个方向最近最活跃、哪个停滞
+
+## D-2 · 2026-06-20 · agent-cli 下一步可以怎么玩
+- 作者: claude
+- 来源素材: M-7, M-8
+- 脑爆:
+  - 在 demo 里加「审批模式」开关，模拟 suggest / auto-edit / full-auto 三档，让离线 demo 真正演示「分级放权」
+  - 真实 AI 模式接入工具调用编排（function calling），让真实模式也能展示工具卡 + diff，而不只是聊天
+  - 再扩几家做对照：Cline / Continue / Cursor agent / Devin，矩阵加列
+  - 一键「自动播放」一条 ReAct 轨迹（带计时），把循环讲给人看
+  - 把四家速查矩阵导出为 Markdown / 图片，便于分享
