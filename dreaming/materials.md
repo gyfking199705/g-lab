@@ -349,3 +349,10 @@
 - 子项目: muse-ui
 - 重点: 写 projects/muse-ui/AGENTS.md：5 条铁律 + TiltCard 范例 + 组件↔纯逻辑对照 + 加组件/复用两份配方 + 红线/自检；README 与根 AGENTS.md 加指引。
 - 解决的问题: 让别的 agent 能快速看懂 muse-ui 的范式并吸收复用——之前只有消费者向 README，缺 agent 向的模式与配方。
+
+## M-45 · 2026-06-20 · 模板徽章/筛选 + 自动生成 KNOWLEDGE.md 供别的 agent 吸收
+- 作者: claude
+- 提交: 68a2738
+- 子项目: ai-coding-lab
+- 重点: 卡片加「📋 模板」徽章+「含模板」筛选；build.mjs 据 data 自动生成全量纯文本摘要 KNOWLEDGE.md(入库)；AGENTS.md/README 增加'只想吸收读 KNOWLEDGE.md / 想扩展读 AGENTS.md'指引
+- 解决的问题: 别的 agent 要吸收知识精华却得跑应用/读源码；模板不易被发现——给一份可直接通读的离线摘要 + 发现入口
