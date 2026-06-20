@@ -31,13 +31,13 @@ function ScoreRing({ score, color }) {
   );
 }
 
-/** 质量体检面板：评分环 + 逐项清单（未通过项给出建议）。 */
-export default function LintPanel({ prompt }) {
+/** 质量体检面板：评分环 + 逐项清单（未通过项给出建议，可点击跳到编辑器修复）。 */
+export default function LintPanel({ prompt, onFix }) {
   const r = lintPrompt(prompt);
   const color = TONE[r.grade.tone];
   return (
     <div className="pl-block">
-      <h5>质量体检</h5>
+      <h5>质量体检{onFix && r.passed < r.total ? <span style={{ color: 'var(--t3)', fontWeight: 400 }}>点未达标项去修复 →</span> : null}</h5>
       <div className="pl-lint">
         <div className="pl-lint-top">
           <ScoreRing score={r.score} color={color} />
@@ -51,15 +51,23 @@ export default function LintPanel({ prompt }) {
           </div>
         </div>
         <ul className="pl-lint-list">
-          {r.checks.map((c) => (
-            <li key={c.id} className={c.pass ? 'pl-ck-on' : 'pl-ck-off'}>
-              <span className="pl-ck-mark">{c.pass ? '✓' : '!'}</span>
-              <span className="pl-ck-body">
-                <span className="pl-ck-label">{c.label}</span>
-                {!c.pass ? <span className="pl-ck-tip">{c.tip}</span> : null}
-              </span>
-            </li>
-          ))}
+          {r.checks.map((c) => {
+            const clickable = !c.pass && onFix;
+            return (
+              <li
+                key={c.id}
+                className={(c.pass ? 'pl-ck-on' : 'pl-ck-off') + (clickable ? ' pl-ck-fix' : '')}
+                onClick={clickable ? () => onFix(c.field) : undefined}
+                title={clickable ? '点击去编辑器修复' : undefined}
+              >
+                <span className="pl-ck-mark">{c.pass ? '✓' : '!'}</span>
+                <span className="pl-ck-body">
+                  <span className="pl-ck-label">{c.label}{clickable ? ' →' : ''}</span>
+                  {!c.pass ? <span className="pl-ck-tip">{c.tip}</span> : null}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>
