@@ -3,7 +3,10 @@
  * 设计语言遵循 g-lab DESIGN.md（暖纸色 + 陶土橙、衬线标题、克制留白、手写无图表库）。
  */
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { parseIndex, filterSkills, categoriesOf, validateSkill } from './registry.js';
+import {
+  parseIndex, filterSkills, categoriesOf, tagsOf, validateSkill,
+  scoreSkill, installCommand,
+} from './registry.js';
 import { splitFrontmatter } from './frontmatter.js';
 import { renderMarkdown } from './markdown.js';
 
@@ -15,6 +18,7 @@ export default function SkillLab() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [tag, setTag] = useState('');
   const [openSlug, setOpenSlug] = useState(null);
 
   useEffect(() => {
@@ -27,8 +31,16 @@ export default function SkillLab() {
   }, []);
 
   const cats = useMemo(() => categoriesOf(skills), [skills]);
-  const shown = useMemo(() => filterSkills(skills, { query, category }), [skills, query, category]);
+  const tags = useMemo(() => tagsOf(skills), [skills]);
+  const shown = useMemo(() => {
+    const byText = filterSkills(skills, { query, category });
+    return tag ? byText.filter((s) => (s.tags || []).includes(tag)) : byText;
+  }, [skills, query, category, tag]);
   const open = useMemo(() => skills.find((s) => s.slug === openSlug) || null, [skills, openSlug]);
+  const avgScore = useMemo(() => {
+    const scored = skills.filter((s) => typeof s.score === 'number');
+    return scored.length ? Math.round(scored.reduce((n, s) => n + s.score, 0) / scored.length) : null;
+  }, [skills]);
 
   return (
     <div className="sl">
@@ -40,7 +52,12 @@ export default function SkillLab() {
           <a href={BASE + 'SPEC.md'} target="_blank" rel="noopener noreferrer"> SKILL.md 业界标准格式</a>，
           即取即用。
         </p>
-        <div className="sl-sub">Agent Skills · Curated &amp; Showcased</div>
+        <div className="sl-sub">
+          Agent Skills · Curated &amp; Showcased
+          {avgScore != null && status === 'ready' && (
+            <span className="sl-avg"> · 平均质量分 {avgScore}/100</span>
+          )}
+        </div>
       </header>
 
       <div className="sl-toolbar">
@@ -66,6 +83,20 @@ export default function SkillLab() {
             <Chip key={c.name} active={category === c.name} label={c.name} count={c.count}
               onClick={() => setCategory(category === c.name ? '' : c.name)} />
           ))}
+        </div>
+      )}
+
+      {status === 'ready' && tags.length > 0 && (
+        <div className="sl-tagcloud">
+          <span className="sl-tagcloud-k">标签</span>
+          {tags.map((t) => (
+            <button key={t.name}
+              className={'sl-tagchip' + (tag === t.name ? ' on' : '')}
+              onClick={() => setTag(tag === t.name ? '' : t.name)}>
+              #{t.name}<span className="sl-tagchip-n">{t.count}</span>
+            </button>
+          ))}
+          {tag && <button className="sl-tagclear" onClick={() => setTag('')}>清除标签 ×</button>}
         </div>
       )}
 
@@ -109,7 +140,10 @@ function SkillCard({ skill, onOpen }) {
     <button className="sl-card" onClick={onOpen}>
       <div className="sl-card-top">
         <span className="sl-card-cat">{skill.category}</span>
-        <span className="sl-card-v">v{skill.version}</span>
+        <span className="sl-card-meta">
+          {skill.grade && <GradeBadge grade={skill.grade} score={skill.score} />}
+          <span className="sl-card-v">v{skill.version}</span>
+        </span>
       </div>
       <div className="sl-card-name">{skill.name}</div>
       <div className="sl-card-desc">{skill.description}</div>
@@ -148,17 +182,27 @@ function SkillModal({ skill, onClose }) {
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, [onClose]);
 
-  const copy = useCallback(async () => {
+  const [copiedInstall, setCopiedInstall] = useState(false);
+  const install = useMemo(() => installCommand(skill.slug), [skill.slug]);
+
+  const copyText = useCallback(async (text, mark) => {
     try {
-      await navigator.clipboard.writeText(rawText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
+      await navigator.clipboard.writeText(text);
+      mark(true);
+      setTimeout(() => mark(false), 1600);
     } catch { /* 剪贴板不可用时静默 */ }
-  }, [rawText]);
+  }, []);
+  const copy = useCallback(() => copyText(rawText, setCopied), [copyText, rawText]);
+  const copyInstall = useCallback(() => copyText(install, setCopiedInstall), [copyText, install]);
 
   const issues = useMemo(
     () => validateSkill({ name: skill.name, description: skill.description }),
     [skill.name, skill.description]
+  );
+
+  const quality = useMemo(
+    () => state.status === 'ready' ? scoreSkill(skill, state.body) : null,
+    [skill, state.status, state.body]
   );
 
   const bodyHtml = useMemo(
@@ -177,9 +221,15 @@ function SkillModal({ skill, onClose }) {
           <p className="sl-m-desc">{skill.description}</p>
           <div className="sl-m-actions">
             <button className="sl-btn sl-btn-pri" onClick={copy}>{copied ? '已复制 ✓' : '复制 SKILL.md'}</button>
+            <button className="sl-btn" onClick={copyInstall}>{copiedInstall ? '已复制安装命令 ✓' : '复制安装命令'}</button>
             <a className="sl-btn" href={BASE + skill.path} download={`${skill.slug}-SKILL.md`}>下载</a>
             <a className="sl-btn" href={BASE + skill.path} target="_blank" rel="noopener noreferrer">查看源文件</a>
           </div>
+        </div>
+
+        <div className="sl-m-install">
+          <div className="sl-m-install-k">安装（克隆仓库后）</div>
+          <code className="sl-m-install-cmd">{install}</code>
         </div>
 
         <div className="sl-m-meta">
@@ -199,6 +249,8 @@ function SkillModal({ skill, onClose }) {
           </Meta>
         </div>
 
+        {quality && <ScorePanel quality={quality} />}
+
         <div className="sl-m-body">
           {state.status === 'loading' && <div className="sl-note">正在加载 SKILL.md…</div>}
           {state.status === 'error' && <div className="sl-err">无法加载：{state.body}</div>}
@@ -214,6 +266,38 @@ function Meta({ label, children }) {
     <div className="sl-meta-row">
       <div className="sl-meta-k">{label}</div>
       <div className="sl-meta-v">{children}</div>
+    </div>
+  );
+}
+
+function GradeBadge({ grade, score }) {
+  const g = String(grade || '').toLowerCase();
+  return (
+    <span className={'sl-grade sl-grade-' + g} title={score != null ? `质量分 ${score}/100` : ''}>
+      {grade}
+    </span>
+  );
+}
+
+function ScorePanel({ quality }) {
+  const { score, grade, checks } = quality;
+  return (
+    <div className="sl-score">
+      <div className="sl-score-hd">
+        <GradeBadge grade={grade} score={score} />
+        <div className="sl-score-num">{score}<span>/100</span></div>
+        <div className="sl-score-cap">质量分（对齐 SPEC.md 评分维度）</div>
+      </div>
+      <div className="sl-score-bar"><i style={{ width: score + '%' }} /></div>
+      <ul className="sl-score-list">
+        {checks.map((c) => (
+          <li key={c.label} className={c.ok ? 'ok' : 'no'} title={c.ok ? '' : c.hint}>
+            <span className="sl-score-ic">{c.ok ? '✓' : '○'}</span>
+            {c.label}
+            {!c.ok && <span className="sl-score-hint">— {c.hint}</span>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -322,10 +406,51 @@ const CSS = `
 .md-hr{border:0;border-top:1px solid var(--bd);margin:20px 0;}
 .md strong{font-weight:600;}.md em{font-style:italic;}
 
+.sl-avg{color:var(--accent-2);}
+
+.sl-tagcloud{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:-8px 0 22px;}
+.sl-tagcloud-k{font-size:12px;color:var(--t3);margin-right:2px;}
+.sl-tagchip{font-family:inherit;font-size:12px;color:var(--t2);background:var(--surface-2);border:1px solid var(--bd-2);
+  border-radius:6px;padding:3px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s;}
+.sl-tagchip:hover{border-color:var(--accent);color:var(--accent-2);}
+.sl-tagchip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);font-weight:600;}
+.sl-tagchip-n{font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums;}
+.sl-tagchip.on .sl-tagchip-n{color:var(--accent-2);}
+.sl-tagclear{font-family:inherit;font-size:12px;color:var(--t3);background:transparent;border:0;cursor:pointer;padding:3px 4px;}
+.sl-tagclear:hover{color:var(--accent-2);}
+
+.sl-card-meta{display:flex;align-items:center;gap:7px;}
+.sl-grade{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;
+  border-radius:5px;font-size:11px;font-weight:700;font-family:var(--serif);letter-spacing:.2px;}
+.sl-grade-a{background:#E5EEE7;color:#4F7A5E;}
+.sl-grade-b{background:#EAF0E6;color:#6E8A4E;}
+.sl-grade-c{background:#F6EEDD;color:#A77B33;}
+.sl-grade-d{background:#F6E3DF;color:#A8503F;}
+
+.sl-m-install{margin:18px 0 0;background:#33302A;border-radius:10px;padding:11px 14px;display:flex;flex-direction:column;gap:5px;}
+.sl-m-install-k{font-size:11px;color:#B8B2A6;letter-spacing:.3px;}
+.sl-m-install-cmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:#F3EFE7;
+  word-break:break-all;line-height:1.5;}
+
+.sl-score{margin:20px 0 6px;border:1px solid var(--bd-2);border-radius:12px;padding:16px 16px 12px;background:var(--surface-2);}
+.sl-score-hd{display:flex;align-items:center;gap:10px;}
+.sl-score-num{font-family:var(--serif);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;}
+.sl-score-num span{font-size:13px;color:var(--t3);font-family:var(--sans);margin-left:1px;}
+.sl-score-cap{font-size:12px;color:var(--t2);margin-left:auto;}
+.sl-score-bar{height:5px;background:var(--fill);border-radius:3px;overflow:hidden;margin:11px 0 13px;}
+.sl-score-bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .3s;}
+.sl-score-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;}
+.sl-score-list li{font-size:12.5px;color:var(--t1);display:flex;gap:6px;align-items:baseline;}
+.sl-score-list li.no{color:var(--t2);}
+.sl-score-ic{color:var(--ok);font-weight:700;}
+.sl-score-list li.no .sl-score-ic{color:var(--t3);}
+.sl-score-hint{color:var(--warn);font-size:11.5px;}
+
 @media (max-width:560px){
   .sl-modal{padding:22px 18px 24px;}
   .sl-m-name{font-size:23px;}
   .sl-meta-row{flex-direction:column;gap:4px;}
   .sl-meta-k{width:auto;}
+  .sl-score-list{grid-template-columns:1fr;}
 }
 `;

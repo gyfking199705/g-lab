@@ -102,3 +102,11 @@
 - 重点: 业界框架页新增覆盖度（每个框架对齐的范式数 + 已落地/进行中，按 DORA/SPACE/DevEx 维度聚合落地进度）；底部新增收藏/采纳状态/自评的 JSON 导出备份与导入；纯逻辑新增 frameworkCoverage/buildExport/parseImport，单测增至 15 项全过
 - 解决的问题: 采纳进度此前只能看总量，看不出哪条能力线薄弱；本地数据无法在团队成员间共享或备份
 - 遗留/副作用: parseImport 对异源/非法 JSON 抛错并对字段类型降级，避免坏数据污染 localStorage
+
+## M-14 · 2026-06-20 · skill-lab 扩展到 20 技能 + 质量分 + 贡献者基建
+- 作者: claude
+- 提交: 97c2e2b
+- 子项目: skill-lab
+- 重点: 技能 12→20；registry 加 scoreSkill/installCommand 并入 index.json；validate.mjs + CI + _template；画廊加评分面板/标签云/安装命令
+- 解决的问题: 只有收录还不够——缺少可量化的质量标准、贡献者上手路径与自动校验，难以规模化保证'符合业界标准'
+- 遗留/副作用: 20 技能平均质量分 97；纯逻辑单测 32 全过
