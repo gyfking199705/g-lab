@@ -162,6 +162,74 @@ export function parseImport(text) {
   };
 }
 
+// ── 落地路线：处方式推荐 + 拓扑排序 ─────────────────────────────────
+
+// DORA 指标 key → 范式 signals 里对应的中文标签（用于把弱项映射到能提升它的范式）
+const METRIC_SIGNAL = {
+  deploy: '部署频率',
+  lead: '变更前置时间',
+  cfr: '变更失败率',
+  mttr: '故障恢复时间',
+};
+
+/**
+ * 处方式推荐：针对 DORA 自评里的薄弱指标（档位 Medium/Low，或未评＝按最弱档），
+ * 列出能提升该指标、且尚未落地的范式（signals 命中该指标），按性价比排序。
+ * @returns {{ items: Array<{key,name,level,practices}>, hasWeak:boolean, allElite:boolean }}
+ *   allElite：四项都 Elite，无需补；hasWeak：存在可处方的弱项。
+ */
+export function prescribe(bands = {}, practices = PRACTICES, statuses = {}) {
+  const result = classifyDora(bands);
+  const items = [];
+  for (const pm of result.perMetric) {
+    if (pm.index < 2) continue; // 只对 Medium(2)/Low(3) 出处方
+    const signal = METRIC_SIGNAL[pm.key];
+    const recs = (practices || [])
+      .filter((p) => (p.signals || []).includes(signal))
+      .filter((p) => statusOf(statuses, p.id) !== 'done')
+      .sort((a, b) => roi(b) - roi(a));
+    items.push({ key: pm.key, name: pm.name, level: pm.level, practices: recs });
+  }
+  const allElite = result.perMetric.every((pm) => pm.index === 0);
+  return { items, hasWeak: items.length > 0, allElite };
+}
+
+/**
+ * 拓扑排序成「落地波次」：尊重 requires 前置边（集合外的依赖忽略），
+ * 同一波内按性价比降序。用 Kahn 算法；若存在环，剩余节点并入最后一波并置 hasCycle。
+ * @returns {{ waves: Array<Array>, hasCycle: boolean }}
+ */
+export function topoOrder(practices = PRACTICES) {
+  const list = practices || [];
+  const ids = new Set(list.map((p) => p.id));
+  const byId = new Map(list.map((p) => [p.id, p]));
+  // 仅保留指向集合内节点的依赖边
+  const deps = new Map(
+    list.map((p) => [p.id, (p.requires || []).filter((r) => ids.has(r) && r !== p.id)]),
+  );
+  const remaining = new Set(ids);
+  const waves = [];
+  let hasCycle = false;
+
+  while (remaining.size) {
+    const ready = [...remaining].filter((id) =>
+      deps.get(id).every((r) => !remaining.has(r)),
+    );
+    if (!ready.length) {
+      // 有环：把剩余节点作为最后一波兜底，避免死循环
+      hasCycle = true;
+      waves.push(
+        [...remaining].map((id) => byId.get(id)).sort((a, b) => roi(b) - roi(a)),
+      );
+      break;
+    }
+    ready.sort((a, b) => roi(byId.get(b)) - roi(byId.get(a)));
+    waves.push(ready.map((id) => byId.get(id)));
+    for (const id of ready) remaining.delete(id);
+  }
+  return { waves, hasCycle };
+}
+
 // ── DORA 自评导出 ───────────────────────────────────────────────────
 
 /** 把自评结果渲染成可粘贴的 Markdown（贴周报/文档用）。 */

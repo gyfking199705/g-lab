@@ -10,11 +10,13 @@ import { load, save } from './store.js';
 import Practices from './Practices.jsx';
 import Frameworks from './Frameworks.jsx';
 import Assessment from './Assessment.jsx';
+import Roadmap from './Roadmap.jsx';
 
 const TABS = [
   { id: 'practices', name: '提效范式库' },
   { id: 'frameworks', name: '业界框架' },
   { id: 'assess', name: 'DORA 自评' },
+  { id: 'roadmap', name: '落地路线' },
 ];
 
 export default function DevxLab() {
@@ -52,6 +54,14 @@ export default function DevxLab() {
       save('status', next);
       return next;
     });
+  }
+
+  const [focus, setFocus] = useState(null);
+
+  function gotoPractice(id) {
+    const p = PRACTICES.find((x) => x.id === id);
+    setFocus({ q: p ? p.title : '', nonce: Date.now() });
+    setTab('practices');
   }
 
   const fileRef = useRef(null);
@@ -129,10 +139,24 @@ export default function DevxLab() {
       </nav>
 
       {tab === 'practices' && (
-        <Practices favs={favs} onToggleFav={toggleFav} statuses={statuses} onSetStatus={setStatus} />
+        <Practices
+          favs={favs}
+          onToggleFav={toggleFav}
+          statuses={statuses}
+          onSetStatus={setStatus}
+          focus={focus}
+        />
       )}
       {tab === 'frameworks' && <Frameworks statuses={statuses} />}
       {tab === 'assess' && <Assessment bands={bands} onSet={setBand} />}
+      {tab === 'roadmap' && (
+        <Roadmap
+          bands={bands}
+          statuses={statuses}
+          onGoto={gotoPractice}
+          onGotoAssess={() => setTab('assess')}
+        />
+      )}
 
       <div className="dx-data">
         <span className="dx-data-h">我的数据（收藏 / 采纳状态 / 自评）</span>

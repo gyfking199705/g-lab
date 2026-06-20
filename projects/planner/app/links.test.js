@@ -30,7 +30,13 @@ const DATA = {
       { done: true, date: '2026-06-19' }, // 无关联
     ],
   }, // 全局 done=2；G1 关联完成=1
-  'habits-planner': { habits: [{ id: 'h1', type: 'check' }], checkins: { h1: { '2026-06-20': 1, '2026-06-19': 1 } } }, // streak 2
+  'habits-planner': {
+    habits: [
+      { id: 'h1', type: 'check', goalId: 'G1' }, // 关联 G1，2 个打卡日
+      { id: 'h2', type: 'check', goalId: 'G1' }, // 关联 G1，1 个打卡日
+    ],
+    checkins: { h1: { '2026-06-20': 1, '2026-06-19': 1 }, h2: { '2026-06-18': 1 } },
+  }, // 全局最长连击=2（h1）；G1 关联习惯累计打卡=3
   'savings-planner': {
     netWorth: {
       accounts: [{ id: 'cash', type: 'asset' }, { id: 'debt', type: 'liability' }],
@@ -117,6 +123,13 @@ test('goal.scheduleDone（scoped）：只统计挂到该目标的已完成日程
   assert.equal(computeLink('goal.scheduleDone', get, TODAY, { goalId: '不存在' }), null); // 没关联项
   assert.equal(computeLink('goal.scheduleDone', get, TODAY), null); // 无 ctx
   assert.equal(LINK_OPTIONS.find((o) => o.id === 'goal.scheduleDone').scoped, true);
+});
+
+test('goal.habitsChecks（scoped）：只统计关联该目标习惯的累计打卡', () => {
+  const get = makeGet(DATA);
+  assert.equal(computeLink('goal.habitsChecks', get, TODAY, { goalId: 'G1' }), 3);
+  assert.equal(computeLink('goal.habitsChecks', get, TODAY, { goalId: '无' }), null);
+  assert.equal(computeLink('goal.habitsChecks', get, TODAY), null);
 });
 
 test('resolveGoalsLinks 对 scoped 来源按各目标自身 id 取数', () => {

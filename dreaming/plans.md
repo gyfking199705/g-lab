@@ -50,14 +50,36 @@
   3. App TaskCard 在 running 且有 output 时实时显示流式文本（带光标）
   4. 补单测：extractDelta(anthropic/openai/[DONE]) + streamSSE 用 ReadableStream 喂分片；重打包
 - 验收: node --test 全绿（含流式解析）；离线流程不受影响；填 Key 后产出逐字出现
+## P-4 · DORA 处方式路线图：按薄弱指标推荐该补的范式
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 数据已就绪：每条范式带 signals/frameworks，DORA 自评已产出 perMetric 档位；把弱项映射到对应 signal 的范式即可，纯前端纯函数可做、可单测
+- 步骤:
+  1. calc 加 prescribe(bands,practices,statuses)：弱指标(档位>=Medium或未评)映射到 signal 命中的未落地范式，按性价比排序
+  2. 新增 Roadmap 视图的处方区：按弱指标分组展示推荐范式，未自评则引导先做自评
+  3. 补 prescribe 单测（弱项命中/已落地剔除/全 Elite 无处方）并重打包
+- 验收: 自评出现 Medium/Low 指标时，路线页按该指标列出可提升它的范式且排除已落地；全 Elite 时提示无需补
 
-## P-5 · swarm 成本可预测：派单前预估 + 路由快路径
+## P-5 · 范式依赖图与拓扑落地顺序
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 平铺清单没有先后；给范式加 requires 前置边后用 Kahn 拓扑排序分批，是确定性纯函数、可单测；缺失依赖容错忽略
+- 步骤:
+  1. data 给有真实前置关系的范式加 requires（如主干开发/功能开关/质量左移依赖 CI/CD，混沌依赖可观测+SLO，策略即代码依赖 IaC）
+  2. calc 加 topoOrder(practices)：Kahn 分波次，波内按性价比排序，检测环、忽略集合外依赖
+  3. Roadmap 视图展示分批落地顺序（第1批/第2批…）+ 依赖提示 + 已落地标记
+  4. 补 topoOrder 单测（分层正确/缺依赖容错/无环）并重打包
+- 验收: 路线页给出有先后的批次，前置未满足的范式排在其依赖之后；node --test 全绿
+
+## P-8 · swarm 成本可预测：派单前预估 + 路由快路径
 - 状态: done
 - 作者: claude
 - 可行性: 调研反复强调多智能体 ~15× token、只对高价值任务划算；demo 缺『这单大概多贵/多少步』的决策辅助，也缺单一意图省钱的快路径(Bedrock 式)
 - 步骤:
-  1. core/cost.js：PRICING 价目 + estimateTokens + estimateJobCost(specs,model)→{步数/波次/in/out/总token/$}（纯函数+单测）
+  1. core/cost.js：PRICING 价目 + estimateTokens + estimateJobCost（步数/波次/in-out-token/$，纯函数+单测）
   2. orchestrator：isSimpleIntent + routeDecompose（单一清晰意图→执行者+汇总者两步快路径）+ 单测
-  3. engine：简单意图走快路径并标 job.route；规划后算 job.estimate
-  4. App：输入框下实时预估、工作区头显示步数/波次/预估花费 + 快路径/全量编排徽章；重打包
-- 验收: node --test 全绿；简单需求显示『快路径·更少步数更低估价』，复杂需求显示全量编排估算；离线不受影响
+  3. engine：简单意图走快路径并标 job.route；规划后算 job.estimate（返工后上调）
+  4. App：输入框下实时预估、工作区头步数/波次/预估花费 + 快路径/全量徽章；重打包
+- 验收: node --test 全绿；简单需求显示快路径更省，复杂需求显示全量编排估算；离线不受影响

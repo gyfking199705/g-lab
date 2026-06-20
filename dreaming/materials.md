@@ -152,9 +152,39 @@
 - 重点: ai.js 加 callChatStream/extractDelta/streamSSE（SSE，Anthropic+OpenAI，纯函数可测）；engine 流式把分片实时写进 task.output 并 onUpdate；TaskCard running 态逐字显示+光标；30 单测全绿，含 mock fetch 全链路验证流式中间态
 - 解决的问题: 原产出一次性返回、体验差且 BYOK 未验证——补上流式 + 端到端验证（mock fetch）
 
-## M-19 · 2026-06-20 · swarm 成本可预测 + 路由快路径（落地 P-5）
+## M-19 · 2026-06-20 · 习惯关联目标(scoped)
 - 作者: claude
-- 提交: 2cae151
+- 提交: 60aaf10
+- 子项目: planner
+- 重点: habits 表单加关联目标选择；links 加 goal.habitsChecks 只统计本目标关联习惯累计打卡
+- 解决的问题: ①习惯与目标未打通，习惯坚持无法驱动目标进度
+
+## M-20 · 2026-06-20 · prompt-lab 标签筛选 + 平均质量概览 + 键盘快捷键
+- 作者: claude
+- 提交: 5baf632
+- 子项目: prompt-lab
+- 重点: 侧栏新增标签分区(top14 按频次)点击精确过滤、filterPrompts 加纯函数 tag 维度、活动标签可一键清除；概览行显示结果数与全库平均质量分(averageScore)；键盘快捷键 / 聚焦搜索、n 新增、Esc 关闭当前层；新增 tag/averageScore 单测，node --test 30 全过，Puppeteer 实测无报错
+- 解决的问题: 库变大后只靠分类/技巧不够细，缺标签维度的快速收敛；缺少全局质量水位感知与高频操作的键盘加速
+- 遗留/副作用: 平均质量分实时按全部 prompt 计算，量很大时为 O(n) 但成本可忽略
+
+## M-21 · 2026-06-20 · agent-cli 体验增强：矩阵导出 Markdown + ReAct 自动演示
+- 作者: claude
+- 提交: 0607694
+- 子项目: agent-cli
+- 重点: engine 加 matrixToMarkdown（纯函数+单测）；研究面板加「复制为 Markdown」按钮；ReAct 手写SVG 示意图加「▶ 自动演示」逐步高亮+计时讲解（推进 D-2 两条）
+- 解决的问题: 调研结论难外带、循环只静态——让六家矩阵可一键带走、agentic 循环能动起来讲清楚
+
+## M-22 · 2026-06-20 · devx-lab 新增『落地路线』：DORA 处方式推荐 + 拓扑落地顺序（落地 P-4/P-5）
+- 作者: claude
+- 提交: 28e6f64
+- 子项目: devx-lab
+- 重点: 新增第四个标签页 Roadmap：①处方建议——读 DORA 自评，针对 Medium/Low 薄弱指标按 signals 映射出能提升它且未落地的范式（按性价比，点击跳范式库）；②建议落地顺序——给范式加 requires 前置边，Kahn 拓扑分批、波内按性价比、环检测兜底。纯逻辑 prescribe/topoOrder，单测 15→17 全过
+- 解决的问题: 范式库+自评只能诊断'现状'，回答不了'下一步先做什么、什么顺序做'——把诊断变成有先后的行动计划
+- 遗留/副作用: 并发协作下记得把 dreaming/plans.md 一并提交，否则未提交改动会卡住后续 rebase（这次踩到）
+
+## M-23 · 2026-06-20 · swarm 成本可预测 + 路由快路径（落地 P-8）
+- 作者: claude
+- 提交: 1b0a233
 - 子项目: swarm
-- 重点: core/cost.js 价目+estimateTokens+estimateJobCost（步数/波次/in-out-token/$，纯函数）；orchestrator 加 isSimpleIntent/routeDecompose/buildPlan；engine 简单意图走 2 步快路径并标 job.route、规划后算 job.estimate（返工后上调）；App 输入框下实时预估+工作区头估算+快路径徽章；顺手修了 P-4 引入的 callChat 漏 import；39 单测全绿
+- 重点: core/cost.js 价目+estimateTokens+estimateJobCost（步数/波次/in-out-token/$，纯函数）；orchestrator 加 isSimpleIntent/routeDecompose/buildPlan；engine 简单意图走 2 步快路径并标 job.route、规划后算 job.estimate（返工后上调）；App 输入框下实时预估+工作区头估算+快路径徽章；修了 P-4 引入的 callChat 漏 import；39 单测全绿
 - 解决的问题: demo 缺『这单多贵/多少步』的派单前决策辅助，也缺单一意图省钱的快路径

@@ -1,7 +1,7 @@
 /**
  * 范式库视图：搜索 + 类别 chips + 框架/排序下拉 + 可展开卡片 + 收藏。
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { PRACTICES, CATEGORIES, FRAMEWORKS, ADOPTION_STATUS } from './data.js';
 import { filterPractices, sortPractices, roi, categoryCounts, statusOf } from './calc.js';
 
@@ -104,13 +104,23 @@ function Card({ p, fav, onFav, onFramework, status, onStatus }) {
   );
 }
 
-export default function Practices({ favs, onToggleFav, statuses, onSetStatus }) {
+export default function Practices({ favs, onToggleFav, statuses, onSetStatus, focus }) {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState('all');
   const [framework, setFramework] = useState('all');
   const [sort, setSort] = useState('impact');
   const [favOnly, setFavOnly] = useState(false);
   const [status, setStatus] = useState('all');
+
+  // 从「落地路线」跳转过来：用范式标题作搜索，并清掉其它筛选以确保命中
+  useEffect(() => {
+    if (!focus) return;
+    setQ(focus.q);
+    setCategory('all');
+    setFramework('all');
+    setStatus('all');
+    setFavOnly(false);
+  }, [focus && focus.nonce]);
 
   const counts = useMemo(() => categoryCounts(PRACTICES), []);
 

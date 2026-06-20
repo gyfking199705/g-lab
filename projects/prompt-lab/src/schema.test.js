@@ -54,6 +54,9 @@ test('filterPrompts 按查询/分类/技巧/收藏过滤', () => {
   assert.equal(filterPrompts(data, { technique: 'role' }).length, 1);
   assert.equal(filterPrompts(data, { favorite: true }).length, 1);
   assert.equal(filterPrompts(data, { query: 'fun' }).length, 1); // 命中 tag
+  assert.equal(filterPrompts(data, { tag: 'fun' }).length, 1); // 按 tag 精确过滤
+  assert.equal(filterPrompts(data, { tag: 'nope' }).length, 0);
+  assert.equal(filterPrompts(data, { tag: 'all' }).length, 2);
   assert.equal(filterPrompts(data, {}).length, 2);
 });
 

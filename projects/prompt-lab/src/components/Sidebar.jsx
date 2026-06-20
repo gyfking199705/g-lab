@@ -1,7 +1,7 @@
 import React from 'react';
-import { CATEGORIES, TECHNIQUES, categoryLabel } from '../schema.js';
+import { CATEGORIES, TECHNIQUES, tagCounts } from '../schema.js';
 
-/** 左侧导航：收藏、分类、技巧过滤。计数随当前数据实时变化。 */
+/** 左侧导航：收藏、分类、技巧、标签过滤。计数随当前数据实时变化。 */
 export default function Sidebar({ prompts, filter, setFilter }) {
   const catCount = (id) => prompts.filter((p) => p.category === id).length;
   const techCount = (id) => prompts.filter((p) => (p.techniques || []).includes(id)).length;
@@ -9,6 +9,7 @@ export default function Sidebar({ prompts, filter, setFilter }) {
 
   const usedCats = CATEGORIES.filter((c) => catCount(c.id) > 0);
   const usedTechs = TECHNIQUES.filter((t) => techCount(t.id) > 0);
+  const topTags = tagCounts(prompts).slice(0, 14);
 
   const set = (patch) => setFilter((f) => ({ ...f, ...patch }));
 
@@ -63,6 +64,24 @@ export default function Sidebar({ prompts, filter, setFilter }) {
                 onClick={() => set({ technique: filter.technique === t.id ? 'all' : t.id })}
               >
                 {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {topTags.length ? (
+        <div>
+          <h4>标签</h4>
+          <div className="pl-navlist pl-wrap">
+            {topTags.map(({ tag, count }) => (
+              <button
+                key={tag}
+                className={'pl-chip' + (filter.tag === tag ? ' pl-on' : '')}
+                title={`${count} 条`}
+                onClick={() => set({ tag: filter.tag === tag ? 'all' : tag })}
+              >
+                #{tag}
               </button>
             ))}
           </div>

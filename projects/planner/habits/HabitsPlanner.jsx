@@ -188,10 +188,12 @@ function HabitForm({ onSubmit, onCancel }) {
   const [type, setType] = useState('check');
   const [target, setTarget] = useState('8');
   const [unit, setUnit] = useState('次');
+  const [goalId, setGoalId] = useState('');
+  const goals = ((readModule('goals-planner') || {}).goals || []).filter((g) => !g.archived);
 
   const submit = () => {
     if (!name.trim()) return;
-    onSubmit({ name: name.trim(), icon: icon.trim() || '⭐', type,
+    onSubmit({ name: name.trim(), icon: icon.trim() || '⭐', type, goalId: goalId || '',
       ...(type === 'count' ? { target: Math.max(1, Number(target) || 1), unit: unit.trim() } : {}) });
   };
 
@@ -217,6 +219,15 @@ function HabitForm({ onSubmit, onCancel }) {
             </>
           )}
         </div>
+        {goals.length > 0 && (
+          <div className="gx-inrow">
+            <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>关联目标</span>
+            <select className="gx-in" style={{ flex: 1, maxWidth: 200 }} value={goalId} onChange={(e) => setGoalId(e.target.value)}>
+              <option value="">不关联</option>
+              {goals.map((g) => (<option key={g.id} value={g.id}>{g.title}</option>))}
+            </select>
+          </div>
+        )}
         <div className="gx-inrow">
           <button className="gx-btn gx-btn-primary" onClick={submit}>创建</button>
           <button className="gx-btn" onClick={onCancel}>取消</button>
