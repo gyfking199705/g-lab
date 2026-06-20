@@ -27,6 +27,7 @@ import LedgerPlanner from '../ledger/LedgerPlanner.jsx';
 import CompareTool from '../compare/CompareTool.jsx';
 import SalaryEstimator from '../salary/SalaryEstimator.jsx';
 import { readModule } from '../core/store.js';
+import { LINK_OPTIONS, computeLink } from './links.js';
 import { BodyPortal } from '../core/ui.jsx';
 import { AISettingsButton } from '../core/AISettings.jsx';
 import { seedMissing } from './seed.js';
@@ -359,7 +360,7 @@ export default function App() {
           ) : active === 'schedule' ? (
             <SchedulePlanner storageKey="schedule-planner" onChange={bump} />
           ) : active === 'goals' ? (
-            <GoalsPlanner storageKey="goals-planner" onChange={bump} />
+            <GoalsPlanner storageKey="goals-planner" onChange={bump} linkOptions={LINK_OPTIONS} resolveLink={(id) => computeLink(id, readModule)} />
           ) : active === 'habits' ? (
             <HabitsPlanner storageKey="habits-planner" onChange={bump} />
           ) : active === 'cut' ? (
