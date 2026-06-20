@@ -143,6 +143,64 @@ export function todayDigest(get, today = todayStr()) {
   return { rows, due, done, remaining: Math.max(0, due - done), pct: due ? Math.round((done / due) * 100) : 0 };
 }
 
+/* ----------------------------- 跨模块「本周回顾」 ----------------------------- */
+/**
+ * 最近 7 天的跨模块进展快照（纯函数）。get(key) 注入读取。
+ * 返回 { from, to, rows[] }，rows: [{ id, icon, label, value, sub }]，只含有数据的模块。
+ */
+export function weeklyReview(get, today = todayStr()) {
+  const days = lastNDays(7, today); // 升序 7 个日期串
+  const inWeek = new Set(days);
+  const list = (v) => (Array.isArray(v) ? v : []);
+  const rows = [];
+
+  // 习惯：本周打卡次数
+  const h = get('habits-planner') || {};
+  const habits = list(h.habits).filter((x) => x && !x.archived);
+  if (habits.length) {
+    const ext = fitnessWorkoutDates(get('fitness-planner'));
+    const ci = h.checkins || {};
+    let n = 0;
+    for (const hb of habits) for (const d of days) if (isDoneOn(hb, d, ci, ext)) n += 1;
+    rows.push({ id: 'habits', icon: '🔥', label: '习惯打卡', value: n, sub: '本周次数' });
+  }
+
+  // 健身：本周训练次数 + 容量
+  const f = get('fitness-planner') || {};
+  if (list(f.workouts).length) {
+    const w = list(f.workouts).filter((x) => x && inWeek.has(x.date));
+    rows.push({ id: 'fitness', icon: '💪', label: '训练', value: w.length, sub: w.length ? `${formatVolume(totalVolume(w))} 容量` : '本周次数' });
+  }
+
+  // 学习：本周时长
+  const l = get('learning-planner') || {};
+  if (list(l.sessions).length) {
+    const min = list(l.sessions).filter((s) => s && inWeek.has(s.date)).reduce((a, s) => a + Math.max(0, s.minutes || 0), 0);
+    rows.push({ id: 'learning', icon: '📚', label: '学习', value: `${min} 分钟`, sub: '本周时长' });
+  }
+
+  // 日程：本周完成数
+  const s = get('schedule-planner') || {};
+  if (list(s.items).length) {
+    const done = list(s.items).filter((it) => it && it.done && it.doneAt && inWeek.has(it.doneAt.slice(0, 10))).length;
+    rows.push({ id: 'schedule', icon: '📅', label: '完成日程', value: done, sub: '本周' });
+  }
+
+  // 记账：本周净存（收 − 支）
+  const lg = get('ledger-planner') || {};
+  if (list(lg.entries).length) {
+    let inc = 0; let exp = 0;
+    for (const e of lg.entries) {
+      if (!e || !inWeek.has(e.date)) continue;
+      if (e.type === 'income') inc += e.amount || 0;
+      else if (e.type === 'expense') exp += e.amount || 0;
+    }
+    rows.push({ id: 'ledger', icon: '🧾', label: '本周净存', value: formatMoney(inc - exp), sub: `收 ${formatMoney(inc)} / 支 ${formatMoney(exp)}` });
+  }
+
+  return { from: days[0], to: days[days.length - 1], rows };
+}
+
 /* ----------------------------- 各模块大盘 ----------------------------- */
 
 /** 从记账近 3 月推断每月「主动收入」(工资+兼职) 与「净储蓄」。 */

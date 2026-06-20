@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { readModule, saveState } from '../core/store.js';
 import { SHARED_CSS, Progress, Empty, LineChart, MiniBars, Ring } from '../core/ui.jsx';
-import { buildAnalytics, BOARD_ORDER, todayDigest } from './analytics.js';
+import { buildAnalytics, BOARD_ORDER, todayDigest, weeklyReview } from './analytics.js';
 import MarketCards, { MARKET_CSS } from './MarketCards.jsx';
 import { todayStr, fmtDate } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
@@ -134,6 +134,26 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {digest.rows.map((r) => (
                     <span key={r.id} className="gx-tag">{r.icon} {r.label} {r.done}/{r.total}{r.overdue ? ` ⚠${r.overdue}` : ''}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 本周回顾：最近 7 天跨模块进展 */}
+          {(() => {
+            const wk = weeklyReview(readModule, today);
+            if (!wk.rows.length) return null;
+            return (
+              <div className="gx-card" style={{ marginBottom: 14 }}>
+                <div className="gx-sechead"><h3 className="db-h">📆 本周回顾</h3><span className="gx-sub">{wk.from.slice(5)} ~ {wk.to.slice(5)}</span></div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {wk.rows.map((r) => (
+                    <div key={r.id} style={{ minWidth: 96, flex: '1 1 96px', background: 'var(--surface-2)', border: '1px solid var(--bd-soft)', borderRadius: 10, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{r.icon} {r.label}</div>
+                      <div style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 500, margin: '2px 0', fontVariantNumeric: 'tabular-nums' }}>{r.value}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.sub}</div>
+                    </div>
                   ))}
                 </div>
               </div>
