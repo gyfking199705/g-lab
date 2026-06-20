@@ -265,3 +265,10 @@
 - 子项目: devx-lab
 - 重点: 纯逻辑 buildSnapshot(落地率/各数/DORA评分/日期) + upsertSnapshot(同日覆盖/按时间升序/限长60)；团队画像页加进度趋势区：手写 SVG 双线（落地率实线+DORA评分虚线）+较上次变化+保存今日快照；快照随 export/import 迁移；单测 20→22 全过
 - 解决的问题: 采纳与评分只能看当下，看不出改进趋势——补上时间维度让'持续改进'可视化
+
+## M-34 · 2026-06-20 · agent-cli 会话导出 Markdown transcript（落地 P-10）
+- 作者: claude
+- 提交: 7d1c25f
+- 子项目: agent-cli
+- 重点: engine 加 transcriptToMarkdown（用户/回答/工具卡/diff/审批轨迹→Markdown，纯函数+单测）；标题栏「⤓ 导出会话」按钮
+- 解决的问题: 一次 agent 会话无法复盘/分享——现在可一键导出整段交互
