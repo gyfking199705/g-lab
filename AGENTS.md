@@ -1,7 +1,7 @@
 # AGENTS.md — g-lab 的 AI agent 工作约定
 
 > 在本仓库工作的 AI agent 请先读本文件。完整规范见 [`CONTRIBUTING.md`](CONTRIBUTING.md)，
-> 视觉规范见 [`DESIGN.md`](DESIGN.md)。
+> 视觉规范见 [`DESIGN.md`](DESIGN.md)。English version: [`AGENTS.en.md`](AGENTS.en.md)。
 
 ## 这是什么
 `g-lab` 是**伞形 monorepo**：根目录是一个静态门户首页，每个独立小项目放在 `projects/<name>/` 下。
