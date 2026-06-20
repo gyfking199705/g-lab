@@ -227,7 +227,9 @@ async function runOneTool(ctx, display, name, input) {
 async function loopAnthropic(ctx) {
   const tools = AGENT_TOOLS.map((t) => ({ name: t.name, description: t.desc, input_schema: t.schema }));
   const messages = [{ role: 'user', content: ctx.user }];
+  let steps = 0;
   for (let step = 0; step < ctx.maxSteps; step++) {
+    steps++;
     let res;
     try {
       res = await fetch(`${ctx.baseURL}/v1/messages`, {
@@ -252,13 +254,15 @@ async function loopAnthropic(ctx) {
     }
     messages.push({ role: 'user', content: results });
   }
-  return { files: ctx.fs };
+  return { files: ctx.fs, steps };
 }
 
 async function loopOpenAI(ctx) {
   const tools = AGENT_TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.desc, parameters: t.schema } }));
   const messages = [{ role: 'system', content: ctx.system }, { role: 'user', content: ctx.user }];
+  let steps = 0;
   for (let step = 0; step < ctx.maxSteps; step++) {
+    steps++;
     let res;
     try {
       res = await fetch(`${ctx.baseURL}/v1/chat/completions`, {
@@ -283,5 +287,5 @@ async function loopOpenAI(ctx) {
       messages.push({ role: 'tool', tool_call_id: c.id, content: out.text });
     }
   }
-  return { files: ctx.fs };
+  return { files: ctx.fs, steps };
 }

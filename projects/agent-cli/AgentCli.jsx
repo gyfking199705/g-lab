@@ -13,7 +13,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   SLASH_COMMANDS, DEMO_PROMPT, parseInput, matchSlash, estimateTokens,
   seedFiles, diffStat, planAgentRun, agentSystemPrompt, agentToolSystemPrompt,
-  APPROVAL_MODES, needsApproval, matrixToMarkdown, researchReportMarkdown, transcriptToMarkdown,
+  APPROVAL_MODES, needsApproval, matrixToMarkdown, researchReportMarkdown, transcriptToMarkdown, formatRunStats,
 } from './engine.js';
 import {
   PROVIDERS, callChat, runRealAgent, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
@@ -76,7 +76,10 @@ function Console() {
   const histPtrRef = useRef(-1);
   const modeRef = useRef(approval);     // 给 async 闭包读最新审批模式
   const approvalRef = useRef(null);     // 待决审批的 resolver
+  const historyRef = useRef(history);   // 给 async 闭包读最新历史（算运行统计）
+  const stepsRef = useRef(null);        // 真实工具循环的步数
   useEffect(() => { modeRef.current = approval; }, [approval]);
+  useEffect(() => { historyRef.current = history; }, [history]);
 
   const menu = matchSlash(input);
 
@@ -165,7 +168,7 @@ function Console() {
         return;
       }
       push({ type: 'thinking', text: `调用你的模型（${model}）·工具循环…` });
-      const { files: nf } = await runRealAgent({
+      const { files: nf, steps } = await runRealAgent({
         config: liveCfg,
         system: agentToolSystemPrompt(),
         user: prompt,
@@ -176,6 +179,7 @@ function Console() {
         onToolEnd: (id, r) => { update(id, { status: r.ok === false ? 'error' : 'done', detail: r.result }); if (r.diff && r.diff.length) push({ type: 'diff', file: '(edit)', diff: r.diff }); },
         onApproval: (display, argStr) => gate(display, argStr),
       });
+      stepsRef.current = steps != null ? steps : null;
       if (nf && !cancelRef.current) setFiles(nf);
     } catch (e) {
       push({ type: 'error', text: `调用失败：${e && e.message ? e.message : String(e)}` });
@@ -185,11 +189,23 @@ function Console() {
   const handlePrompt = useCallback(async (prompt) => {
     setRunning(true);
     cancelRef.current = false;
+    stepsRef.current = null;
+    const t0 = Date.now();
+    const startLen = historyRef.current.length;
     try {
       if (aiReady) await runReal(prompt);
       else { const { events, finalFiles } = planAgentRun(prompt, files); await playEvents(events, finalFiles); }
-    } finally { setRunning(false); cancelRef.current = false; }
-  }, [aiReady, runReal, playEvents, files]);
+    } finally {
+      setRunning(false);
+      cancelRef.current = false;
+      const added = historyRef.current.slice(startLen);
+      const tools = added.filter((h) => h.type === 'tool').length;
+      const tokens = added.reduce((s, h) => s + estimateTokens(h.text || '') + estimateTokens(h.detail || ''), 0);
+      if (tools > 0 || added.some((h) => h.type === 'assistant')) {
+        push({ type: 'runstat', text: formatRunStats({ tools, steps: stepsRef.current, ms: Date.now() - t0, tokens }) });
+      }
+    }
+  }, [aiReady, runReal, playEvents, files, push]);
 
   function handleInit() {
     setRunning(true);
@@ -430,6 +446,7 @@ function Line({ it, onDecide }) {
         </div>
       );
     case 'file': return <div className="cli-diff"><div className="cli-difffile">{it.file}</div><pre className="cli-filebody">{it.text}</pre></div>;
+    case 'runstat': return <div className="cli-runstat">{it.text}</div>;
     case 'system': return <pre className="cli-system">{it.text}</pre>;
     case 'error': return <div className="cli-error">⚠ {it.text}</div>;
     default: return null;
@@ -881,6 +898,7 @@ const CLI_CSS = `
 .cli-system{margin:6px 0;color:var(--t-dim);white-space:pre-wrap;font-family:var(--mono);}
 .cli-error{margin:6px 0;color:var(--t-red);}
 .cli-runhint{color:var(--t-dim);margin:8px 0;font-size:12.5px;}
+.cli-runstat{color:var(--t-green);margin:8px 0 4px;font-size:11.5px;border-top:1px dashed var(--t-bd);padding-top:7px;}
 
 .cli-menu{background:var(--t-card);border-top:1px solid var(--t-bd);max-height:190px;overflow-y:auto;}
 .cli-menuitem{display:flex;gap:14px;padding:6px 16px;cursor:pointer;}

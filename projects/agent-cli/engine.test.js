@@ -18,6 +18,7 @@ import {
   displayToolName,
   AGENT_TOOLS,
   transcriptToMarkdown,
+  formatRunStats,
 } from './engine.js';
 
 test('parseInput 区分空 / 斜杠 / 自然语言', () => {
@@ -185,6 +186,12 @@ test('transcriptToMarkdown 渲染会话且跳过装饰', () => {
   assert.ok(md.includes('已批准'));
   assert.ok(md.includes('已完成。'));
   assert.ok(!md.includes('banner')); // 装饰被跳过
+});
+
+test('formatRunStats 拼装小结，steps 可选', () => {
+  assert.equal(formatRunStats({ tools: 3, ms: 1400, tokens: 120 }), '✓ 3 个工具 · 1.4s · ≈120 tok');
+  assert.ok(formatRunStats({ tools: 2, steps: 4, ms: 900, tokens: 50 }).includes('4 步'));
+  assert.match(formatRunStats({}), /^✓ 0 个工具/);
 });
 
 test('AGENT_TOOLS 与 displayToolName 一致', () => {
