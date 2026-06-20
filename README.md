@@ -20,7 +20,11 @@ g-lab/
     ├── planner/            # 🎯 个人成长规划系统（详见 projects/planner/README.md）
     ├── muse-ui/            # ✨ UI 组件脑爆 & research 实验室（零依赖 React 创意交互组件，可发 npm）
     ├── prompt-lab/         # 🧠 Prompt 研究室：收集 / 展示 / 复用优秀 Prompt
-    └── swarm/              # 🐝 多智能体协作工作区原型 + 业界调研
+    ├── swarm/              # 🐝 多智能体协作工作区原型 + 业界调研
+    ├── agent-cli/          # 🖥️ Agent CLI 交互研究（复刻 + 对比业界命令行 agent）
+    ├── ai-coding-lab/      # 🤖 AI Coding 研究室：收集与展示 AI 编程范式与提效方式
+    ├── skill-lab/          # 🧩 Skill 研究室：收录与展示标准化 Agent Skills
+    └── devx-lab/           # 🔬 研发提效研究室（提效范式库 + 业界框架 + DORA 自评）
 ```
 
 ## 📦 子项目
@@ -31,6 +35,10 @@ g-lab/
 | **muse-ui** | UI 组件脑爆 & research 实验室：零依赖 React 创意交互组件 + 画廊演示（可被 planner 复用、也可发 npm） | `…/g-lab/projects/muse-ui/` | `cd projects/muse-ui && npm i --no-save esbuild react react-dom && node build.mjs` |
 | **prompt-lab** | Prompt 研究室：收集 / 整理 / 展示 / 复用优秀 Prompt（分类、技巧标签、变量模板、导入导出，本地存储） | `…/g-lab/projects/prompt-lab/` | `cd projects/prompt-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 | **swarm** | 多智能体协作工作区：需求进队列 → 多角色分工 → 给出结论（集群模式原型 + 业界调研） | `…/g-lab/projects/swarm/` | `cd projects/swarm && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
+| **agent-cli** | Agent CLI 交互研究：复刻并对比业界命令行 agent（Claude Code / Codex / Gemini CLI / Aider）的交互方式——可上手把玩的终端控制台 + 玩法调研 | `…/g-lab/projects/agent-cli/` | `cd projects/agent-cli && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
+| **ai-coding-lab** | AI Coding 研究室：收集并展示 AI 编程范式与提效方式（范式/工作流/技巧/工具/护栏） | `…/g-lab/projects/ai-coding-lab/` | `cd projects/ai-coding-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
+| **skill-lab** | Skill 研究室：收录、检索与展示符合 `SKILL.md` 业界标准的高质量 Agent Skills | `…/g-lab/projects/skill-lab/` | `cd projects/skill-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
+| **devx-lab** | 研发提效研究室：提效范式库（对齐 DORA/SPACE/DevEx）+ 业界框架 + DORA 自评 | `…/g-lab/projects/devx-lab/` | `cd projects/devx-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 
 ## 🚀 本地预览
 
@@ -43,6 +51,10 @@ python3 -m http.server 8000
 # muse-ui：  http://localhost:8000/projects/muse-ui/
 # prompt-lab：http://localhost:8000/projects/prompt-lab/
 # swarm：    http://localhost:8000/projects/swarm/
+# agent-cli：http://localhost:8000/projects/agent-cli/
+# ai-coding-lab：http://localhost:8000/projects/ai-coding-lab/
+# skill-lab：http://localhost:8000/projects/skill-lab/
+# devx-lab：http://localhost:8000/projects/devx-lab/
 ```
 
 ## ➕ 新增一个子项目

@@ -18,7 +18,18 @@
   4. AGENTS.md / AGENTS.en.md / dreaming/README.md 补充启用与绕过说明 ✓
 - 验收: 启用后忘记记素材会被 pre-commit 挡住、提交后有 post-commit 提醒；隔离副本已验证纪律流零摩擦、遗忘流可拦截可恢复
 
-## P-2 · swarm 加入验证—返工闭环
+## P-2 · demo 加「审批模式」三档，演示分级放权
+- 状态: proposed
+- 作者: claude
+- 来源脑爆: D-2
+- 可行性: 纯前端可做：engine 已产出工具事件流，只需在工具事件前插入审批停顿/确认 UI；分级放权是四家共性核心，值得在 demo 里可感知
+- 步骤:
+  1. engine 增加 approvalMode 概念与「需审批的工具」判定（纯函数 + 单测）
+  2. Console 在工具事件前按模式插入「批准/拒绝」交互或自动放行
+  3. 标题栏/状态栏加模式切换（suggest/auto-edit/full-auto），离线即可体验
+- 验收: 切到 suggest 每个工具调用前都要确认；full-auto 全自动连跑；行为与研究面板「分级放权」对得上
+
+## P-3 · swarm 加入验证—返工闭环
 - 状态: done
 - 作者: claude
 - 可行性: 当前管线是线性的：评审员只输出意见、不触发返工。generator-critic 迭代是业界最被验证的质量机制（RESEARCH §4.3），是当前最大功能缺口

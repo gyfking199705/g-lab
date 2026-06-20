@@ -17,7 +17,7 @@ import {
 import {
   PROVIDERS, callChat, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
 } from './ai.js';
-import { CLIS, PATTERNS, SOURCES } from './notes.js';
+import { CLIS, MATRIX, PATTERNS, SOURCES } from './notes.js';
 
 let _seq = 0;
 const nid = () => `it_${Date.now().toString(36)}_${_seq++}`;
@@ -42,8 +42,8 @@ export default function AgentCli() {
       </section>
 
       <section className="ac-section">
-        <div className="ac-sechead"><h2>② 调研：业界三家怎么做交互</h2>
-          <span className="ac-sub">Claude Code · Codex CLI · Gemini CLI</span></div>
+        <div className="ac-sechead"><h2>② 调研：业界四家怎么做交互</h2>
+          <span className="ac-sub">Claude Code · Codex CLI · Gemini CLI · Aider</span></div>
         <ResearchPanel />
       </section>
     </div>
@@ -81,6 +81,13 @@ function Console() {
     return () => window.removeEventListener('ai-config-changed', h);
   }, []);
   useEffect(() => { setMenuIdx(0); }, [input]);
+  // 输入框随内容自适应高度（Shift+Enter 多行时增高，发送清空后回落）
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(160, el.scrollHeight) + 'px';
+  }, [input]);
 
   const push = useCallback((item) => { setHistory((h) => [...h, { id: nid(), ...item }]); }, []);
   const update = useCallback((id, patch) => { setHistory((h) => h.map((it) => (it.id === id ? { ...it, ...patch } : it))); }, []);
@@ -423,6 +430,51 @@ function AISettings({ onClose }) {
   );
 }
 
+/* ============================ agentic 循环示意（手写 SVG，无图表库） ============================ */
+function LoopDiagram() {
+  const C = { bd: '#E3E0D7', t1: '#26241F', t2: '#83827A', t3: '#B0AFA5', accent: '#CC785C', accent2: '#B5654A', surf: '#FFFFFF', soft: '#F5ECE5' };
+  const boxes = [
+    { cx: 64, label: '诉求', sub: 'prompt' },
+    { cx: 220, label: '推理', sub: 'reason' },
+    { cx: 376, label: '调用工具', sub: 'act' },
+    { cx: 532, label: '观察', sub: 'observe' },
+    { cx: 668, label: '回答', sub: 'answer', accent: true },
+  ];
+  const w = 104, h = 46, y = 78;
+  const Box = ({ cx, label, sub, accent }) => (
+    <g>
+      <rect x={cx - w / 2} y={y} width={w} height={h} rx={11} fill={accent ? C.soft : C.surf} stroke={accent ? C.accent : C.bd} strokeWidth={accent ? 1.4 : 1.2} />
+      <text x={cx} y={y + 20} textAnchor="middle" fontSize="14" fontFamily="Georgia, serif" fontWeight="600" fill={accent ? C.accent2 : C.t1}>{label}</text>
+      <text x={cx} y={y + 36} textAnchor="middle" fontSize="9.5" fill={C.t3} letterSpacing="0.5">{sub}</text>
+    </g>
+  );
+  const arrow = (x1, x2) => <line x1={x1} y1={y + h / 2} x2={x2} y2={y + h / 2} stroke={C.t3} strokeWidth="1.4" markerEnd="url(#ac-ah)" />;
+  return (
+    <svg viewBox="0 0 730 168" width="100%" style={{ display: 'block', minWidth: 560 }} role="img" aria-label="agentic ReAct 循环示意图">
+      <defs>
+        <marker id="ac-ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.t3} /></marker>
+        <marker id="ac-ah-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.accent} /></marker>
+      </defs>
+      {/* 直线箭头：诉求→推理→工具→观察→回答 */}
+      {arrow(64 + w / 2, 220 - w / 2)}
+      {arrow(220 + w / 2, 376 - w / 2)}
+      {arrow(376 + w / 2, 532 - w / 2)}
+      {arrow(532 + w / 2, 668 - w / 2)}
+      {/* 审批 / 沙箱门：在「推理→调用工具」之间 */}
+      <g>
+        <line x1={298} y1={y + h / 2 - 10} x2={298} y2={y + h / 2 + 10} stroke={C.accent} strokeWidth="1.4" strokeDasharray="3 2" />
+        <text x={298} y={y - 6} textAnchor="middle" fontSize="10" fill={C.accent2}>审批 · 沙箱</text>
+      </g>
+      {/* 回环箭头：观察 → 推理（继续循环） */}
+      <path d={`M532,${y} C532,28 220,28 220,${y - 2}`} fill="none" stroke={C.accent} strokeWidth="1.5" strokeDasharray="4 3" markerEnd="url(#ac-ah-a)" />
+      <text x={376} y={22} textAnchor="middle" fontSize="11" fill={C.accent2}>继续循环（还需要更多信息 / 下一步动作）</text>
+      {/* 完成标注：观察 → 回答 */}
+      <text x={600} y={y + h + 20} textAnchor="middle" fontSize="10" fill={C.t2}>满足后才结束</text>
+      {boxes.map((b) => <Box key={b.label} {...b} />)}
+    </svg>
+  );
+}
+
 /* ============================ 调研对比面板 ============================ */
 function ResearchPanel() {
   return (
@@ -443,6 +495,23 @@ function ResearchPanel() {
           </div>
         ))}
       </div>
+
+      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">速查矩阵</h2><span className="ac-sub">维度 × 四家 · 横向滚动可看全</span></div>
+      <div className="ac-matrixwrap">
+        <table className="ac-matrix">
+          <thead>
+            <tr><th>维度</th>{MATRIX.cols.map((c) => <th key={c}>{c}</th>)}</tr>
+          </thead>
+          <tbody>
+            {MATRIX.rows.map((row) => (
+              <tr key={row[0]}><th scope="row">{row[0]}</th>{row.slice(1).map((cell, i) => <td key={i}>{cell}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">agentic 循环长什么样</h2><span className="ac-sub">ReAct：推理 → 调工具 → 观察 → 再推理，满足后才回答</span></div>
+      <div className="ac-diagram"><LoopDiagram /></div>
 
       <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">③ 共性设计模式</h2><span className="ac-sub">跨产品反复出现 · 也是上面 demo 复刻的对象</span></div>
       <div className="ac-patterns">
@@ -497,6 +566,20 @@ const PAGE_CSS = `
 .ac-srcline{margin-top:13px;padding-top:11px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--t3);}
 .ac-srcline a,.ac-sources a{color:var(--accent-2);text-decoration:none;}
 .ac-srcline a:hover,.ac-sources a:hover{text-decoration:underline;}
+
+/* agentic 循环示意 */
+.ac-diagram{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);padding:14px 16px;}
+
+/* 速查矩阵 */
+.ac-matrixwrap{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);}
+.ac-matrix{border-collapse:collapse;width:100%;min-width:640px;font-size:12.5px;}
+.ac-matrix th,.ac-matrix td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;line-height:1.5;}
+.ac-matrix thead th{font-family:var(--serif);font-weight:600;color:var(--t1);background:var(--surface-2);position:sticky;top:0;}
+.ac-matrix thead th:first-child{color:var(--t3);font-family:var(--sans);font-weight:500;}
+.ac-matrix tbody th{font-weight:600;color:var(--accent-2);white-space:nowrap;background:var(--surface-2);}
+.ac-matrix td{color:var(--t2);}
+.ac-matrix tbody tr:last-child th,.ac-matrix tbody tr:last-child td{border-bottom:none;}
+.ac-matrix tbody tr:hover td,.ac-matrix tbody tr:hover th{background:var(--surface-3);}
 
 /* 共性模式 */
 .ac-patterns{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}

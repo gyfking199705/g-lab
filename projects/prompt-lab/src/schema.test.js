@@ -4,6 +4,7 @@ import {
   extractVariables,
   renderTemplate,
   normalizePrompt,
+  commitEdit,
   filterPrompts,
   sortPrompts,
   tagCounts,
@@ -87,6 +88,37 @@ test('parseImport 接受裸数组、拒绝垃圾', () => {
   assert.equal(parseImport([{ title: 'a' }]).length, 1);
   assert.equal(parseImport({ nope: 1 }).length, 0);
   assert.equal(parseImport(null).length, 0);
+});
+
+test('commitEdit 正文变化时压入历史快照', () => {
+  const v1 = normalizePrompt({ title: 'P', content: 'v1', version: '1.0.0' }, 100);
+  const v2 = commitEdit(v1, { content: 'v2', version: '1.1.0' }, 200);
+  assert.equal(v2.content, 'v2');
+  assert.equal(v2.version, '1.1.0');
+  assert.equal(v2.history.length, 1);
+  assert.equal(v2.history[0].content, 'v1');
+  assert.equal(v2.history[0].version, '1.0.0');
+  assert.equal(v2.history[0].savedAt, 100);
+});
+
+test('commitEdit 仅改元数据不产生历史', () => {
+  const v1 = normalizePrompt({ title: 'P', content: 'same' }, 100);
+  const v2 = commitEdit(v1, { title: 'P2' }, 200);
+  assert.equal(v2.title, 'P2');
+  assert.equal(v2.history.length, 0);
+});
+
+test('commitEdit 历史最新在前且封顶 20', () => {
+  let p = normalizePrompt({ title: 'P', content: 'c0' }, 0);
+  for (let k = 1; k <= 25; k++) p = commitEdit(p, { content: 'c' + k }, k);
+  assert.equal(p.history.length, 20);
+  assert.equal(p.history[0].content, 'c24'); // 最近一次被替换的内容
+});
+
+test('normalizePrompt 保留并清洗 history', () => {
+  const p = normalizePrompt({ content: 'x', history: [{ content: 'old', version: '0.9', savedAt: 5 }, 'junk'] });
+  assert.equal(p.history.length, 1);
+  assert.equal(p.history[0].content, 'old');
 });
 
 test('categoryLabel 已知/未知', () => {

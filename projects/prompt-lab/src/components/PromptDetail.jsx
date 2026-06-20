@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { categoryLabel, techniqueLabel, renderTemplate } from '../schema.js';
+import HistoryPanel from './HistoryPanel.jsx';
+import BatchPanel from './BatchPanel.jsx';
 
 function CopyBtn({ text, onCopied, label = '复制' }) {
   const [done, setDone] = useState(false);
@@ -43,8 +45,9 @@ export async function writeClipboard(text) {
 }
 
 /** prompt 详情抽屉：展示元信息、可填变量预览、一键复制、编辑/删除。 */
-export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onToggleFav, onToast }) {
+export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onToggleFav, onRestore, onToast }) {
   const [vals, setVals] = useState({});
+  const [batch, setBatch] = useState(false);
   if (!prompt) return null;
 
   const rendered = renderTemplate(prompt.content, vals);
@@ -105,8 +108,13 @@ export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onTogg
 
           {(prompt.variables || []).length ? (
             <div className="pl-block">
-              <h5>变量（填入后预览与复制即套用）</h5>
-              {prompt.variables.map((v) => (
+              <h5>
+                变量（填入后预览与复制即套用）
+                <button className="pl-btn pl-btn-sm pl-ghost" onClick={() => setBatch((b) => !b)}>
+                  {batch ? '单组填充' : '批量对照'}
+                </button>
+              </h5>
+              {batch ? null : prompt.variables.map((v) => (
                 <div className="pl-var-row" key={v}>
                   <label>{`{{${v}}}`}</label>
                   <input
@@ -118,6 +126,8 @@ export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onTogg
               ))}
             </div>
           ) : null}
+
+          {batch ? <BatchPanel prompt={prompt} onToast={onToast} /> : null}
 
           <div className="pl-block">
             <h5>
@@ -151,6 +161,8 @@ export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onTogg
           {prompt.source ? (
             <div className="pl-kv"><span><b>出处</b> {prompt.source}</span></div>
           ) : null}
+
+          <HistoryPanel prompt={prompt} onRestore={onRestore} />
 
           <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
             <CopyBtn text={fullPrompt} onCopied={onCopied} label="复制完整（System+User）" />

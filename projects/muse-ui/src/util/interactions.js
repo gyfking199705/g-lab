@@ -89,3 +89,20 @@ export function meshGradient(colors, t = 0, opts = {}) {
     })
     .join(', ');
 }
+
+/** 打字机：按经过秒数与每秒字符数(cps)，返回当前应显示的文本切片。 */
+export function typedSlice(text, elapsedSec, cps = 22) {
+  const s = String(text == null ? '' : text);
+  const n = Math.max(0, Math.floor((elapsedSec || 0) * cps));
+  return s.slice(0, Math.min(n, s.length));
+}
+/** 打字是否已打完。 */
+export function typeDone(text, elapsedSec, cps = 22) {
+  return (elapsedSec || 0) * cps >= String(text == null ? '' : text).length;
+}
+
+/** 线性渐变字符串（渐变文字/描边等用）。 */
+export function linearGradient(colors, angle = 90) {
+  const list = colors && colors.length ? colors : ['#CC785C', '#6E83C4'];
+  return `linear-gradient(${angle}deg, ${list.join(', ')})`;
+}

@@ -108,6 +108,19 @@ export function normalizePrompt(input = {}, now = Date.now()) {
     ? input.models.filter((m) => MODELS.includes(m))
     : [];
 
+  // 历史版本快照（仅保留正文/角色/版本/时间），上限 20 条，最新在前。
+  const history = Array.isArray(input.history)
+    ? input.history
+        .filter((h) => h && typeof h === 'object')
+        .map((h) => ({
+          version: typeof h.version === 'string' ? h.version : '',
+          system: typeof h.system === 'string' ? h.system : '',
+          content: typeof h.content === 'string' ? h.content : '',
+          savedAt: typeof h.savedAt === 'number' ? h.savedAt : now,
+        }))
+        .slice(0, 20)
+    : [];
+
   return {
     id: input.id || uid(),
     title: title || '未命名 Prompt',
@@ -126,9 +139,30 @@ export function normalizePrompt(input = {}, now = Date.now()) {
     license: typeof input.license === 'string' ? input.license.trim() : '',
     version: typeof input.version === 'string' && input.version.trim() ? input.version.trim() : '1.0.0',
     favorite: !!input.favorite,
+    history,
     createdAt: typeof input.createdAt === 'number' ? input.createdAt : now,
     updatedAt: now,
   };
+}
+
+/**
+ * 编辑提交：在 prev 基础上应用 nextInput，若正文或角色发生变化，则把 prev
+ * 的快照压入 history（最新在前，上限 20）。返回规整后的新记录（纯函数）。
+ * 用于「保存编辑」「从历史恢复」，让版本历史与对比可用。
+ */
+export function commitEdit(prev, nextInput, now = Date.now()) {
+  const next = normalizePrompt({ ...prev, ...nextInput, history: prev?.history || [] }, now);
+  const changed = !prev || prev.content !== next.content || prev.system !== next.system;
+  if (prev && changed) {
+    const snapshot = {
+      version: prev.version,
+      system: prev.system,
+      content: prev.content,
+      savedAt: prev.updatedAt || now,
+    };
+    next.history = [snapshot, ...(prev.history || [])].slice(0, 20);
+  }
+  return next;
 }
 
 /**
