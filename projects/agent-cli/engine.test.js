@@ -17,6 +17,7 @@ import {
   executeTool,
   displayToolName,
   AGENT_TOOLS,
+  transcriptToMarkdown,
 } from './engine.js';
 
 test('parseInput 区分空 / 斜杠 / 自然语言', () => {
@@ -163,6 +164,27 @@ test('executeTool write_file / run_bash', () => {
   const w = executeTool('write_file', { path: 'NEW.md', content: 'a\nb\n' }, files);
   assert.ok(w.ok && w.files['NEW.md'] === 'a\nb\n');
   assert.match(executeTool('run_bash', { command: 'npm test' }, files).result, /passing/);
+});
+
+test('transcriptToMarkdown 渲染会话且跳过装饰', () => {
+  const history = [
+    { type: 'banner' },
+    { type: 'user', text: '加个 clamp' },
+    { type: 'thinking', text: '先看文件' },
+    { type: 'tool', tool: 'Edit', arg: 'src/utils.js', detail: '+4 -0' },
+    { type: 'diff', diff: [{ type: 'ctx', text: 'a' }, { type: 'add', text: 'b' }, { type: 'del', text: 'c' }] },
+    { type: 'approval', tool: 'Bash', arg: 'npm test', status: 'approve' },
+    { type: 'assistant', text: '已完成。' },
+  ];
+  const md = transcriptToMarkdown(history);
+  assert.match(md, /^# Agent CLI 会话记录/);
+  assert.ok(md.includes('### › 加个 clamp'));
+  assert.ok(md.includes('● **Edit**(src/utils.js) — +4 -0'));
+  assert.ok(md.includes('```diff'));
+  assert.ok(md.includes('+b') && md.includes('-c'));
+  assert.ok(md.includes('已批准'));
+  assert.ok(md.includes('已完成。'));
+  assert.ok(!md.includes('banner')); // 装饰被跳过
 });
 
 test('AGENT_TOOLS 与 displayToolName 一致', () => {

@@ -13,7 +13,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   SLASH_COMMANDS, DEMO_PROMPT, parseInput, matchSlash, estimateTokens,
   seedFiles, diffStat, planAgentRun, agentSystemPrompt, agentToolSystemPrompt,
-  APPROVAL_MODES, needsApproval, matrixToMarkdown, researchReportMarkdown,
+  APPROVAL_MODES, needsApproval, matrixToMarkdown, researchReportMarkdown, transcriptToMarkdown,
 } from './engine.js';
 import {
   PROVIDERS, callChat, runRealAgent, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
@@ -62,6 +62,7 @@ function Console() {
   const [, setAiTick] = useState(0);
   const [menuIdx, setMenuIdx] = useState(0);
   const [approval, setApproval] = useState('auto-edit'); // 审批模式：suggest / auto-edit / full-auto
+  const [exported, setExported] = useState(false);
 
   const cfg = loadAIConfig();
   const aiReady = isConfigured(cfg);
@@ -301,6 +302,7 @@ function Console() {
         <span className="cli-dots"><i /><i /><i /></span>
         <span className="cli-title">agent-cli · ~/demo-app</span>
         <span className="cli-titleacts" onClick={(e) => e.stopPropagation()}>
+          <button className="cli-tbtn" title="导出本次会话为 Markdown" onClick={async () => { if (await copyText(transcriptToMarkdown(history))) { setExported(true); setTimeout(() => setExported(false), 1600); } }}>{exported ? '✓ 已复制' : '⤓ 导出会话'}</button>
           <button className="cli-tbtn" title="切换主题" onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>{theme === 'dark' ? '☾' : '☀'}</button>
           <button className={`cli-tbtn ${aiReady ? 'on' : ''}`} onClick={() => setAiOpen(true)}>{aiReady ? '✨ AI 已就绪' : '✨ 配置 AI'}</button>
         </span>
