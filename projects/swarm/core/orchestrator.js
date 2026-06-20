@@ -29,40 +29,82 @@ export function classify(requirement) {
   return 'general';
 }
 
-/* ============================ 2. 离线拆解 ============================ */
+/* ============================ 2. 离线拆解（按拓扑自适应） ============================ */
+
+/** 给「汇总者」自动连上前面全部任务的 key。 */
+function withSynth(specs, synthSpec) {
+  const deps = specs.map((s) => s.key);
+  return [...specs, { ...synthSpec, role: 'synthesizer', depKeys: deps }];
+}
+
+/** 每种需求类型的拓扑构造器。返回带 depKeys 的占位规格（不含 id）。 */
+const TOPOLOGIES = {
+  // 编码/构建：深且顺序 → 单线程深链（业界共识：强耦合任务别 fan-out）
+  build(req) {
+    return withSynth([
+      { key: 'r1', role: 'researcher', title: '需求与约束调研', brief: `梳理「${req}」的范围、约束、依赖与衡量标准。`, depKeys: [] },
+      { key: 'p1', role: 'planner', title: '架构与任务拆解', brief: '定架构与接口，拆成有序、可实现的步骤。', depKeys: ['r1'] },
+      { key: 'w1', role: 'worker', title: '实现主干', brief: '按拆解单线程实现主干（保持连续上下文，不并行分叉）。', depKeys: ['p1'] },
+      { key: 'c1', role: 'critic', title: '评审与挑错', brief: '对实现做对抗式检查，给可执行修改意见与验收判断。', depKeys: ['w1'] },
+    ], { key: 's1', title: '汇总最终结论', brief: '整合全过程，给一句话结论 + 关键要点 + 下一步 + 风险。' });
+  },
+  // 调研：广度优先 → 多路并行子问题，再交叉核验
+  research(req) {
+    return withSynth([
+      { key: 'r1', role: 'researcher', title: '子问题 A：现状与定义', brief: `围绕「${req}」查清现状、关键概念与边界。`, depKeys: [] },
+      { key: 'r2', role: 'researcher', title: '子问题 B：方案与对标', brief: '并行调研可选方案、业界对标与优劣。', depKeys: [] },
+      { key: 'r3', role: 'researcher', title: '子问题 C：风险与代价', brief: '并行调研风险、成本与失败模式。', depKeys: [] },
+      { key: 'c1', role: 'critic', title: '交叉核验', brief: '对三路调研做一致性/可信度交叉核验，标注分歧与缺口。', depKeys: ['r1', 'r2', 'r3'] },
+    ], { key: 's1', title: '汇总调研结论', brief: '整合多路发现，给结论 + 对比要点 + 下一步 + 待确认项。' });
+  },
+  // 决策：可打分的决策框架
+  decide(req) {
+    return withSynth([
+      { key: 'r1', role: 'researcher', title: '选项与事实', brief: `列出「${req}」的可选项与各自关键事实。`, depKeys: [] },
+      { key: 'p1', role: 'planner', title: '建立决策框架', brief: '定义评估维度与权重，搭出可打分的决策框架。', depKeys: ['r1'] },
+      { key: 'w1', role: 'worker', title: '打分与推荐', brief: '按框架逐项打分，产出带理由的推荐选项与取舍。', depKeys: ['p1'] },
+      { key: 'c1', role: 'critic', title: '复核取舍', brief: '检查权重与打分是否合理、有无遗漏的关键因素。', depKeys: ['w1'] },
+    ], { key: 's1', title: '汇总决策建议', brief: '给出推荐选项一句话结论 + 理由 + 风险 + 何时复盘。' });
+  },
+  // 写作：精简 调研→初稿→润色
+  write(req) {
+    return withSynth([
+      { key: 'r1', role: 'researcher', title: '资料与要点', brief: `为「${req}」收集素材、受众与关键信息点。`, depKeys: [] },
+      { key: 'w1', role: 'worker', title: '撰写初稿', brief: '按要点产出结构清晰、可直接使用的完整初稿。', depKeys: ['r1'] },
+      { key: 'c1', role: 'critic', title: '润色评审', brief: '检查结构/逻辑/语气，给具体修改建议与验收判断。', depKeys: ['w1'] },
+    ], { key: 's1', title: '汇总成稿', brief: '给最终稿要点 + 可改进项 + 使用建议。' });
+  },
+  // 通用：两路并行调研 → 规划 → 执行 → 评审
+  general(req) {
+    return withSynth([
+      { key: 'r1', role: 'researcher', title: '需求与背景调研', brief: `围绕「${req}」收集关键事实、约束与可选方案。`, depKeys: [] },
+      { key: 'r2', role: 'researcher', title: '风险与对标调研', brief: '调研同类做法、业界对标与主要风险点。', depKeys: [] },
+      { key: 'p1', role: 'planner', title: '拆解执行计划', brief: '综合调研，排出有优先级、可执行的步骤与里程碑。', depKeys: ['r1', 'r2'] },
+      { key: 'w1', role: 'worker', title: '产出交付草案', brief: '按计划产出可交付的第一版成果。', depKeys: ['p1'] },
+      { key: 'c1', role: 'critic', title: '评审与挑错', brief: '对草案做对抗式检查，给可执行修改意见与验收判断。', depKeys: ['w1'] },
+    ], { key: 's1', title: '汇总最终结论', brief: '整合全部产出，给一句话结论 + 关键要点 + 下一步 + 风险。' });
+  },
+};
+
+/** 拓扑中文名（UI 展示）。 */
+export function topologyLabel(kind) {
+  return {
+    build: '单线程深链',
+    research: '广度并行',
+    decide: '决策框架',
+    write: '精简管线',
+    general: '默认编排',
+  }[kind] || '默认编排';
+}
 
 /**
- * 离线把需求拆成子任务规格（不含 id，调用方用 makeTask 赋 id 时会自动连依赖）。
- * 这里用「占位依赖键」描述依赖，loadPlan 会把键换成真实 id。
+ * 离线把需求按其类型拆成对应拓扑的子任务规格（不含 id）。
+ * build=单线程深链 / research=多路并行 / decide=决策框架 / write=精简 / general=默认。
  */
 export function decompose(requirement) {
   const kind = classify(requirement);
   const req = String(requirement || '').trim();
-
-  // 通用骨架：调研(可并行2路) → 规划 → 执行 → 评审 → 汇总
-  const base = [
-    { key: 'r1', role: 'researcher', title: '需求与背景调研', brief: `围绕「${req}」收集关键事实、约束与可选方案。`, depKeys: [] },
-    { key: 'r2', role: 'researcher', title: '风险与对标调研', brief: `调研同类做法、业界对标与主要风险点。`, depKeys: [] },
-    { key: 'p1', role: 'planner', title: '拆解执行计划', brief: '综合调研结论，排出有优先级、可执行的步骤与里程碑。', depKeys: ['r1', 'r2'] },
-    { key: 'w1', role: 'worker', title: '产出交付草案', brief: '按计划产出可交付的第一版成果（方案/草案/代码骨架）。', depKeys: ['p1'] },
-    { key: 'c1', role: 'critic', title: '评审与挑错', brief: '对草案做对抗式检查，给出可执行的修改意见与验收判断。', depKeys: ['w1'] },
-    { key: 's1', role: 'synthesizer', title: '汇总最终结论', brief: '整合全部产出，给用户一句话结论 + 关键要点 + 下一步 + 风险。', depKeys: ['r1', 'r2', 'p1', 'w1', 'c1'] },
-  ];
-
-  // 按类型微调措辞/侧重
-  if (kind === 'research') {
-    base[3].title = '撰写调研结论草案';
-    base[3].brief = '把调研发现整理成结构化结论草案（含对比表/要点）。';
-  } else if (kind === 'decide') {
-    base[2].title = '建立决策框架';
-    base[2].brief = '列出可选项、评估维度与权重，搭出可打分的决策框架。';
-    base[3].title = '给出推荐选项';
-    base[3].brief = '按框架打分，产出带理由的推荐选项与取舍。';
-  } else if (kind === 'write') {
-    base[3].title = '撰写初稿';
-    base[3].brief = '按规划产出完整初稿（结构清晰、可直接使用）。';
-  }
-  return base;
+  return (TOPOLOGIES[kind] || TOPOLOGIES.general)(req);
 }
 
 /* ---------------------- 路由快路径（Bedrock 式：单一清晰意图直达） ---------------------- */
@@ -76,9 +118,12 @@ const SIMPLE_RE = /(查|算一?下|翻译|解释|什么是|定义|列举|改写|
  */
 export function isSimpleIntent(requirement) {
   const s = String(requirement || '').trim();
-  if (!s || s.length > 40) return false;
+  if (!s || s.length > 30) return false;
   if (COMPLEX_RE.test(s)) return false;
-  return SIMPLE_RE.test(s) || s.length <= 12;
+  // 编码/调研/决策类即便很短也要走对应拓扑，不能抄近路
+  const kind = classify(s);
+  if (kind === 'build' || kind === 'research' || kind === 'decide') return false;
+  return SIMPLE_RE.test(s); // 必须是明确的单一祈使（查/翻译/解释/定义/总结…）
 }
 
 /** 快路径计划：执行者直接产出 → 汇总者收口（两步，省去多路调研/规划/返工）。 */

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { runJob } from '../core/engine.js';
 import { topoLayers, progress } from '../core/queue.js';
 import { getRole, roleList } from '../core/roles.js';
-import { classify, buildPlan, planToSpecs } from '../core/orchestrator.js';
+import { classify, buildPlan, planToSpecs, topologyLabel } from '../core/orchestrator.js';
 import { PROVIDERS, defaultAIConfig, isConfigured } from '../core/ai.js';
 import { estimateJobCost, formatUSD, formatTokens } from '../core/cost.js';
 import { mdToHtml } from './markdown.js';
@@ -127,7 +127,7 @@ export default function App() {
             <div className="sw-preview">
               <div className="sw-preview-top">
                 <span className={'sw-route ' + preview.route}>
-                  {preview.route === 'fast' ? '⚡ 快路径' : '🧭 全量编排'}
+                  {preview.route === 'fast' ? '⚡ 快路径' : `🧭 ${topologyLabel(classify(input.trim()))}`}
                 </span>
                 <span className="sw-preview-cost">~{formatUSD(preview.est.usd)}</span>
               </div>
@@ -212,6 +212,9 @@ function Workspace({ job }) {
           <span className="sw-kind">{kindLabel(classify(job.requirement))}</span>
           {job.route && (
             <span className={'sw-route ' + job.route}>{job.route === 'fast' ? '⚡ 快路径' : '🧭 全量编排'}</span>
+          )}
+          {job.route !== 'fast' && (
+            <span className="sw-topo">拓扑 · {topologyLabel(classify(job.requirement))}</span>
           )}
           {job.requirement}
         </div>
@@ -429,6 +432,7 @@ function Style() {
 .sw-route{font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;font-family:var(--sans);}
 .sw-route.fast{color:var(--ok);background:#EAF0EC;}
 .sw-route.full{color:var(--t2);background:var(--fill);}
+.sw-topo{font-size:11px;font-weight:500;color:var(--accent-2);background:var(--accent-soft);padding:3px 9px;border-radius:20px;font-family:var(--sans);}
 .sw-estimate{margin-top:8px;font-size:11.5px;color:var(--t2);font-variant-numeric:tabular-nums;}
 .sw-est-model{color:var(--t3);}
 .sw-preview{margin-top:10px;background:var(--surface-2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;}

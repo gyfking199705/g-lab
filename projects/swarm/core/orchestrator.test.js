@@ -4,8 +4,9 @@ import {
   classify, decompose, planToSpecs, parsePlan, synthesize,
   buildPlanMessages, buildAgentMessages, buildSynthesisMessages, mockRun, depOutputs,
   parseVerdict, reworkSpecs, injectRework, isRework, isSimpleIntent, routeDecompose, buildPlan,
+  topologyLabel,
 } from './orchestrator.js';
-import { makeTask } from './queue.js';
+import { makeTask, topoLayers } from './queue.js';
 
 test('classify 按关键词识别需求类型', () => {
   assert.equal(classify('帮我开发一个待办应用'), 'build');
@@ -25,8 +26,8 @@ test('decompose 产出含调研/规划/执行/评审/汇总的管线，且恰有
   assert.equal(roles.filter((r) => r === 'synthesizer').length, 1);
 });
 
-test('decompose：两路调研无依赖，可并行；规划依赖两路调研', () => {
-  const plan = decompose('做个应用');
+test('general 拓扑：两路调研无依赖可并行，规划依赖两路调研', () => {
+  const plan = decompose('整理一下我的想法'); // general
   const r = plan.filter((p) => p.role === 'researcher');
   assert.equal(r.length, 2);
   r.forEach((t) => assert.deepEqual(t.depKeys, []));
@@ -35,14 +36,49 @@ test('decompose：两路调研无依赖，可并行；规划依赖两路调研',
 });
 
 test('planToSpecs 把 depKeys 解析成真实 id', () => {
-  const plan = decompose('做个应用');
+  const plan = decompose('整理一下我的想法'); // general：2 路调研
   const specs = planToSpecs(plan, (i) => `id${i}`);
   const planner = specs.find((s) => s.role === 'planner');
-  // 规划依赖两路调研（id0, id1）
   assert.deepEqual(planner.deps.sort(), ['id0', 'id1']);
   // synthesizer 依赖其余全部
   const synth = specs.find((s) => s.role === 'synthesizer');
   assert.equal(synth.deps.length, specs.length - 1);
+});
+
+test('自适应拓扑：build=单线程深链 / research=多路并行 / decide=决策框架', () => {
+  // build：编码类应为单线程链——每个非汇总任务最多 1 个直接后继，无并行调研
+  const build = decompose('帮我开发一个待办应用');
+  assert.equal(build.filter((p) => p.role === 'researcher').length, 1);
+  const bSpecs = planToSpecs(build, (i) => `b${i}`);
+  const bLayers = topoLayers(bSpecs);
+  // 单线程链 → 每一波只有 1 个任务
+  assert.ok(bLayers.every((layer) => layer.length === 1), '单线程深链每波次只 1 个');
+
+  // research：应有 3 路并行调研（同一波次）
+  const research = decompose('调研一下多智能体框架');
+  assert.equal(research.filter((p) => p.role === 'researcher').length, 3);
+  const rSpecs = planToSpecs(research, (i) => `r${i}`);
+  const rLayers = topoLayers(rSpecs);
+  assert.equal(rLayers[0].length, 3, '三路调研并行在第一波');
+
+  // decide：含决策框架（planner）与打分（worker）
+  const decide = decompose('我该不该换工作');
+  assert.ok(decide.some((p) => p.role === 'planner'));
+  assert.ok(decide.some((p) => p.role === 'worker'));
+
+  // 每种拓扑都恰有一个 synthesizer 且依赖其余全部
+  for (const plan of [build, research, decide]) {
+    assert.equal(plan.filter((p) => p.role === 'synthesizer').length, 1);
+    const synth = plan.find((p) => p.role === 'synthesizer');
+    assert.equal(synth.depKeys.length, plan.length - 1);
+  }
+});
+
+test('topologyLabel 给出各拓扑中文名', () => {
+  assert.equal(topologyLabel('build'), '单线程深链');
+  assert.equal(topologyLabel('research'), '广度并行');
+  assert.equal(topologyLabel('decide'), '决策框架');
+  assert.equal(topologyLabel('xxx'), '默认编排');
 });
 
 test('parsePlan 解析合法 JSON', () => {

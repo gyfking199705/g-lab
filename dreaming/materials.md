@@ -195,3 +195,10 @@
 - 子项目: swarm
 - 重点: core/cost.js 价目+estimateTokens+estimateJobCost（步数/波次/in-out-token/$，纯函数）；orchestrator 加 isSimpleIntent/routeDecompose/buildPlan；engine 简单意图走 2 步快路径并标 job.route、规划后算 job.estimate（返工后上调）；App 输入框下实时预估+工作区头估算+快路径徽章；修了 P-4 引入的 callChat 漏 import；39 单测全绿
 - 解决的问题: demo 缺『这单多贵/多少步』的派单前决策辅助，也缺单一意图省钱的快路径
+
+## M-25 · 2026-06-20 · swarm 任务自适应拓扑（落地 P-9）
+- 作者: claude
+- 提交: 0e72de9
+- 子项目: swarm
+- 重点: orchestrator decompose 按 kind 分派不同拓扑：build=单线程深链/research=3路并行/decide=决策框架/write=精简管线/general=默认；新增 topologyLabel；收紧 isSimpleIntent（编码/调研/决策即便短也走对应拓扑，不抄近路）；App 工作区头+输入预览显示拓扑名；41 单测全绿
+- 解决的问题: 原 decompose 各类型只改措辞、结构相同；兑现调研最核心结论『按任务类型选拓扑』
