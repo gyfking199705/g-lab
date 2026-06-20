@@ -102,6 +102,13 @@ export const CSS = `
 .dx-pillar .pn{font-size:12.5px;font-weight:600;color:var(--t1);min-width:118px;}
 .dx-pillar .pd{font-size:12.5px;color:var(--t2);}
 .dx-fw .lk{margin-top:14px;font-size:12.5px;}
+.dx-cov{margin:10px 0 4px;}
+.dx-cov-bar{position:relative;height:6px;border-radius:4px;background:var(--fill);overflow:hidden;display:flex;}
+.dx-cov-bar i{display:block;height:100%;}
+.dx-cov-bar i.done{background:var(--ok);}
+.dx-cov-bar i.doing{background:var(--warn);opacity:.7;}
+.dx-cov-cap{font-size:11.5px;color:var(--t3);margin-top:5px;}
+.dx-cov-cap b{color:var(--t2);font-weight:600;}
 
 /* assessment */
 .dx-assess{background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:22px;}
@@ -139,6 +146,10 @@ export const CSS = `
 .dx-status button:first-child{border-left:none;}
 .dx-status button:hover{background:var(--surface-2);}
 .dx-status button[aria-pressed="true"]{color:#fff;font-weight:600;}
+
+/* data export / import bar */
+.dx-data{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:40px;padding-top:18px;border-top:1px solid var(--bd);}
+.dx-data-h{font-size:12.5px;color:var(--t2);margin-right:auto;}
 
 /* copy / export button */
 .dx-copy{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;

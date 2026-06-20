@@ -2,7 +2,7 @@
  * devx-lab 纯逻辑层：范式筛选/排序/统计 + DORA 自评分级。
  * 全部为纯函数，可 `node --test` 单测，与 UI 解耦。
  */
-import { PRACTICES, CATEGORIES, DORA_METRICS, DORA_LEVELS, ADOPTION_STATUS } from './data.js';
+import { PRACTICES, CATEGORIES, FRAMEWORKS, DORA_METRICS, DORA_LEVELS, ADOPTION_STATUS } from './data.js';
 
 const STATUS_IDS = ADOPTION_STATUS.map((s) => s.id);
 
@@ -102,6 +102,64 @@ export function adoptionStats(list, statuses = {}) {
   const total = (list || []).length;
   const percent = total ? Math.round((counts.done / total) * 100) : 0;
   return { ...counts, total, percent };
+}
+
+/**
+ * 按业界框架聚合覆盖度：每个框架有多少条范式对齐、其中已落地/进行中各几条。
+ * @returns {Array<{id,name,total,done,doing,percent}>}（与 FRAMEWORKS 同序）
+ */
+export function frameworkCoverage(practices, statuses = {}) {
+  return FRAMEWORKS.map((f) => {
+    const items = (practices || []).filter((p) => (p.frameworks || []).includes(f.id));
+    const done = items.filter((p) => statusOf(statuses, p.id) === 'done').length;
+    const doing = items.filter((p) => statusOf(statuses, p.id) === 'doing').length;
+    return {
+      id: f.id,
+      name: f.name,
+      total: items.length,
+      done,
+      doing,
+      percent: items.length ? Math.round((done / items.length) * 100) : 0,
+    };
+  });
+}
+
+// ── 数据导出 / 导入（团队备份与共享，仅本地） ────────────────────────
+
+export const EXPORT_VERSION = 1;
+
+/** 组装可导出的快照对象（收藏 + 采纳状态 + DORA 自评）。 */
+export function buildExport({ favs = [], statuses = {}, bands = {} } = {}) {
+  return {
+    app: 'devx-lab',
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    favs,
+    statuses,
+    bands,
+  };
+}
+
+/**
+ * 解析并校验导入文本，返回干净的 { favs, statuses, bands }。
+ * 非 devx-lab 导出或非法 JSON 抛错；字段缺失/类型不符时安全降级为空。
+ */
+export function parseImport(text) {
+  let o;
+  try {
+    o = JSON.parse(text);
+  } catch {
+    throw new Error('不是有效的 JSON 文件');
+  }
+  if (!o || typeof o !== 'object' || o.app !== 'devx-lab') {
+    throw new Error('不是 devx-lab 的导出文件');
+  }
+  const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+  return {
+    favs: Array.isArray(o.favs) ? o.favs.filter((x) => typeof x === 'string') : [],
+    statuses: isObj(o.statuses) ? o.statuses : {},
+    bands: isObj(o.bands) ? o.bands : {},
+  };
 }
 
 // ── DORA 自评导出 ───────────────────────────────────────────────────
