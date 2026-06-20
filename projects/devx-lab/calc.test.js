@@ -74,6 +74,20 @@ test('filterPractices: 关键词 / 类别 / 框架', () => {
   assert.ok(combo.every((p) => p.category === 'cd' && p.frameworks.includes('dora')));
 });
 
+test('filterPractices: 框架多选(OR) 与 高性价比', () => {
+  // 多选框架：命中任一即通过
+  const multi = filterPractices(PRACTICES, { frameworks: ['dora', 'space'] });
+  assert.ok(multi.every((p) => p.frameworks.includes('dora') || p.frameworks.includes('space')));
+  assert.ok(multi.length >= filterPractices(PRACTICES, { framework: 'dora' }).length);
+  // 空数组不过滤
+  assert.equal(filterPractices(PRACTICES, { frameworks: [] }).length, PRACTICES.length);
+  // 高性价比：全部 roi>=2
+  const qw = filterPractices(PRACTICES, { quickWin: true });
+  assert.ok(qw.length > 0 && qw.every((p) => roi(p) >= 2));
+  // 与概览口径一致
+  assert.equal(qw.length, summaryStats(PRACTICES).quickWins);
+});
+
 test('filterPractices: 搜索大小写不敏感、空列表安全', () => {
   const lower = filterPractices(PRACTICES, { q: 'dora' });
   const upper = filterPractices(PRACTICES, { q: 'DORA' });

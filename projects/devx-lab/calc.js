@@ -20,18 +20,30 @@ function norm(s) {
 }
 
 /**
- * 按关键词 / 类别 / 框架筛选范式。
+ * 按关键词 / 类别 / 框架 / 高性价比筛选范式。
  * @param {Array} list 范式列表
- * @param {{q?:string, category?:string, framework?:string}} opts
- *   category/framework 传 'all' 或空表示不过滤。
+ * @param {Object} opts
+ *   - category: 单个类别 id；'all' 或空不过滤。
+ *   - framework: 单个框架 id（向后兼容）；'all' 或空不过滤。
+ *   - frameworks: 框架 id 数组（多选）；命中任一即通过（OR）；空数组不过滤。
+ *   - quickWin: true 时只留高性价比范式（roi ≥ 2，与概览口径一致）。
  */
 export function filterPractices(list, opts = {}) {
   const q = norm(opts.q);
   const category = opts.category && opts.category !== 'all' ? opts.category : null;
-  const framework = opts.framework && opts.framework !== 'all' ? opts.framework : null;
+  // 归一化框架筛选：优先用 frameworks 数组，回退到单个 framework 字符串
+  const fwList = (
+    Array.isArray(opts.frameworks) && opts.frameworks.length
+      ? opts.frameworks
+      : opts.framework && opts.framework !== 'all'
+        ? [opts.framework]
+        : []
+  ).filter(Boolean);
+  const quickWin = !!opts.quickWin;
   return (list || []).filter((p) => {
     if (category && p.category !== category) return false;
-    if (framework && !(p.frameworks || []).includes(framework)) return false;
+    if (fwList.length && !fwList.some((f) => (p.frameworks || []).includes(f))) return false;
+    if (quickWin && roi(p) < 2) return false;
     if (q) {
       const hay = norm(
         [p.title, p.summary, (p.signals || []).join(' '), (p.how || []).join(' ')].join(' '),

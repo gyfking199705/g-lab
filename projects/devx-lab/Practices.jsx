@@ -163,39 +163,46 @@ function Card({ p, fav, onFav, onFramework, status, onStatus, onGotoPractice, on
 export default function Practices({ favs, onToggleFav, statuses, onSetStatus, focus, onGotoAntipatterns }) {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState('all');
-  const [framework, setFramework] = useState('all');
+  const [frameworks, setFrameworks] = useState([]);
+  const [quickWin, setQuickWin] = useState(false);
   const [sort, setSort] = useState('impact');
   const [favOnly, setFavOnly] = useState(false);
   const [status, setStatus] = useState('all');
+
+  function resetFilters() {
+    setCategory('all');
+    setFrameworks([]);
+    setQuickWin(false);
+    setStatus('all');
+    setFavOnly(false);
+  }
+
+  function toggleFramework(fid) {
+    setFrameworks((prev) => (prev.includes(fid) ? prev.filter((x) => x !== fid) : [...prev, fid]));
+  }
 
   // 从「落地路线」跳转过来：用范式标题作搜索，并清掉其它筛选以确保命中
   useEffect(() => {
     if (!focus) return;
     setQ(focus.q);
-    setCategory('all');
-    setFramework('all');
-    setStatus('all');
-    setFavOnly(false);
+    resetFilters();
   }, [focus && focus.nonce]);
 
   // 卡片关系网内就地跳转：用标题搜索并清掉其它筛选
   function gotoLocal(title) {
     setQ(title);
-    setCategory('all');
-    setFramework('all');
-    setStatus('all');
-    setFavOnly(false);
+    resetFilters();
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   const counts = useMemo(() => categoryCounts(PRACTICES), []);
 
   const list = useMemo(() => {
-    let r = filterPractices(PRACTICES, { q, category, framework });
+    let r = filterPractices(PRACTICES, { q, category, frameworks, quickWin });
     if (favOnly) r = r.filter((p) => favs.includes(p.id));
     if (status !== 'all') r = r.filter((p) => statusOf(statuses, p.id) === status);
     return sortPractices(r, sort);
-  }, [q, category, framework, sort, favOnly, favs, status, statuses]);
+  }, [q, category, frameworks, quickWin, sort, favOnly, favs, status, statuses]);
 
   return (
     <div>
@@ -208,10 +215,6 @@ export default function Practices({ favs, onToggleFav, statuses, onSetStatus, fo
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <select className="dx-select" value={framework} onChange={(e) => setFramework(e.target.value)}>
-          <option value="all">全部框架</option>
-          {FRAMEWORKS.map((f) => <option key={f.id} value={f.id}>对齐 {f.name}</option>)}
-        </select>
         <select className="dx-select" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="all">全部状态</option>
           {ADOPTION_STATUS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -223,6 +226,14 @@ export default function Practices({ favs, onToggleFav, statuses, onSetStatus, fo
           <option value="effort">按成本</option>
           <option value="title">按名称</option>
         </select>
+        <button
+          className="dx-chip"
+          aria-pressed={quickWin}
+          onClick={() => setQuickWin((v) => !v)}
+          title="只看高性价比（影响÷成本 ≥ 2）"
+        >
+          ⚡ 高性价比
+        </button>
         <button
           className="dx-chip"
           aria-pressed={favOnly}
@@ -249,6 +260,23 @@ export default function Practices({ favs, onToggleFav, statuses, onSetStatus, fo
         ))}
       </div>
 
+      <div className="dx-chips dx-fwchips">
+        <span className="dx-fwlab">框架对齐</span>
+        {FRAMEWORKS.map((f) => (
+          <button
+            key={f.id}
+            className="dx-chip sm"
+            aria-pressed={frameworks.includes(f.id)}
+            onClick={() => toggleFramework(f.id)}
+          >
+            {f.name}
+          </button>
+        ))}
+        {frameworks.length > 0 && (
+          <button className="dx-chip sm clear" onClick={() => setFrameworks([])}>清空 ✕</button>
+        )}
+      </div>
+
       {list.length ? (
         <div className="dx-grid">
           {list.map((p) => (
@@ -257,7 +285,7 @@ export default function Practices({ favs, onToggleFav, statuses, onSetStatus, fo
               p={p}
               fav={favs.includes(p.id)}
               onFav={onToggleFav}
-              onFramework={(fid) => setFramework(fid)}
+              onFramework={(fid) => setFrameworks([fid])}
               status={statusOf(statuses, p.id)}
               onStatus={onSetStatus}
               onGotoPractice={gotoLocal}

@@ -48,6 +48,10 @@ export const CSS = `
 .dx-chip:hover{border-color:var(--accent);color:var(--t1);}
 .dx-chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);font-weight:600;}
 .dx-chip .c{color:var(--t3);font-size:11px;margin-left:4px;}
+.dx-chip.sm{font-size:11.5px;padding:4px 10px;}
+.dx-chip.clear{color:var(--t3);border-style:dashed;}
+.dx-fwchips{align-items:center;margin-top:-6px;}
+.dx-fwlab{font-size:11px;color:var(--t3);letter-spacing:.5px;margin-right:2px;}
 
 /* grid + cards */
 .dx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
