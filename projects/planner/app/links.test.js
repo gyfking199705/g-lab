@@ -20,6 +20,21 @@ const DATA = {
     plans: [
       { modules: [{ lessons: [{ status: 'mastered' }, { status: 'learning' }, { status: 'mastered' }] }] },
     ],
+    sessions: [{ minutes: 30 }, { minutes: 45 }], // 75
+  },
+  'project-planner': { tasks: [{ status: 'done' }, { status: 'doing' }, { status: 'done' }] }, // done 2
+  'schedule-planner': {
+    items: [{ done: true, date: '2026-06-10' }, { done: false, date: '2026-06-20' }, { done: true, date: '2026-06-19' }],
+  }, // 2
+  'habits-planner': { habits: [{ id: 'h1', type: 'check' }], checkins: { h1: { '2026-06-20': 1, '2026-06-19': 1 } } }, // streak 2
+  'savings-planner': {
+    netWorth: {
+      accounts: [{ id: 'cash', type: 'asset' }, { id: 'debt', type: 'liability' }],
+      snapshots: [
+        { date: '2026-05', values: { cash: 1000, debt: 500 } },
+        { date: '2026-06', values: { cash: 1500, debt: 400 } }, // net 1100
+      ],
+    },
   },
   'papers-planner': {
     items: [{ status: 'done' }, { status: 'reading' }, { status: 'done' }, { status: 'toread' }],
@@ -70,6 +85,33 @@ test('ledger：累计结余', () => {
 test('cut：当前趋势体重为数值', () => {
   const v = computeLink('cut.weight', makeGet(DATA), TODAY);
   assert.ok(typeof v === 'number' && v > 78 && v < 81);
+});
+
+test('project：已完成任务数', () => {
+  assert.equal(computeLink('project.tasksDone', makeGet(DATA), TODAY), 2);
+});
+
+test('schedule：累计完成日程', () => {
+  assert.equal(computeLink('schedule.done', makeGet(DATA), TODAY), 2);
+});
+
+test('habits：最长连续打卡', () => {
+  assert.equal(computeLink('habits.bestStreak', makeGet(DATA), TODAY), 2);
+});
+
+test('learning：累计学习时长', () => {
+  assert.equal(computeLink('learning.studyMin', makeGet(DATA), TODAY), 75);
+});
+
+test('savings：净资产', () => {
+  assert.equal(computeLink('savings.networth', makeGet(DATA), TODAY), 1100);
+});
+
+test('新来源无数据 → null', () => {
+  const e = makeGet({});
+  for (const id of ['project.tasksDone', 'schedule.done', 'habits.bestStreak', 'learning.studyMin', 'savings.networth']) {
+    assert.equal(computeLink(id, e, TODAY), null, id);
+  }
 });
 
 test('无数据 / 无效 id / 无 get → null', () => {

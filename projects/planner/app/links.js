@@ -12,11 +12,14 @@
  * 可测试：node --test app/links.test.js
  */
 import { todayStr } from '../core/date.js';
-import { overallStats as learningStats } from '../learning/calc.js';
+import { overallStats as learningStats, studyMinutes } from '../learning/calc.js';
 import { overallCounts as aimapCounts } from '../aimap/calc.js';
 import { totalVolume, weekStreak } from '../fitness/calc.js';
 import { balance } from '../ledger/calc.js';
 import { trendSeries as cutTrend } from '../cut/calc.js';
+import { taskStats } from '../project/calc.js';
+import { currentStreak, fitnessWorkoutDates } from '../habits/calc.js';
+import { netWorthSeries } from '../savings/calc.js';
 
 const arr = (v) => (Array.isArray(v) ? v : []);
 const num = (v) => (typeof v === 'number' && isFinite(v) ? v : 0);
@@ -79,6 +82,47 @@ export const LINK_SOURCES = [
       const logs = arr((get('cut-planner') || {}).logs);
       const t = cutTrend(logs);
       return t.length ? t[t.length - 1].trend : null;
+    },
+  },
+  {
+    id: 'project.tasksDone', label: '已完成任务', unit: '个', module: 'project-planner',
+    compute: (get) => {
+      const tasks = arr((get('project-planner') || {}).tasks);
+      return tasks.length ? num(taskStats(tasks).done) : null;
+    },
+  },
+  {
+    id: 'schedule.done', label: '累计完成日程', unit: '项', module: 'schedule-planner',
+    compute: (get) => {
+      const items = arr((get('schedule-planner') || {}).items);
+      if (!items.length) return null;
+      return items.filter((i) => i && i.done).length;
+    },
+  },
+  {
+    id: 'habits.bestStreak', label: '最长连续打卡', unit: '天', module: 'habits-planner',
+    compute: (get, today) => {
+      const d = get('habits-planner') || {};
+      const habits = arr(d.habits).filter((h) => h && !h.archived);
+      if (!habits.length) return null;
+      const ext = fitnessWorkoutDates(get('fitness-planner'));
+      const ci = d.checkins || {};
+      return habits.reduce((mx, h) => Math.max(mx, currentStreak(h, ci, today, ext)), 0);
+    },
+  },
+  {
+    id: 'learning.studyMin', label: '累计学习时长', unit: '分钟', module: 'learning-planner',
+    compute: (get) => {
+      const sessions = arr((get('learning-planner') || {}).sessions);
+      return sessions.length ? num(studyMinutes(sessions)) : null;
+    },
+  },
+  {
+    id: 'savings.networth', label: '净资产', unit: '元', module: 'savings-planner',
+    compute: (get) => {
+      const nw = (get('savings-planner') || {}).netWorth || {};
+      const series = netWorthSeries(arr(nw.snapshots), nw.accounts || []);
+      return series.length ? Math.round(series[series.length - 1].net) : null;
     },
   },
 ];
