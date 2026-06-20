@@ -16,7 +16,10 @@ g-lab/
 ├── .github/workflows/      # GitHub Pages 部署（static：整仓库原样上传）
 └── projects/
     ├── planner/            # 子项目：个人成长规划系统
-    └── muse-ui/         # 子项目：React 创意交互组件库
+    ├── muse-ui/            # 子项目：React 创意交互组件库
+    ├── prompt-lab/         # 子项目：Prompt 研究室
+    ├── swarm/              # 子项目：多智能体协作工作区原型 + 调研
+    └── agent-cli/          # 子项目：Agent CLI 交互研究（自包含、独立构建）
 ```
 
 ## 黄金规则

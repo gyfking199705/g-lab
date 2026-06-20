@@ -20,8 +20,9 @@ g-lab 的一个子项目：把 **Claude Code / OpenAI Codex CLI / Google Gemini 
 先试 **`/demo`** 看完整流程。
 
 ### ② 玩法调研（对比 + 共性）
-- **三家对比**：Claude Code / Codex CLI / Gemini CLI 的交互模型、放权/审批/沙箱、斜杠命令、项目记忆、可扩展性。
-- **共性设计模式**：REPL 工具循环、流式呈现、工具调用卡、斜杠命令、分级放权、计划模式、项目记忆、MCP 扩展。
+- **四家对比卡**：Claude Code / Codex CLI / Gemini CLI / Aider 的交互模型、放权·审批·沙箱、斜杠命令、项目记忆、可扩展性。
+- **速查矩阵**：维度 ×（四家）一屏横扫——放权/审批、沙箱、上下文/记忆、计划模式、Git 集成、扩展、开源。
+- **共性设计模式**：REPL 工具循环、流式呈现、工具调用卡、斜杠命令、分级放权、计划模式、项目记忆、仓库地图/检索、可回滚、MCP 扩展。
 - 每条结论附**来源链接**（官方文档为主），写于 2026-06。
 
 ## 代码结构
@@ -35,11 +36,26 @@ g-lab 的一个子项目：把 **Claude Code / OpenAI Codex CLI / Google Gemini 
 | `bootstrap.jsx` / `index.html` | 独立页入口 |
 | `build.mjs` | esbuild 打包为自托管单文件 `app.js` |
 
+## 🧩 给后续 agent 的接入/扩展指南
+
+想继续加强这个项目？常见改动只动一两个文件，**改完跑 `node --test` + `node build.mjs` 即可**：
+
+| 想做的事 | 改哪里 | 说明 |
+| --- | --- | --- |
+| 调研多一家 CLI | `notes.js` → `CLIS`（+ `SOURCES`、`MATRIX`） | 加一张对比卡：填 `rows` 与 `sources` 下标；矩阵里同步加一列单元。`notes.test.js` 会校验结构/来源/对齐 |
+| 加一条共性模式 | `notes.js` → `PATTERNS` | `[标题, 说明]` 二元组 |
+| 加一个斜杠命令 | `engine.js` → `SLASH_COMMANDS` + `AgentCli.jsx` → `runSlash()` | 前者管补全与 /help 展示，后者写命令行为 |
+| 加一种模拟场景 | `engine.js` → `classifyIntent()` + `planAgentRun()` | 前者把诉求归类，后者产出「思考/工具/diff/回答」事件流（纯函数，`engine.test.js` 覆盖） |
+| 换虚拟项目 | `engine.js` → `seedFiles()` | 离线 demo 操作的内存文件 |
+| 接新模型/厂商 | `ai.js` → `PROVIDERS` / `callChat()` | BYOK 客户端，Key 存本地键 `agent-cli-ai` |
+
+> 约定：纯逻辑进 `engine.js` / 数据进 `notes.js`（都要可单测）；UI 只在 `AgentCli.jsx`。改完务必重新 `node build.mjs` 并**只提交 `app.js` 这一个产物**（连同 `index.html` 的 `?v=` 行）。
+
 ## 开发
 
 ```bash
 cd projects/agent-cli
-node --test                                              # 单测（engine + notes）
+node --test                                              # 单测（engine + notes，共 18 项）
 npm install --no-save esbuild react@18.3.1 react-dom@18.3.1
 node build.mjs                                           # 生成 app.js 并刷新 index.html 的 ?v=
 ```
