@@ -301,3 +301,10 @@
 - 子项目: swarm
 - 重点: core/export.js jobToMarkdown（纯函数：标题/元信息/结论/逐角色过程/署名）+exportFilename；App 结论区加 复制结论/复制Markdown/下载.md（剪贴板+Blob，含降级）；46 单测全绿；重打包
 - 解决的问题: 结论只能看不能带走——补上一键复制/下载 Markdown
+
+## M-39 · 2026-06-20 · devx-lab 范式库快捷筛选：高性价比一键 + 框架多选
+- 作者: claude
+- 提交: d5e4fb9
+- 子项目: devx-lab
+- 重点: filterPractices 支持 frameworks 数组(OR)与 quickWin(roi>=2)；UI 框架筛选由单选下拉改多选 chip 行、新增⚡高性价比 toggle、点框架徽章聚焦该框架；单测 23→24 全过
+- 解决的问题: 原框架筛选只能单选、也无法快速挑出高性价比范式；筛选粒度不够
