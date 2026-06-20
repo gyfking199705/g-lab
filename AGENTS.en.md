@@ -7,7 +7,7 @@
 `g-lab` is an **umbrella monorepo**: the repo root is a static portal page, and each independent
 mini-project lives under `projects/<name>/`.
 - `projects/planner/` — Personal Growth Planner (multi-module single-page app)
-- `projects/popcorn-ui/` — zero-dependency React creative-interaction component library
+- `projects/muse-ui/` — zero-dependency React creative-interaction component library
 
 ## Must follow
 1. **Code goes inside a sub-project dir** `projects/<name>/`. The repo root only holds the portal `index.html`, `README`, `DESIGN.md`, `AGENTS.md`, `CONTRIBUTING.md`, `assets/`, `.github/`. **Do not add app code to the root.**
@@ -17,7 +17,7 @@ mini-project lives under `projects/<name>/`.
 5. **Rebuild and commit artifacts after changes**:
    ```bash
    cd projects/planner && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node scripts/build.mjs
-   # popcorn-ui: cd projects/popcorn-ui && npm i --no-save esbuild react react-dom && node build.mjs
+   # muse-ui: cd projects/muse-ui && npm i --no-save esbuild react react-dom && node build.mjs
    ```
 6. **Only commit the bundles you actually changed**: `build.mjs` rebuilds every bundle, and different esbuild versions cause tiny diffs in unrelated bundles. `git add` only the `dist/*.js` you truly changed plus its `?v=` line in the matching `index.html`; revert the rest with `git checkout origin/main -- <files>`. Make sure each `?v=` hash matches its bundle.
 

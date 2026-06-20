@@ -1,5 +1,5 @@
 /**
- * popcorn-ui · 纯数学/动画工具（不依赖 React 与 DOM，可在 Node 里单测）
+ * muse-ui · 纯数学/动画工具（不依赖 React 与 DOM，可在 Node 里单测）
  */
 
 /** 把 v 夹在 [min,max] 内。 */

@@ -8,14 +8,14 @@ import { magneticOffset } from './util/interactions.js';
 import { useInjectedStyle, usePrefersReducedMotion } from './util/hooks.js';
 
 const CSS = `
-.popcorn-mag{display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;
+.muse-mag{display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;
   padding:12px 26px;border-radius:999px;font:inherit;font-weight:600;color:#fff;background:#CC785C;
   transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s;box-shadow:0 6px 20px rgba(204,120,92,.35);}
-.popcorn-mag:hover{box-shadow:0 10px 28px rgba(204,120,92,.5);}
+.muse-mag:hover{box-shadow:0 10px 28px rgba(204,120,92,.5);}
 `;
 
 export default function MagneticButton({ radius = 80, strength = 0.4, as: Tag = 'button', className = '', style, children, ...rest }) {
-  useInjectedStyle('popcorn-magnetic', CSS);
+  useInjectedStyle('muse-magnetic', CSS);
   const ref = useRef(null);
   const reduced = usePrefersReducedMotion();
   const [o, setO] = useState({ x: 0, y: 0 });
@@ -33,7 +33,7 @@ export default function MagneticButton({ radius = 80, strength = 0.4, as: Tag = 
   return (
     <Tag
       ref={ref}
-      className={`popcorn-mag ${className}`.trim()}
+      className={`muse-mag ${className}`.trim()}
       style={{ ...style, transform: `translate(${o.x}px, ${o.y}px)` }}
       onMouseMove={onMove}
       onMouseLeave={onLeave}

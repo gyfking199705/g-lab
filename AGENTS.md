@@ -6,7 +6,7 @@
 ## 这是什么
 `g-lab` 是**伞形 monorepo**：根目录是一个静态门户首页，每个独立小项目放在 `projects/<name>/` 下。
 - `projects/planner/` — 个人成长规划系统（多模块单页应用）
-- `projects/popcorn-ui/` — 零依赖 React 创意交互组件库
+- `projects/muse-ui/` — 零依赖 React 创意交互组件库
 
 ## 必须遵守
 1. **代码进子项目目录**：所有应用代码放 `projects/<name>/` 内；根目录只放门户 `index.html`、`README`、`DESIGN.md`、`CONTRIBUTING.md`、`assets/`、`.github/`。**不要往根目录加应用代码。**
@@ -16,7 +16,7 @@
 5. **改完必须重新打包并提交产物**：
    ```bash
    cd projects/planner && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node scripts/build.mjs
-   # popcorn-ui: cd projects/popcorn-ui && npm i --no-save esbuild react react-dom && node build.mjs
+   # muse-ui: cd projects/muse-ui && npm i --no-save esbuild react react-dom && node build.mjs
    ```
 6. **只提交真正改到的 bundle**：`build.mjs` 会重建所有 bundle，不同 esbuild 版本会让无关 bundle 产生细微 diff。只 `git add` 本次实际改动的 `dist/*.js` 及其对应 `index.html` 的 `?v=` 行；其余 `git checkout origin/main -- <文件>` 还原。确认 `?v=` 哈希与 bundle 内容一致。
 

@@ -1,5 +1,5 @@
 /**
- * popcorn-ui 演示画廊（独立页 /ui/）。逐个展示组件 + 一句话用法。
+ * muse-ui 演示画廊（独立页 /ui/）。逐个展示组件 + 一句话用法。
  * 仅用于演示，不打进库；库入口是 ../src/index.js。
  */
 import React from 'react';
@@ -54,8 +54,8 @@ export default function Gallery() {
       <style>{CSS}</style>
 
       <MeshGradient className="gx-hero" colors={['#CC785C', '#5C8A6B', '#6E83C4', '#C9A14A']} speed={0.05} style={{ minHeight: 280 }}>
-        <h1>popcorn-ui 🍿</h1>
-        <p>零依赖的 React 创意交互组件 · 复制即用、自带样式、支持「减少动效」</p>
+        <h1>muse-ui ✨</h1>
+        <p>UI 组件脑爆 + research 实验室 · 零依赖、复制即用、自带样式、支持「减少动效」</p>
         <div className="gx-stats">
           <div className="gx-stat">
             <b><CountUp value={6} duration={1.2} /></b>
@@ -130,7 +130,7 @@ export default function Gallery() {
       </Section>
 
       <div className="gx-foot">
-        <code>npm i popcorn-ui</code> · <code>import {'{ TiltCard }'} from 'popcorn-ui'</code>
+        <code>npm i muse-ui</code> · <code>import {'{ TiltCard }'} from 'muse-ui'</code>
         <br />零运行时依赖 · 自带样式无需引 CSS · 尊重 prefers-reduced-motion
       </div>
     </div>

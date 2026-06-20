@@ -16,7 +16,7 @@ g-lab/
 ├── .github/workflows/      # GitHub Pages 部署（static：整仓库原样上传）
 └── projects/
     ├── planner/            # 子项目：个人成长规划系统
-    └── popcorn-ui/         # 子项目：React 创意交互组件库
+    └── muse-ui/         # 子项目：React 创意交互组件库
 ```
 
 ## 黄金规则
@@ -54,8 +54,8 @@ cd projects/planner
 npm install --no-save esbuild react@18.3.1 react-dom@18.3.1
 node scripts/build.mjs          # 产出 dist/*.js，并给各 index.html 写入 ?v=hash 缓存号
 
-# popcorn-ui（库 + 画廊演示）
-cd projects/popcorn-ui
+# muse-ui（库 + 画廊演示）
+cd projects/muse-ui
 npm install --no-save esbuild react@18.3.1 react-dom@18.3.1
 node build.mjs                  # 库产物 dist/（gitignore）+ 演示 demo.js（入库）
 ```
@@ -70,7 +70,7 @@ node build.mjs                  # 库产物 dist/（gitignore）+ 演示 demo.js
 
 ```bash
 cd projects/planner/<module> && node --test     # 各模块纯函数测试
-cd projects/popcorn-ui && node --test
+cd projects/muse-ui && node --test
 ```
 提交前确保涉及到的模块测试全绿。
 
