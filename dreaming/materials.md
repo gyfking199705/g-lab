@@ -363,3 +363,10 @@
 - 子项目: ai-coding-lab
 - 重点: build.mjs 据 data 自动生成符合 llmstxt.org 规范的 llms.txt(H1+摘要+知识库链接+分类计数+Optional)；toLlmsTxt 纯函数+单测；AGENTS.md/根 README 同步入口
 - 解决的问题: 缺一份给 LLM/agent 的标准化索引来快速理解并定位本知识库——本项目恰好收录 llms.txt 范式，自实践
+
+## M-47 · 2026-06-20 · muse-ui 吸收性验证通过 + 指南补缺（Parallax / v0.7）
+- 作者: claude
+- 提交: dc7d5f2
+- 子项目: muse-ui
+- 重点: 独立 agent 仅凭 AGENTS.md 完成 Parallax（36→47 全绿）；据反馈补 AGENTS.md 6 处缺口、同步 README。
+- 解决的问题: 验证范式可被别的 agent 吸收，并用反馈打磨指南。
