@@ -337,6 +337,15 @@ export function agentToolSystemPrompt() {
   ].join(' ');
 }
 
+/** 把速查矩阵渲染成 Markdown 表格（便于一键复制分享）。 */
+export function matrixToMarkdown(matrix) {
+  const cols = matrix.cols || [];
+  const head = `| 维度 | ${cols.join(' | ')} |`;
+  const sep = `| ${new Array(cols.length + 1).fill('---').join(' | ')} |`;
+  const rows = (matrix.rows || []).map((r) => `| ${r.map((c) => String(c).replace(/\|/g, '\\|')).join(' | ')} |`);
+  return [head, sep, ...rows].join('\n');
+}
+
 /* ----------------------------- 审批模式（分级放权） ----------------------------- */
 /** 三档审批模式，对应业界 Codex/Cline 等的「分级放权」。 */
 export const APPROVAL_MODES = [
