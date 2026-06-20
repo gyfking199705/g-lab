@@ -18,8 +18,9 @@ g-lab/
 ├── .github/workflows/      # GitHub Pages 部署（整仓库原样上传）
 └── projects/
     ├── planner/            # 🎯 个人成长规划系统（详见 projects/planner/README.md）
-    ├── popcorn-ui/         # 🍿 零依赖 React 创意交互组件库（可发 npm）
+    ├── muse-ui/            # ✨ UI 组件脑爆 & research 实验室（零依赖 React 创意交互组件，可发 npm）
     └── swarm/              # 🐝 多智能体协作工作区原型 + 业界调研
+
 ```
 
 ## 📦 子项目
@@ -27,7 +28,7 @@ g-lab/
 | 子项目 | 说明 | 在线路径 | 本地构建 |
 | --- | --- | --- | --- |
 | **planner** | 个人成长规划系统：个人/学习/健身/财富/股市/日程/习惯/目标/减脂/论文… 一体化应用 | `…/g-lab/projects/planner/` | `cd projects/planner && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node scripts/build.mjs` |
-| **popcorn-ui** | 零依赖 React 创意交互组件库 + 画廊演示 | `…/g-lab/projects/popcorn-ui/` | `cd projects/popcorn-ui && npm i --no-save esbuild react react-dom && node build.mjs` |
+| **muse-ui** | UI 组件脑爆 & research 实验室：零依赖 React 创意交互组件 + 画廊演示（可被 planner 复用、也可发 npm） | `…/g-lab/projects/muse-ui/` | `cd projects/muse-ui && npm i --no-save esbuild react react-dom && node build.mjs` |
 | **swarm** | 多智能体协作工作区：需求进队列 → 多角色分工 → 给出结论（集群模式原型 + 业界调研） | `…/g-lab/projects/swarm/` | `cd projects/swarm && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 
 ## 🚀 本地预览
@@ -38,7 +39,7 @@ g-lab/
 python3 -m http.server 8000
 # 门户：    http://localhost:8000/
 # planner： http://localhost:8000/projects/planner/
-# popcorn-ui：http://localhost:8000/projects/popcorn-ui/
+# muse-ui：  http://localhost:8000/projects/muse-ui/
 # swarm：    http://localhost:8000/projects/swarm/
 ```
 

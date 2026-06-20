@@ -174,11 +174,6 @@ g-lab/
 │   ├── drive.js             #   浏览器侧 OAuth(GIS) + Drive REST（可见文件夹/多文件，drive.file）
 │   ├── backup.test.js       #   单元测试（node --test）
 │   └── README.md            #   一次性 OAuth 配置 + 安全说明
-├── ui/                       # 🍿 popcorn-ui：零依赖 React 创意交互组件库（可独立发 npm）
-│   ├── src/                 #   组件 + 纯函数(util/anim,interactions) + hooks
-│   ├── demo/                #   画廊演示页（/ui/，打包成 dist/ui.js）
-│   ├── build.mjs            #   库打包（ESM+CJS，react 外置）
-│   └── README.md            #   安装/用法/props
 ├── dist/                     # 打包产物（提交入库，Pages 直接部署）
 │   ├── app.js               #   主应用 bundle（含 React）
 │   ├── schedule.js / goals.js / habits.js / cut.js / papers.js / ledger.js  # 模块独立页 bundle
@@ -198,7 +193,7 @@ python3 -m http.server 8000
 # 浏览器打开 http://localhost:8000/
 ```
 
-部署到 GitHub Pages 后直接访问站点首页；各模块也有独立演示页：日程 `/schedule/`、目标 `/goals/`、习惯 `/habits/`、减脂 `/cut/`、论文 `/papers/`、记账 `/ledger/`、比价 `/compare/`、学习站 `/learning/`、健身 `/fitness/`、项目规划 `/project/`、财富规划器 `/savings/`；另有创意组件库画廊 **`/ui/`**（[popcorn-ui 🍿](ui/README.md)，可独立发 npm）。
+部署到 GitHub Pages 后直接访问站点首页；各模块也有独立演示页：日程 `/schedule/`、目标 `/goals/`、习惯 `/habits/`、减脂 `/cut/`、论文 `/papers/`、记账 `/ledger/`、比价 `/compare/`、学习站 `/learning/`、健身 `/fitness/`、项目规划 `/project/`、财富规划器 `/savings/`。
 
 ### 🔧 修改源码后重新打包
 

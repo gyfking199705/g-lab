@@ -1,0 +1,33 @@
+#!/bin/sh
+# g-lab dreaming · pre-commit（拦截式）
+# 规则：上一个「代码提交」必须已记素材，否则挡住这次提交，逼你先 capture。
+# 这样保证 dreaming 闭环不断：每个代码提交都会留下素材。
+# 绕过（确有必要时）：DREAM_SKIP=1 git commit ...   或   git commit --no-verify
+[ "$DREAM_SKIP" = "1" ] && exit 0
+
+# 仓库根目录运行；无 dreaming 机制则不管（兼容老仓库）
+[ -f dreaming/materials.md ] || exit 0
+
+# 初次提交（还没有 HEAD）放行
+git rev-parse --verify HEAD >/dev/null 2>&1 || exit 0
+
+short=$(git rev-parse --short HEAD)
+changed=$(git diff-tree --no-commit-id --name-only -r HEAD)
+# HEAD 只动了 dreaming/ → 是素材/元提交，无需 capture，放行
+nonmeta=$(printf '%s\n' "$changed" | grep -v '^dreaming/' | grep -v '^$')
+[ -z "$nonmeta" ] && exit 0
+
+# 代码提交：materials.md 里应已出现 HEAD 短哈希
+grep -q "$short" dreaming/materials.md 2>/dev/null && exit 0
+
+cat >&2 <<EOF
+
+✗ dreaming 机制：上一个提交 $short 还没记素材，先记一条再继续提交。
+
+    node scripts/dream.mjs capture --by <claude|codex> --scope <子项目> \\
+      --title "<标题>" --focus "<$short 做了什么>" --problem "<解决了什么问题>"
+    git commit dreaming/materials.md -m "dream: 记素材 $short"   # 只提交素材，不裹挟已暂存的新改动
+
+  （确需跳过本次校验： DREAM_SKIP=1 git commit ...  或  git commit --no-verify ）
+EOF
+exit 1
