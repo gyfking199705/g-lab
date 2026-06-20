@@ -1,0 +1,21 @@
+{
+  "name": "skill-lab",
+  "version": "0.1.0",
+  "description": "🧩 Skill 研究室：收录、整理与展示符合业界标准（SKILL.md）的高质量 Agent Skills。",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "agent-skills",
+    "skill",
+    "claude",
+    "ai-agent",
+    "prompt-engineering",
+    "registry",
+    "gallery"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test app/*.test.js"
+  }
+}

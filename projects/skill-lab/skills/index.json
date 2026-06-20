@@ -1,0 +1,149 @@
+{
+  "generatedAt": "2026-06-20",
+  "count": 6,
+  "skills": [
+    {
+      "slug": "code-reviewer",
+      "name": "code-reviewer",
+      "description": "Review a code diff for correctness, security, and maintainability, returning prioritized, actionable findings. Use when asked to review a change, audit a pull request, or sanity-check code before merging — focusing on real bugs over style nits.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Bash(git diff:*)",
+        "Read",
+        "Grep"
+      ],
+      "path": "skills/code-reviewer/SKILL.md",
+      "metadata": {
+        "category": "Code Quality",
+        "version": "1.2.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "code-review",
+          "quality",
+          "security",
+          "bugs",
+          "refactoring"
+        ]
+      }
+    },
+    {
+      "slug": "changelog-keeper",
+      "name": "changelog-keeper",
+      "description": "Maintain a human-readable CHANGELOG.md following the Keep a Changelog format and semantic versioning. Use when cutting a release, adding an entry for a merged change, or converting raw commit history into grouped, user-facing release notes.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Bash(git log:*)",
+        "Bash(git tag:*)"
+      ],
+      "path": "skills/changelog-keeper/SKILL.md",
+      "metadata": {
+        "category": "Docs & Release",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "changelog",
+          "release-notes",
+          "semver",
+          "documentation"
+        ]
+      }
+    },
+    {
+      "slug": "readme-author",
+      "name": "readme-author",
+      "description": "Write or improve a project README that gets a new user from zero to running fast. Use when a repo has no README, has a stale or thin one, or when documenting what a project does, how to install it, and how to use it.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "path": "skills/readme-author/SKILL.md",
+      "metadata": {
+        "category": "Docs & Release",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "readme",
+          "documentation",
+          "onboarding",
+          "open-source"
+        ]
+      }
+    },
+    {
+      "slug": "conventional-commits",
+      "name": "conventional-commits",
+      "description": "Write clear, structured Git commit messages following the Conventional Commits 1.0 spec. Use when committing changes, drafting a commit message, or normalizing messy commit history into a consistent, machine-readable format that drives semantic versioning and changelogs.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Bash(git status:*)",
+        "Bash(git diff:*)",
+        "Bash(git log:*)",
+        "Read"
+      ],
+      "path": "skills/conventional-commits/SKILL.md",
+      "metadata": {
+        "category": "Git & Version Control",
+        "version": "1.1.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "git",
+          "commits",
+          "conventional-commits",
+          "semver",
+          "changelog"
+        ]
+      }
+    },
+    {
+      "slug": "pr-description",
+      "name": "pr-description",
+      "description": "Draft a clear, reviewer-friendly pull request description from a branch's diff and commits. Use when opening a PR, summarizing a set of changes for review, or filling out a PR template with a What/Why/How-to-test breakdown.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Bash(git diff:*)",
+        "Bash(git log:*)",
+        "Read"
+      ],
+      "path": "skills/pr-description/SKILL.md",
+      "metadata": {
+        "category": "Git & Version Control",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "git",
+          "pull-request",
+          "code-review",
+          "documentation"
+        ]
+      }
+    },
+    {
+      "slug": "unit-test-author",
+      "name": "unit-test-author",
+      "description": "Write focused, fast, deterministic unit tests for a function or module, covering happy paths, edge cases, and error handling. Use when adding tests for new code, backfilling coverage for untested logic, or reproducing a bug as a failing test before fixing it.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Grep",
+        "Bash(npm test:*)",
+        "Bash(node --test:*)"
+      ],
+      "path": "skills/unit-test-author/SKILL.md",
+      "metadata": {
+        "category": "Testing",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "testing",
+          "unit-tests",
+          "tdd",
+          "quality",
+          "coverage"
+        ]
+      }
+    }
+  ]
+}
