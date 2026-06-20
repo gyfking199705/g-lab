@@ -48,3 +48,15 @@
   - 把 agent-cli 的 system prompt 与工具定义沉淀成 skill-lab 的一个技能
   - 英文版 i18n，便于对外分享调研
   - 把共性模式与「哪家最能体现」交叉链接，点模式高亮对应家
+
+## D-5 · 2026-06-20 · muse-ui 之上：从「组件库」到「创意 UI 生产力」
+- 作者: claude
+- 来源素材: M-37
+- 脑爆:
+  - 命令系统化：CommandPalette 支持嵌套子命令/面包屑 + 一个 useCommands 注册中心，任意组件声明命令 → 全站 ⌘K 统一调度（planner 可直接接，按 ⌘K 跳模块/建任务）。
+  - StickyCanvas 升级为白板：便利贴连线/箭头/分组框 + 导出 PNG/JSON + localStorage 持久化 → 直接做成 planner 里的「脑暴/看板」模块（muse-ui 孵化→planner 复用的范例）。
+  - 发 npm + 文档站：把 muse-ui 正式发布，并用组件自身搭文档站——画廊升级为带「可调 props + 实时代码片段 + 一键复制」的 playground。
+  - 主题系统：抽出 design tokens（色/圆角/动效时长），<MuseThemeProvider> 一处换肤，让 muse-ui 与 g-lab 的 DESIGN.md 暖色体系自动对齐。
+  - Brainstorm Kit 子集：新增 MindNode（思维导图节点+自动布局）、IdeaShuffler（灵感抽签）、PromptCard（SCAMPER/六顶帽提示卡），凑成专门服务「脑爆」的一组件群。
+  - 性能与无障碍基线：所有 raf 组件用 IntersectionObserver 离屏暂停；补键盘可达与 aria；给画廊加自动化 a11y 冒烟。
+  - 跨子项目「创意感」统一：把 Sparkles/Sketchy/Marquee/GradientText 点缀进各 lab 的门户与卡片，形成 g-lab 一致的视觉签名。
