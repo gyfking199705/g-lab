@@ -1,7 +1,30 @@
 {
   "generatedAt": "2026-06-20",
-  "count": 6,
+  "count": 12,
   "skills": [
+    {
+      "slug": "api-designer",
+      "name": "api-designer",
+      "description": "Design clean, consistent, and evolvable HTTP/REST APIs — resources, methods, status codes, errors, pagination, and versioning. Use when adding an endpoint, designing a new service interface, or reviewing an API for consistency and backward compatibility.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Grep"
+      ],
+      "path": "skills/api-designer/SKILL.md",
+      "metadata": {
+        "category": "Architecture & API",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "api",
+          "rest",
+          "http",
+          "design",
+          "backend"
+        ]
+      }
+    },
     {
       "slug": "code-reviewer",
       "name": "code-reviewer",
@@ -23,6 +46,75 @@
           "security",
           "bugs",
           "refactoring"
+        ]
+      }
+    },
+    {
+      "slug": "sql-optimizer",
+      "name": "sql-optimizer",
+      "description": "Diagnose and speed up slow SQL queries using the execution plan, indexing, and query rewrites. Use when a query or report is slow, a database is under load, or you need to add the right index without guessing.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Bash"
+      ],
+      "path": "skills/sql-optimizer/SKILL.md",
+      "metadata": {
+        "category": "Data & Databases",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "sql",
+          "database",
+          "performance",
+          "indexing",
+          "query-optimization"
+        ]
+      }
+    },
+    {
+      "slug": "debugging-strategy",
+      "name": "debugging-strategy",
+      "description": "Debug a failing program systematically by reproducing, isolating, and confirming the root cause before changing code. Use when chasing a bug, an intermittent failure, or unexpected behavior — to avoid guess-and-check edits and shotgun fixes.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Grep",
+        "Bash"
+      ],
+      "path": "skills/debugging-strategy/SKILL.md",
+      "metadata": {
+        "category": "Debugging",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "debugging",
+          "root-cause",
+          "troubleshooting",
+          "scientific-method"
+        ]
+      }
+    },
+    {
+      "slug": "dockerfile-author",
+      "name": "dockerfile-author",
+      "description": "Write secure, small, well-cached Dockerfiles for production using multi-stage builds and least privilege. Use when containerizing an app, shrinking a bloated image, fixing slow Docker builds, or hardening a container before deployment.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Bash(docker:*)"
+      ],
+      "path": "skills/dockerfile-author/SKILL.md",
+      "metadata": {
+        "category": "DevOps & Infra",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "docker",
+          "containers",
+          "devops",
+          "ci",
+          "security"
         ]
       }
     },
@@ -73,6 +165,29 @@
       }
     },
     {
+      "slug": "accessibility-auditor",
+      "name": "accessibility-auditor",
+      "description": "Audit web UI for accessibility (WCAG) issues — semantics, keyboard, focus, contrast, labels, and ARIA — and return prioritized fixes. Use when reviewing a component or page for a11y, making a UI usable with a keyboard or screen reader, or meeting WCAG AA.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Grep"
+      ],
+      "path": "skills/accessibility-auditor/SKILL.md",
+      "metadata": {
+        "category": "Frontend",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "accessibility",
+          "a11y",
+          "wcag",
+          "frontend",
+          "aria"
+        ]
+      }
+    },
+    {
       "slug": "conventional-commits",
       "name": "conventional-commits",
       "description": "Write clear, structured Git commit messages following the Conventional Commits 1.0 spec. Use when committing changes, drafting a commit message, or normalizing messy commit history into a consistent, machine-readable format that drives semantic versioning and changelogs.",
@@ -117,6 +232,30 @@
           "pull-request",
           "code-review",
           "documentation"
+        ]
+      }
+    },
+    {
+      "slug": "security-reviewer",
+      "name": "security-reviewer",
+      "description": "Audit code or a diff for security vulnerabilities — injection, broken auth, secrets, and unsafe data handling — and report exploitable findings with fixes. Use when reviewing changes for security, hardening an endpoint, or checking untrusted-input handling before shipping.",
+      "license": "MIT",
+      "allowed-tools": [
+        "Read",
+        "Grep",
+        "Bash(git diff:*)"
+      ],
+      "path": "skills/security-reviewer/SKILL.md",
+      "metadata": {
+        "category": "Security",
+        "version": "1.0.0",
+        "author": "g-lab/skill-lab",
+        "tags": [
+          "security",
+          "vulnerabilities",
+          "owasp",
+          "appsec",
+          "audit"
         ]
       }
     },

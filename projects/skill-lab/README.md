@@ -67,14 +67,20 @@ cd projects/skill-lab && node --test app/*.test.js
 2. 跑 `node build.mjs`，自动收录进 `index.json` 并校验。
 3. 在画廊里自查描述是否具体、正文是否可执行、校验是否通过。
 
-## 收录现有技能（节选）
+## 收录现有技能（12）
 
 | 技能 | 分类 | 用途 |
 | --- | --- | --- |
 | `conventional-commits` | Git & Version Control | 写规范的 Conventional Commits 提交信息 |
 | `pr-description` | Git & Version Control | 从分支 diff 生成 PR 描述 |
 | `code-reviewer` | Code Quality | 按优先级审查 diff 的正确性/安全/可维护性 |
+| `debugging-strategy` | Debugging | 系统化定位根因，先复现再确认再修 |
 | `unit-test-author` | Testing | 为函数/模块写聚焦、确定性的单测 |
+| `security-reviewer` | Security | 审查注入/鉴权/密钥等可利用漏洞并给修复 |
+| `api-designer` | Architecture & API | 设计一致、可演进的 HTTP/REST API |
+| `sql-optimizer` | Data & Databases | 用执行计划与索引优化慢查询 |
+| `dockerfile-author` | DevOps & Infra | 写小而安全、缓存友好的生产 Dockerfile |
+| `accessibility-auditor` | Frontend | 按 WCAG 审查无障碍并给优先级修复 |
 | `changelog-keeper` | Docs & Release | 维护 Keep a Changelog 风格的 CHANGELOG |
 | `readme-author` | Docs & Release | 写让新人快速上手的 README |
 
