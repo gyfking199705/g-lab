@@ -639,6 +639,287 @@ export const TEMPLATES = [
     ],
   },
   {
+    id: 'tpl-doctor',
+    icon: '🩺',
+    title: '顶尖医生 / 临床专家 · 全方位提升计划',
+    subject: '医学与临床',
+    level: '进阶到精通',
+    weeks: 52,
+    hoursPerWeek: 12,
+    summary:
+      '面向「顶尖医生 / 临床专家」的一年期全方位成长路线：循证医学 + 临床诊断思维 + 专科精进 + 临床操作 + 医患沟通 + 临床科研 + 医疗质量与安全 + 医学伦理与法规 + 职业发展 + 精力与身心。建议每季度复盘一次，与本应用的健身/番茄/间隔复习联动使用。',
+    modules: [
+      {
+        title: '① 医学基础与循证医学',
+        lessons: [
+          { title: '夯实基础医学（解剖/生理/病理/药理）' },
+          { title: '循证医学：证据等级与指南解读', note: '让决策建立在证据而非经验上' },
+          { title: '医学统计与文献评读' },
+        ],
+      },
+      {
+        title: '② 临床思维与诊断推理',
+        lessons: [
+          { title: '病史采集与体格检查' },
+          { title: '鉴别诊断与临床推理', note: '避免锚定与过早闭合等思维陷阱' },
+          { title: '检查检验的合理选择与解读' },
+          { title: '常见误诊与认知偏差' },
+        ],
+      },
+      {
+        title: '③ 专科知识精进',
+        lessons: [
+          { title: '本专科核心疾病的系统梳理' },
+          { title: '疑难病例与最新进展' },
+          { title: '多学科协作（MDT）' },
+        ],
+      },
+      {
+        title: '④ 临床操作与技能',
+        lessons: [
+          { title: '专科操作技能规范' },
+          { title: '急危重症识别与处理' },
+          { title: '模拟训练与技能复盘' },
+        ],
+      },
+      {
+        title: '⑤ 医患沟通与人文',
+        lessons: [
+          { title: '医患沟通与知情同意' },
+          { title: '坏消息告知与共情' },
+          { title: '医学人文与患者体验' },
+        ],
+      },
+      {
+        title: '⑥ 临床科研与论文',
+        lessons: [
+          { title: '提出临床问题与研究设计' },
+          { title: '数据收集与统计分析' },
+          { title: '论文写作与投稿' },
+        ],
+      },
+      {
+        title: '⑦ 医疗质量与安全',
+        lessons: [
+          { title: '医疗安全与不良事件管理' },
+          { title: '临床路径与质量改进（PDCA）' },
+          { title: '感染控制与规范' },
+        ],
+      },
+      {
+        title: '⑧ 医学伦理与法规',
+        lessons: [
+          { title: '医学伦理四原则' },
+          { title: '医疗法律法规与病历规范' },
+          { title: '医疗纠纷的预防与应对' },
+        ],
+      },
+      {
+        title: '⑨ 职业发展',
+        lessons: [
+          { title: '职称晋升与进修规划' },
+          { title: '带教与团队管理' },
+          { title: '学术影响力与学会参与' },
+        ],
+      },
+      {
+        title: '⑩ 精力 · 韧性 · 身心',
+        lessons: [
+          { title: '医生职业倦怠（burnout）防护', note: '可与「健身规划」联动' },
+          { title: '高强度排班下的精力管理', note: '可用「学习规划」番茄计时器' },
+          { title: '情绪调节与可持续从医' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'tpl-lawyer',
+    icon: '⚖️',
+    title: '顶尖律师 / 法律人 · 全方位提升计划',
+    subject: '法律与法务',
+    level: '进阶到精通',
+    weeks: 52,
+    hoursPerWeek: 10,
+    summary:
+      '面向「顶尖律师 / 法律人」的一年期全方位成长路线：法律思维 + 部门法精通 + 法律检索 + 法律写作 + 诉讼与争议解决 + 谈判 + 客户与业务 + 职业伦理 + 职业发展 + 精力与抗压。建议每季度复盘一次，与本应用的番茄/间隔复习联动使用。',
+    modules: [
+      {
+        title: '① 法学基础与法律思维',
+        lessons: [
+          { title: '法律体系与法理基础' },
+          { title: '法律解释方法与请求权基础', note: '民法案例分析的核心方法' },
+          { title: '事实认定与证据思维' },
+        ],
+      },
+      {
+        title: '② 部门法精通',
+        lessons: [
+          { title: '民商法体系梳理' },
+          { title: '刑法与刑事诉讼' },
+          { title: '行政法与公司/合同专题' },
+          { title: '本专业领域的深耕' },
+        ],
+      },
+      {
+        title: '③ 法律检索与研究',
+        lessons: [
+          { title: '法条 / 判例 / 学理的高效检索' },
+          { title: '类案检索与裁判规则提炼' },
+          { title: '法律数据库工具' },
+        ],
+      },
+      {
+        title: '④ 法律写作',
+        lessons: [
+          { title: '合同起草与审查' },
+          { title: '法律意见书与备忘录' },
+          { title: '诉讼文书（起诉/答辩/代理词）' },
+        ],
+      },
+      {
+        title: '⑤ 诉讼与争议解决',
+        lessons: [
+          { title: '诉讼策略与举证' },
+          { title: '庭审技巧与质证' },
+          { title: '仲裁与非诉争议解决' },
+        ],
+      },
+      {
+        title: '⑥ 谈判与调解',
+        lessons: [
+          { title: '谈判原理与 BATNA' },
+          { title: '调解与和解策略' },
+          { title: '冲突管理' },
+        ],
+      },
+      {
+        title: '⑦ 客户与业务开发',
+        lessons: [
+          { title: '客户沟通与需求把握' },
+          { title: '个人专长定位与品牌' },
+          { title: '案源与业务拓展' },
+        ],
+      },
+      {
+        title: '⑧ 职业伦理与合规',
+        lessons: [
+          { title: '律师执业规范与职业道德' },
+          { title: '利益冲突与保密义务' },
+          { title: '风险防控与免责' },
+        ],
+      },
+      {
+        title: '⑨ 职业发展',
+        lessons: [
+          { title: '资格 / 专业认证路径' },
+          { title: '团队协作与带教' },
+          { title: '行业影响力（著述 / 分享）' },
+        ],
+      },
+      {
+        title: '⑩ 精力 · 韧性 · 抗压',
+        lessons: [
+          { title: '高压工作下的身心健康', note: '可与「健身规划」联动' },
+          { title: '深度工作与时间管理', note: '可用「学习规划」番茄计时器' },
+          { title: '情绪复原与长期主义' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'tpl-teacher',
+    icon: '👩‍🏫',
+    title: '顶尖教师 / 教育者 · 全方位提升计划',
+    subject: '教育与教学',
+    level: '进阶到精通',
+    weeks: 52,
+    hoursPerWeek: 8,
+    summary:
+      '面向「顶尖教师 / 教育者」的一年期全方位成长路线：学科与课标 + 教学设计 + 课堂教学与管理 + 学习科学 + 评估与反馈 + 因材施教 + 教育技术 + 师生与家校沟通 + 教研与专业成长 + 精力与可持续。建议每季度复盘一次，与本应用的番茄/间隔复习联动使用。',
+    modules: [
+      {
+        title: '① 学科内容与课程标准',
+        lessons: [
+          { title: '深耕学科知识体系' },
+          { title: '吃透课程标准与教材' },
+          { title: '跨学科与素养导向' },
+        ],
+      },
+      {
+        title: '② 教学设计',
+        lessons: [
+          { title: '逆向设计：从目标到评估到活动', note: 'Understanding by Design' },
+          { title: '教案与学习目标（可测量）' },
+          { title: '单元整体设计' },
+        ],
+      },
+      {
+        title: '③ 课堂教学与管理',
+        lessons: [
+          { title: '讲解、提问与课堂互动' },
+          { title: '课堂管理与纪律' },
+          { title: '激发动机与参与度' },
+        ],
+      },
+      {
+        title: '④ 学习科学与认知',
+        lessons: [
+          { title: '记忆与遗忘曲线、间隔复习', note: '可让学生用「学习规划」的间隔复习' },
+          { title: '刻意练习与提取练习' },
+          { title: '认知负荷与有效教学' },
+        ],
+      },
+      {
+        title: '⑤ 评估与反馈',
+        lessons: [
+          { title: '形成性评估与总结性评估' },
+          { title: '有效反馈与作业设计' },
+          { title: '数据驱动的学情分析' },
+        ],
+      },
+      {
+        title: '⑥ 因材施教',
+        lessons: [
+          { title: '差异化教学与分层' },
+          { title: '关注特殊需要学生' },
+          { title: '个性化学习路径' },
+        ],
+      },
+      {
+        title: '⑦ 教育技术与工具',
+        lessons: [
+          { title: '数字化教学工具' },
+          { title: 'AI 辅助备课与个性化' },
+          { title: '混合式 / 翻转课堂' },
+        ],
+      },
+      {
+        title: '⑧ 师生与家校沟通',
+        lessons: [
+          { title: '建立师生关系与班级文化' },
+          { title: '家校沟通与协作' },
+          { title: '育人与心理关怀' },
+        ],
+      },
+      {
+        title: '⑨ 教研与专业成长',
+        lessons: [
+          { title: '听评课与教学反思' },
+          { title: '教研课题与论文' },
+          { title: '公开课与示范' },
+        ],
+      },
+      {
+        title: '⑩ 精力 · 韧性 · 可持续',
+        lessons: [
+          { title: '教师职业倦怠防护', note: '可与「健身规划」联动' },
+          { title: '备课与批改的时间管理', note: '可用「学习规划」番茄计时器' },
+          { title: '教育情怀与长期成长' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'tpl-aiml',
     icon: '🤖',
     title: '人工智能 / 机器学习入门',
@@ -798,7 +1079,10 @@ export const TEMPLATE_CATEGORIES = [
     id: 'mastery',
     label: '🎯 顶尖人才 · 全方位提升',
     hint: '一年期、十大维度的旗舰成长计划，按职业方向选择',
-    ids: ['tpl-top-talent', 'tpl-founder', 'tpl-researcher', 'tpl-product', 'tpl-finance', 'tpl-growth'],
+    ids: [
+      'tpl-top-talent', 'tpl-founder', 'tpl-researcher', 'tpl-product',
+      'tpl-finance', 'tpl-growth', 'tpl-doctor', 'tpl-lawyer', 'tpl-teacher',
+    ],
   },
   {
     id: 'skill',
