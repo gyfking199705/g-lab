@@ -2,9 +2,9 @@
  * DORA 自评视图：四项指标各选一档 → 综合评级（Elite/High/Medium/Low）+ 手写 SVG 仪表盘。
  * 口径取自业界 State of DevOps 通用分级，仅供团队自我对标，非个人考核。
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { DORA_METRICS, DORA_LEVELS } from './data.js';
-import { classifyDora } from './calc.js';
+import { classifyDora, doraMarkdown } from './calc.js';
 
 const LV_KEYS = ['Elite', 'High', 'Medium', 'Low'];
 
@@ -42,6 +42,19 @@ function Gauge({ score, color }) {
 export default function Assessment({ bands, onSet }) {
   const result = classifyDora(bands);
   const answered = DORA_METRICS.filter((m) => bands[m.key] != null).length;
+  const [copied, setCopied] = useState(false);
+
+  async function copyResult() {
+    const md = doraMarkdown(bands);
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // 剪贴板不可用时退回选中提示
+      window.prompt('复制下面的 Markdown：', md);
+    }
+  }
 
   return (
     <div className="dx-assess">
@@ -90,6 +103,11 @@ export default function Assessment({ bands, onSet }) {
                 {pm.name}：{pm.level.name}
               </span>
             ))}
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <button className="dx-copy" onClick={copyResult}>
+              {copied ? '✓ 已复制 Markdown' : '复制结果（Markdown）'}
+            </button>
           </div>
         </div>
       </div>

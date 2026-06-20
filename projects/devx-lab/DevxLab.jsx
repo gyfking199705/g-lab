@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { CSS } from './styles.js';
 import { PRACTICES, FRAMEWORKS } from './data.js';
-import { summaryStats } from './calc.js';
+import { summaryStats, adoptionStats } from './calc.js';
 import { load, save } from './store.js';
 import Practices from './Practices.jsx';
 import Frameworks from './Frameworks.jsx';
@@ -21,8 +21,10 @@ export default function DevxLab() {
   const [tab, setTab] = useState('practices');
   const [favs, setFavs] = useState(() => load('favs', []));
   const [bands, setBands] = useState(() => load('dora', {}));
+  const [statuses, setStatuses] = useState(() => load('status', {}));
 
   const stats = summaryStats(PRACTICES);
+  const adoption = adoptionStats(PRACTICES, statuses);
 
   function toggleFav(id) {
     setFavs((prev) => {
@@ -38,6 +40,16 @@ export default function DevxLab() {
       if (idx == null) delete next[key];
       else next[key] = idx;
       save('dora', next);
+      return next;
+    });
+  }
+
+  function setStatus(id, status) {
+    setStatuses((prev) => {
+      const next = { ...prev };
+      if (!status || status === 'todo') delete next[id];
+      else next[id] = status;
+      save('status', next);
       return next;
     });
   }
@@ -59,6 +71,16 @@ export default function DevxLab() {
           <div className="dx-stat"><b>{stats.quickWins}</b><span>个高性价比</span></div>
           <div className="dx-stat"><b>{stats.avgImpact}</b><span>平均影响 / 5</span></div>
         </div>
+        <div className="dx-prog">
+          <div className="dx-prog-bar"><i style={{ width: adoption.percent + '%' }} /></div>
+          <div className="dx-prog-cap">
+            <span>团队落地进度</span>
+            <span>
+              已落地 <b>{adoption.done}</b> · 进行中 <b>{adoption.doing}</b> · 共 {adoption.total}
+              （<b>{adoption.percent}%</b>）
+            </span>
+          </div>
+        </div>
       </header>
 
       <nav className="dx-tabs" role="tablist">
@@ -75,7 +97,9 @@ export default function DevxLab() {
         ))}
       </nav>
 
-      {tab === 'practices' && <Practices favs={favs} onToggleFav={toggleFav} />}
+      {tab === 'practices' && (
+        <Practices favs={favs} onToggleFav={toggleFav} statuses={statuses} onSetStatus={setStatus} />
+      )}
       {tab === 'frameworks' && <Frameworks />}
       {tab === 'assess' && <Assessment bands={bands} onSet={setBand} />}
 

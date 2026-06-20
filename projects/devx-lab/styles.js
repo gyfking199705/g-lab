@@ -125,6 +125,26 @@ export const CSS = `
 .dx-pm{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
 .dx-pm .tag{font-size:11.5px;border-radius:6px;padding:3px 9px;color:#fff;}
 
+/* hero adoption progress */
+.dx-prog{margin-top:20px;max-width:420px;}
+.dx-prog-bar{height:7px;border-radius:5px;background:var(--fill);overflow:hidden;}
+.dx-prog-bar i{display:block;height:100%;background:var(--ok);border-radius:5px;transition:width .3s;}
+.dx-prog-cap{display:flex;justify-content:space-between;font-size:11.5px;color:var(--t3);margin-top:6px;}
+.dx-prog-cap b{color:var(--t2);font-weight:600;}
+
+/* adoption status segmented control on card */
+.dx-status{display:flex;gap:0;margin-top:12px;border:1px solid var(--bd);border-radius:8px;overflow:hidden;}
+.dx-status button{flex:1;appearance:none;cursor:pointer;font-family:var(--sans);font-size:11.5px;color:var(--t2);
+  background:var(--surface);border:none;border-left:1px solid var(--bd);padding:6px 4px;transition:background .15s,color .15s;}
+.dx-status button:first-child{border-left:none;}
+.dx-status button:hover{background:var(--surface-2);}
+.dx-status button[aria-pressed="true"]{color:#fff;font-weight:600;}
+
+/* copy / export button */
+.dx-copy{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12.5px;font-weight:600;
+  color:var(--accent-2);background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:7px 13px;transition:all .15s;}
+.dx-copy:hover{border-color:var(--accent);background:var(--accent-soft);}
+
 @media(max-width:560px){
   .dx-levels{grid-template-columns:repeat(2,1fr);}
   .dx-hero h1{font-size:26px;}

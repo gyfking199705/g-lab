@@ -2,8 +2,8 @@
  * 范式库视图：搜索 + 类别 chips + 框架/排序下拉 + 可展开卡片 + 收藏。
  */
 import React, { useMemo, useState } from 'react';
-import { PRACTICES, CATEGORIES, FRAMEWORKS } from './data.js';
-import { filterPractices, sortPractices, roi, categoryCounts } from './calc.js';
+import { PRACTICES, CATEGORIES, FRAMEWORKS, ADOPTION_STATUS } from './data.js';
+import { filterPractices, sortPractices, roi, categoryCounts, statusOf } from './calc.js';
 
 const CAT_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 const FW_MAP = Object.fromEntries(FRAMEWORKS.map((f) => [f.id, f]));
@@ -21,7 +21,24 @@ function Meter({ label, value, muted }) {
   );
 }
 
-function Card({ p, fav, onFav, onFramework }) {
+function StatusControl({ value, onChange }) {
+  return (
+    <div className="dx-status" role="group" aria-label="采纳状态">
+      {ADOPTION_STATUS.map((s) => (
+        <button
+          key={s.id}
+          aria-pressed={value === s.id}
+          style={value === s.id ? { background: s.color } : undefined}
+          onClick={() => onChange(s.id)}
+        >
+          {s.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Card({ p, fav, onFav, onFramework, status, onStatus }) {
   const [open, setOpen] = useState(false);
   const cat = CAT_MAP[p.category];
   return (
@@ -60,6 +77,8 @@ function Card({ p, fav, onFav, onFramework }) {
         ))}
       </div>
 
+      <StatusControl value={status} onChange={(s) => onStatus(p.id, s)} />
+
       <button className="dx-more" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         {open ? '收起 ▲' : '怎么落地 / 来源 ▾'}
       </button>
@@ -85,20 +104,22 @@ function Card({ p, fav, onFav, onFramework }) {
   );
 }
 
-export default function Practices({ favs, onToggleFav }) {
+export default function Practices({ favs, onToggleFav, statuses, onSetStatus }) {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState('all');
   const [framework, setFramework] = useState('all');
   const [sort, setSort] = useState('impact');
   const [favOnly, setFavOnly] = useState(false);
+  const [status, setStatus] = useState('all');
 
   const counts = useMemo(() => categoryCounts(PRACTICES), []);
 
   const list = useMemo(() => {
     let r = filterPractices(PRACTICES, { q, category, framework });
     if (favOnly) r = r.filter((p) => favs.includes(p.id));
+    if (status !== 'all') r = r.filter((p) => statusOf(statuses, p.id) === status);
     return sortPractices(r, sort);
-  }, [q, category, framework, sort, favOnly, favs]);
+  }, [q, category, framework, sort, favOnly, favs, status, statuses]);
 
   return (
     <div>
@@ -114,6 +135,10 @@ export default function Practices({ favs, onToggleFav }) {
         <select className="dx-select" value={framework} onChange={(e) => setFramework(e.target.value)}>
           <option value="all">全部框架</option>
           {FRAMEWORKS.map((f) => <option key={f.id} value={f.id}>对齐 {f.name}</option>)}
+        </select>
+        <select className="dx-select" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="all">全部状态</option>
+          {ADOPTION_STATUS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <select className="dx-select" value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="impact">按影响</option>
@@ -157,6 +182,8 @@ export default function Practices({ favs, onToggleFav }) {
               fav={favs.includes(p.id)}
               onFav={onToggleFav}
               onFramework={(fid) => setFramework(fid)}
+              status={statusOf(statuses, p.id)}
+              onStatus={onSetStatus}
             />
           ))}
         </div>

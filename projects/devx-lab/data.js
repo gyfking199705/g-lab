@@ -616,6 +616,13 @@ export const DORA_METRICS = [
   },
 ];
 
+// ── 采纳状态（团队对每条范式的落地进度，存本地浏览器） ──────────────
+export const ADOPTION_STATUS = [
+  { id: 'todo', name: '未开始', color: '#B0AFA5' },
+  { id: 'doing', name: '进行中', color: '#BE9356' },
+  { id: 'done', name: '已落地', color: '#6E9079' },
+];
+
 export const DORA_LEVELS = [
   { name: 'Elite', cn: '精英', color: '#6E9079', desc: '吞吐与稳定兼得，处于业界第一梯队。' },
   { name: 'High', cn: '高效', color: '#CC785C', desc: '表现优秀，已具备高频可靠交付能力。' },

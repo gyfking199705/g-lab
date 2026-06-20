@@ -2,7 +2,9 @@
  * devx-lab 纯逻辑层：范式筛选/排序/统计 + DORA 自评分级。
  * 全部为纯函数，可 `node --test` 单测，与 UI 解耦。
  */
-import { PRACTICES, CATEGORIES, DORA_METRICS, DORA_LEVELS } from './data.js';
+import { PRACTICES, CATEGORIES, DORA_METRICS, DORA_LEVELS, ADOPTION_STATUS } from './data.js';
+
+const STATUS_IDS = ADOPTION_STATUS.map((s) => s.id);
 
 /** 标准化文本用于搜索（小写、去首尾空格）。 */
 function norm(s) {
@@ -77,6 +79,52 @@ export function summaryStats(list) {
 
 function round1(x) {
   return Math.round(x * 10) / 10;
+}
+
+// ── 采纳追踪 ────────────────────────────────────────────────────────
+
+/** 取某条范式的采纳状态，缺省/非法都归为 'todo'。 */
+export function statusOf(statuses, id) {
+  const s = statuses && statuses[id];
+  return STATUS_IDS.includes(s) ? s : 'todo';
+}
+
+/**
+ * 采纳进度统计。
+ * @param {Array} list 范式列表
+ * @param {Object} statuses { [practiceId]: 'todo'|'doing'|'done' }
+ * @returns {{ todo:number, doing:number, done:number, total:number, percent:number }}
+ *   percent 为「已落地」占比（0..100，四舍五入）。
+ */
+export function adoptionStats(list, statuses = {}) {
+  const counts = { todo: 0, doing: 0, done: 0 };
+  for (const p of list || []) counts[statusOf(statuses, p.id)]++;
+  const total = (list || []).length;
+  const percent = total ? Math.round((counts.done / total) * 100) : 0;
+  return { ...counts, total, percent };
+}
+
+// ── DORA 自评导出 ───────────────────────────────────────────────────
+
+/** 把自评结果渲染成可粘贴的 Markdown（贴周报/文档用）。 */
+export function doraMarkdown(bands = {}) {
+  const r = classifyDora(bands);
+  const lines = [
+    '## DORA 自评结果',
+    '',
+    `**综合评级：${r.level.name} · ${r.level.cn}**（评分 ${r.score}/100）`,
+    '',
+    '| 指标 | 等级 | 现状 |',
+    '| --- | --- | --- |',
+  ];
+  for (const m of DORA_METRICS) {
+    const idx = bands[m.key];
+    const lvl = (idx == null ? DORA_LEVELS[3] : DORA_LEVELS[idx]).name;
+    const picked = idx == null ? '未评（按最弱档计入）' : m.levels[idx];
+    lines.push(`| ${m.name} | ${lvl} | ${picked} |`);
+  }
+  lines.push('', '> 口径来自业界 State of DevOps（DORA）通用分级，仅用于团队自我对标，非个人考核。');
+  return lines.join('\n');
 }
 
 // ── DORA 自评 ───────────────────────────────────────────────────────

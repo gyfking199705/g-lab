@@ -10,6 +10,9 @@ import {
   categoryCounts,
   summaryStats,
   classifyDora,
+  statusOf,
+  adoptionStats,
+  doraMarkdown,
 } from './calc.js';
 import { PRACTICES, CATEGORIES } from './data.js';
 
@@ -120,4 +123,32 @@ test('classifyDora: 混合档位取均值四舍五入', () => {
   const r = classifyDora({ deploy: 0, lead: 1, cfr: 1, mttr: 2 });
   assert.equal(r.index, 1);
   assert.equal(r.level.name, 'High');
+});
+
+test('statusOf: 缺省与非法归为 todo', () => {
+  assert.equal(statusOf({}, 'x'), 'todo');
+  assert.equal(statusOf({ x: 'doing' }, 'x'), 'doing');
+  assert.equal(statusOf({ x: 'bogus' }, 'x'), 'todo');
+});
+
+test('adoptionStats: 计数、总数守恒与 done 占比', () => {
+  const list = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
+  const s = adoptionStats(list, { a: 'done', b: 'doing', c: 'done' }); // d 缺省=todo
+  assert.equal(s.total, 4);
+  assert.equal(s.done, 2);
+  assert.equal(s.doing, 1);
+  assert.equal(s.todo, 1);
+  assert.equal(s.todo + s.doing + s.done, s.total);
+  assert.equal(s.percent, 50);
+  assert.deepEqual(adoptionStats([], {}), { todo: 0, doing: 0, done: 0, total: 0, percent: 0 });
+});
+
+test('doraMarkdown: 含评级、四指标行与口径说明', () => {
+  const md = doraMarkdown({ deploy: 0, lead: 0, cfr: 0, mttr: 0 });
+  assert.match(md, /Elite/);
+  assert.match(md, /100\/100/);
+  // 四个指标各一行 + 表头
+  assert.equal((md.match(/\n\| /g) || []).length >= 4, true);
+  // 未评项标注按最弱档计入
+  assert.match(doraMarkdown({ deploy: 0 }), /未评（按最弱档计入）/);
 });
