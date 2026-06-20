@@ -30,6 +30,8 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
   const view = useRef({ x: 16, y: 16, k: 1 });
   const drag = useRef(null);
   const moved = useRef(false);
+  const pts = useRef(new Map()); // 活跃指针：pointerId → {x,y}，用于双指捏合
+  const pinch = useRef(null); // {dist, k, cx, cy} 捏合起始基准
   const [selId, setSelId] = useState(null);
   const [tip, setTip] = useState(null);
   const [studyOpen, setStudyOpen] = useState(false);
@@ -148,13 +150,39 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
     apply();
   };
 
+  // 由双指中点+间距设置缩放（围绕两指中点缩放），供触屏捏合用
+  const pinchZoom = (k2, midX, midY) => {
+    const el = wrapRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = midX - r.left, py = midY - r.top;
+    const v = view.current;
+    const k = Math.min(4, Math.max(0.25, k2));
+    view.current = { k, x: px - ((px - v.x) / v.k) * k, y: py - ((py - v.y) / v.k) * k };
+    apply();
+  };
   const onPointerDown = (e) => {
     dismissHint();
-    drag.current = { sx: e.clientX, sy: e.clientY, ox: view.current.x, oy: view.current.y };
-    moved.current = false;
+    pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* 静默 */ }
+    if (pts.current.size === 2) {
+      // 进入双指捏合：记录基准间距与当前缩放
+      const [a, b] = [...pts.current.values()];
+      pinch.current = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, k: view.current.k };
+      drag.current = null;
+    } else {
+      drag.current = { sx: e.clientX, sy: e.clientY, ox: view.current.x, oy: view.current.y };
+      moved.current = false;
+    }
   };
   const onPointerMove = (e) => {
+    if (pts.current.has(e.pointerId)) pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.current && pts.current.size >= 2) {
+      const [a, b] = [...pts.current.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      moved.current = true;
+      pinchZoom(pinch.current.k * (dist / pinch.current.dist), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      return;
+    }
     if (!drag.current) return;
     const dx = e.clientX - drag.current.sx, dy = e.clientY - drag.current.sy;
     if (Math.abs(dx) + Math.abs(dy) > 4) moved.current = true;
@@ -162,7 +190,11 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
     view.current.y = drag.current.oy + dy;
     apply();
   };
-  const onPointerUp = () => { drag.current = null; };
+  const onPointerUp = (e) => {
+    if (e && e.pointerId != null) pts.current.delete(e.pointerId);
+    if (pts.current.size < 2) pinch.current = null;
+    if (pts.current.size === 0) drag.current = null;
+  };
   const onWheel = (e) => { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.18 : 1 / 1.18, e.clientX, e.clientY); };
 
   const showTip = (e, t) => {
@@ -175,7 +207,7 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
   return (
     <div className="amv-wrap" ref={wrapRef}>
       <svg className="amv-svg" onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp} onPointerLeave={onPointerUp} onWheel={onWheel}>
+        onPointerUp={onPointerUp} onPointerLeave={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel}>
         <g ref={gRef}>
           {world.continents.map((c) => (
             <g key={c.domain || '__own'}>
@@ -218,7 +250,7 @@ export default function MapView({ groups, filter, onSetStatus, onPatchTopic }) {
       </div>
       <button className="amv-continue" onClick={continueLearning} title="跳到下一个该学的点：进行中 → 迷雾 → 未开始">▶ 继续学习</button>
       {!hintGone && !sel && (
-        <div className="amv-hint">🖐 拖拽漫游 · 🔍 滚轮缩放 · 👆 点格子开学 · ▶ 不知从哪开始就点「继续学习」</div>
+        <div className="amv-hint">🖐 拖拽漫游 · 🔍 滚轮/双指缩放 · 👆 点格子开学 · ▶ 不知从哪开始就点「继续学习」</div>
       )}
 
       {/* 悬停浮签 */}

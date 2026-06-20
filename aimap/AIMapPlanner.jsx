@@ -14,7 +14,7 @@
  *   <AIMapPlanner storageKey="aimap-planner" onChange={fn} />
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { STATUS_META, STATUS_CYCLE, cycleStatus, trackStats, overallCounts, donePct, fogItems, normalize, groupByDomain, rid } from './calc.js';
+import { STATUS_META, STATUS_CYCLE, trackStats, overallCounts, donePct, fogItems, normalize, groupByDomain, rid } from './calc.js';
 import MapView, { MAP_CSS } from './MapView.jsx';
 import { todayStr } from '../core/date.js';
 
@@ -27,6 +27,7 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
   const [state, setState] = useState(() => load(initialState, storageKey));
   const [filter, setFilter] = useState('all');
   const [edit, setEdit] = useState(false);
+  const [pickerId, setPickerId] = useState(null); // 列表视图：展开状态选择器的知识点 id
   // 视图：map=世界图（默认，探索感），list=列表（结构编辑用）
   const [viewMode, setViewMode] = useState(() => { try { return localStorage.getItem('aimap-view') || 'map'; } catch (e) { return 'map'; } });
   const switchView = (v) => { setViewMode(v); if (v === 'map') setEdit(false); try { localStorage.setItem('aimap-view', v); } catch (e) { /* 静默 */ } };
@@ -196,10 +197,23 @@ export default function AIMapPlanner({ initialState, onChange, storageKey = 'aim
                           {edit
                             ? <input className="am-in am-in-topic" value={t.name} onChange={(e) => upTopic(tr.id, cl.id, t.id, { name: e.target.value })} />
                             : <div className="am-card-name">{t.name}</div>}
-                          <button className="am-badge" style={{ color: STATUS_META[t.status].color, background: STATUS_META[t.status].soft }}
-                            title="点击轮换：未开始→进行中→已掌握→迷雾" onClick={() => upTopic(tr.id, cl.id, t.id, { status: cycleStatus(t.status) })}>
-                            {STATUS_META[t.status].label}
-                          </button>
+                          <span className="am-badge-wrap">
+                            <button className="am-badge" style={{ color: STATUS_META[t.status].color, background: STATUS_META[t.status].soft }}
+                              title="点击选择状态" onClick={() => setPickerId(pickerId === t.id ? null : t.id)}>
+                              {STATUS_META[t.status].label} ▾
+                            </button>
+                            {pickerId === t.id && (
+                              <span className="am-picker">
+                                {STATUS_CYCLE.map((k) => (
+                                  <button key={k} className={t.status === k ? 'on' : ''}
+                                    style={{ color: STATUS_META[k].color }}
+                                    onClick={() => { upTopic(tr.id, cl.id, t.id, { status: k }); setPickerId(null); }}>
+                                    <i style={{ background: STATUS_META[k].color }} />{STATUS_META[k].label}
+                                  </button>
+                                ))}
+                              </span>
+                            )}
+                          </span>
                         </div>
                         {edit ? (
                           <>
@@ -521,8 +535,14 @@ const CSS = `
 .am-s-fog{border-style:dashed;border-left-color:var(--fog);background:linear-gradient(rgba(142,124,195,.045),rgba(142,124,195,.045)),var(--surface);}
 .am-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
 .am-card-name{font-weight:600;font-size:13px;line-height:1.5;}
-.am-badge{flex:none;border:none;font-size:10.5px;padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;font-family:var(--sans);transition:filter .15s;}
+.am-badge-wrap{position:relative;flex:none;}
+.am-badge{border:none;font-size:10.5px;padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;font-family:var(--sans);transition:filter .15s;}
 .am-badge:hover{filter:brightness(.92);}
+.am-picker{position:absolute;top:calc(100% + 4px);right:0;z-index:6;display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--bd-2);border-radius:9px;padding:4px;box-shadow:0 8px 24px rgba(38,36,31,.16);}
+.am-picker button{display:flex;align-items:center;gap:7px;border:none;background:none;border-radius:6px;padding:5px 12px 5px 9px;font-size:11.5px;cursor:pointer;white-space:nowrap;font-family:var(--sans);color:var(--text-2);}
+.am-picker button:hover{background:var(--surface-2);}
+.am-picker button.on{background:var(--surface-3);font-weight:600;}
+.am-picker i{width:8px;height:8px;border-radius:99px;flex:none;}
 .am-card-note{font-size:11.5px;color:var(--text-2);margin-top:7px;line-height:1.65;}
 .am-unlock{font-size:11.5px;margin-top:9px;padding-top:8px;border-top:1px dashed var(--bd-2);color:var(--fog);line-height:1.6;}
 .am-unlock b{display:block;font-size:9.5px;letter-spacing:1.2px;color:var(--text-3);margin-bottom:2px;font-weight:600;}
