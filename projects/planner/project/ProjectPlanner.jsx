@@ -34,6 +34,9 @@ import {
   formatDuration,
   mmss,
 } from './calc.js';
+// 复用 muse-ui 子项目的创意组件（monorepo 内相对引入；planner 的 esbuild 会一起打进 dist/project.js）
+import GradientText from '../../muse-ui/src/GradientText.jsx';
+import CountUp from '../../muse-ui/src/CountUp.jsx';
 
 const DEFAULT_DATA = {
   tasks: [],
@@ -193,7 +196,7 @@ export default function ProjectPlanner({ initialState, onChange, storageKey = 'p
 
       <header className="pp-header">
         <div className="pp-brand">
-          <h1>📋 项目规划</h1>
+          <h1>📋 <GradientText colors={['#CC785C', '#B5654A', '#C9A14A']}>项目规划</GradientText></h1>
           <p>一套任务，三种看法 · 日程 / 人力甘特 / 番茄专注</p>
         </div>
         <div className="pp-tabs">
@@ -710,7 +713,7 @@ function Kpi({ label, value, sub, tone }) {
   return (
     <div className={`pp-kpi ${tone ? 'tone-' + tone : ''}`}>
       <div className="pp-kpi-v">
-        {value}
+        {typeof value === 'number' ? <CountUp value={value} duration={0.7} /> : value}
         {sub ? <span className="pp-kpi-sub">{sub}</span> : null}
       </div>
       <div className="pp-kpi-l">{label}</div>
