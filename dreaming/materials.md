@@ -51,16 +51,9 @@
 - 解决的问题: 验证「muse-ui 孵化 → planner 复用」链路是否可行可维护。
 - 遗留/副作用: muse-/pp- 前缀无冲突；只增 project 一个 bundle；按规则只提交改动的 bundle。
 
-## M-7 · 2026-06-20 · 新增 agent-cli 子项目：复刻业界命令行 agent 交互
+## M-7 · 2026-06-20 · 跨模块打通：目标自动追踪
 - 作者: claude
-- 提交: 5240c38
-- 子项目: agent-cli
-- 重点: 终端式 agent 控制台：斜杠命令+自动补全、↑↓历史、Esc中断、流式（思考/工具卡 ●⎿/行级diff/打字机）；默认离线模拟（虚拟Node项目+按意图生成事件流），/login 后走 BYOK 真实AI
-- 解决的问题: 想搞清楚 Claude Code/Codex 这类 coding-agent CLI 的交互玩法，并有一个能上手把玩的复刻载体
-
-## M-8 · 2026-06-20 · 深化调研：四家对比 + 速查矩阵 + ReAct 手写SVG示意
-- 作者: claude
-- 提交: 5240c38
-- 子项目: agent-cli
-- 重点: 加入 Aider 做到四家（Claude Code/Codex/Gemini CLI/Aider），新增维度×四家速查矩阵 MATRIX 与共性设计模式，补 ReAct 循环手写SVG示意图；并把子项目登记进根 README/AGENTS/CONTRIBUTING + 写接入扩展指南
-- 解决的问题: 让调研成体系、可横向对照，且让后续 agent 读文档就能快速接入与扩展
+- 提交: c535976
+- 子项目: planner
+- 重点: 新增 app/links.js 跨模块链接来源；目标 metric 可选 link，经注入 resolveLink 自动取真实数据；表单加进度来源选择、链接目标显示自动徽章并隐藏手动输入
+- 解决的问题: 目标数值进度此前手动维护，与各模块真实数据割裂
