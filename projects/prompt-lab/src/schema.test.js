@@ -12,6 +12,7 @@ import {
   parseImport,
   categoryLabel,
   promptToMarkdown,
+  libraryToMarkdown,
   EXPORT_FORMAT,
 } from './schema.js';
 
@@ -128,6 +129,22 @@ test('normalizePrompt 保留并清洗 history', () => {
 test('categoryLabel 已知/未知', () => {
   assert.equal(categoryLabel('coding'), '编程 / 工程');
   assert.equal(categoryLabel('???'), '???');
+});
+
+test('libraryToMarkdown 含目录与逐条正文', () => {
+  const data = [
+    normalizePrompt({ title: 'Zebra', category: 'coding', content: 'a' }),
+    normalizePrompt({ title: 'Alpha', category: 'coding', content: 'b' }),
+    normalizePrompt({ title: 'Solo', category: 'writing', content: 'c' }),
+  ];
+  const md = libraryToMarkdown(data);
+  assert.match(md, /# Prompt 研究室 · 库导出/);
+  assert.match(md, /共 3 条/);
+  assert.match(md, /## 目录/);
+  // 组内按标题排序：Alpha 在 Zebra 之前
+  assert.ok(md.indexOf('- Alpha') < md.indexOf('- Zebra'));
+  // 每条正文都在
+  for (const t of ['Zebra', 'Alpha', 'Solo']) assert.ok(md.includes(`# ${t}`));
 });
 
 test('promptToMarkdown 含标题/正文/System 代码块', () => {
