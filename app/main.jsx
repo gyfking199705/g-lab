@@ -268,6 +268,13 @@ export default function App() {
   const _init = parseHash();
   const [active, setActive] = useState(_init.active);
   const [board, setBoard] = useState(_init.board);
+  // 登录优先：首访（没设过同步、也没本地数据）先请登录；登录触发信号传给 CloudSync
+  const [showWelcome, setShowWelcome] = useState(() => {
+    try { return !localStorage.getItem('welcome-seen') && !localStorage.getItem('sync-client-id'); } catch (e) { return false; }
+  });
+  const [loginSignal, setLoginSignal] = useState(0);
+  const dismissWelcome = () => { try { localStorage.setItem('welcome-seen', '1'); } catch (e) { /* 静默 */ } setShowWelcome(false); };
+  const startLogin = () => { dismissWelcome(); setLoginSignal((n) => n + 1); };
   // 用一个计数器在数据变化后刷新侧边栏徽章
   const [tick, setTick] = useState(0);
   const bump = () => setTick((t) => t + 1);
@@ -305,6 +312,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {showWelcome && <WelcomeGate hasClientId={!!(getLS('sync-client-id') || DEFAULT_CLIENT_ID)} onLogin={startLogin} onSkip={dismissWelcome} />}
       <aside className="app-sidebar">
         <div className="app-brand">
           <h1>🎯 成长规划</h1>
@@ -337,7 +345,7 @@ export default function App() {
           <SeedButton />
           <ExportButton />
           <ImportButton />
-          <CloudSync />
+          <CloudSync loginSignal={loginSignal} />
         </div>
       </aside>
 
@@ -608,7 +616,7 @@ const cloudLink = { background: 'none', border: 'none', padding: 0, color: 'var(
  *    详细步骤见 sync/README.md。 */
 const DEFAULT_CLIENT_ID = '';
 
-function CloudSync() {
+function CloudSync({ loginSignal = 0 }) {
   const [clientId, setClientId] = useState(() => getLS('sync-client-id') || DEFAULT_CLIENT_ID);
   const [auto, setAuto] = useState(() => getLS('sync-auto') === '1');
   const [connected, setConnected] = useState(false);
@@ -817,6 +825,18 @@ function CloudSync() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* 欢迎页「用 Google 登录」触发：已配 Client ID → 直接连接 + 开自动；否则打开设置向导 */
+  useEffect(() => {
+    if (!loginSignal) return;
+    if (clientId) {
+      setLS('sync-auto', '1'); setAuto(true);
+      connect(false).catch(() => {});
+    } else {
+      setWizard(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loginSignal]);
+
   /* 自动上传：连接 + 自动开启时，轮询内容签名，变化则防抖上传 */
   useEffect(() => {
     if (!connected || !auto) return undefined;
@@ -866,6 +886,35 @@ function CloudSync() {
 }
 
 /* 应用内「云同步设置向导」：预填本站域名 + 一键复制 + 末尾粘 Client ID 即可，免去翻文档。 */
+/* 登录优先的欢迎页：首访先请用 Google 登录（数据存进自己的 Drive），保留「先本地试用」逃生口。 */
+function WelcomeGate({ hasClientId, onLogin, onSkip }) {
+  return (
+    <BodyPortal>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(38,36,31,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5vh 16px', overflowY: 'auto' }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--bd)', borderRadius: 18, padding: '30px 30px 24px', maxWidth: 460, width: '100%', boxShadow: '0 24px 70px rgba(38,36,31,.3)', textAlign: 'center' }}>
+          <div style={{ fontSize: 42 }}>🎯</div>
+          <h2 style={{ fontFamily: 'var(--serif)', fontSize: 23, fontWeight: 500, marginTop: 10 }}>欢迎来到成长规划</h2>
+          <p style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.7, marginTop: 10 }}>
+            用 <b>Google 登录</b>，你的数据存进<b>你自己的 Google Drive</b>——换设备、换浏览器都自动同步，永不丢失。
+            应用只申请 <code style={{ fontSize: 12 }}>drive.file</code> 权限（仅能读写它自己创建的文件），不碰你其他文件、不经任何第三方服务器。
+          </p>
+          <button className="app-btn app-btn-primary" style={{ width: '100%', marginTop: 18, padding: '11px', fontSize: 14.5 }} onClick={onLogin}>
+            ☁️ 用 Google 登录并同步
+          </button>
+          <button onClick={onSkip} style={{ border: 'none', background: 'none', color: 'var(--text-3)', fontSize: 12.5, cursor: 'pointer', marginTop: 14, textDecoration: 'underline' }}>
+            先本地试用（数据只存这台设备，随时可登录）
+          </button>
+          {!hasClientId && (
+            <p style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.6, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--bd-soft)' }}>
+              首次需约 5 分钟一次性设置 Google 授权（点上面「登录」会引导你）。设置完成后，本设备及今后都一键登录。
+            </p>
+          )}
+        </div>
+      </div>
+    </BodyPortal>
+  );
+}
+
 function SetupWizard({ initialId, onSave, onClose }) {
   const [id, setId] = useState(initialId || '');
   const [copied, setCopied] = useState('');
