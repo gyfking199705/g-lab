@@ -151,6 +151,28 @@ export interface StickyCanvasProps {
 }
 export const StickyCanvas: React.FC<StickyCanvasProps>;
 
+export interface SketchyProps extends React.HTMLAttributes<HTMLSpanElement> {
+  color?: string;
+  /** 描边宽度，默认 2 */
+  strokeWidth?: number;
+  /** 抖动幅度，默认 2 */
+  roughness?: number;
+  /** 形状随机种子（同 seed 形状稳定），默认 42 */
+  seed?: number;
+  fill?: string;
+  padding?: string | number;
+}
+export const Sketchy: React.FC<SketchyProps>;
+
+export interface SparklesProps extends React.HTMLAttributes<HTMLSpanElement> {
+  /** 星点数量，默认 14 */
+  count?: number;
+  color?: string;
+  /** 位置随机种子，默认 7 */
+  seed?: number;
+}
+export const Sparkles: React.FC<SparklesProps>;
+
 /* ============================ 纯函数 ============================ */
 export function clamp(v: number, min: number, max: number): number;
 export function lerp(a: number, b: number, t: number): number;
@@ -187,6 +209,10 @@ export function clampNote(x: number, y: number, w: number, h: number, bounds: { 
 export function snap(v: number, grid: number): number;
 export function reorderToFront<T extends { id: string }>(notes: T[], id: string): T[];
 export function cascadeXY(count: number, step?: number, base?: number): { x: number; y: number };
+export function mulberry32(seed: number): () => number;
+export function roughRectPath(w: number, h: number, opts?: { roughness?: number; inset?: number; segments?: number; passes?: number; seed?: number }): string;
+export interface Sparkle { x: number; y: number; size: number; delay: number; dur: number }
+export function makeSparkles(count?: number, rng?: () => number): Sparkle[];
 
 /* ============================ hooks ============================ */
 export function useRaf(cb: (elapsedSec: number, ts: number) => void, active?: boolean): void;

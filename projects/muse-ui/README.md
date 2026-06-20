@@ -1,6 +1,6 @@
 # muse-ui ✨
 
-**UI 组件的「脑爆 + research」实验室**——创意交互组件在这里孵化、打磨、研究：3D 倾斜、光斑、磁吸、涟漪、动态网格渐变、数字滚动、渐变文字、打字机、⌘K 命令面板、解码文字、跑马灯、礼花、便利贴白板。
+**UI 组件的「脑爆 + research」实验室**——创意交互组件在这里孵化、打磨、研究：3D 倾斜、光斑、磁吸、涟漪、动态网格渐变、数字滚动、渐变文字、打字机、⌘K 命令面板、解码文字、跑马灯、礼花、便利贴白板、手绘风边框、星点。
 零依赖、**复制即用、自带样式（无需引 CSS）、尊重 `prefers-reduced-motion`**。现为独立子项目，组件可被 g-lab 的 **planner 复用**，也可独立发 npm。
 
 ```
@@ -20,12 +20,15 @@ muse-ui/
 │   ├── Marquee.jsx         # 无缝循环跑马灯
 │   ├── ConfettiButton.jsx  # 点击迸发礼花
 │   ├── StickyCanvas.jsx    # 便利贴白板（拖拽/编辑/换色）
+│   ├── Sketchy.jsx         # 手绘风边框
+│   ├── Sparkles.jsx        # 四周闪烁星点
 │   └── util/
 │       ├── anim.js         # clamp/lerp/mapRange/easings/cx（纯函数，可单测）
 │       ├── interactions.js # tilt/magnetic/spotlight/ripple/countAt/mesh/typed/gradient/marquee/scramble（纯函数）
 │       ├── command.js      # 命令面板模糊匹配 fuzzyScore/filterCommands（纯函数）
 │       ├── particles.js    # 礼花粒子 makeParticles/stepParticle（纯函数）
 │       ├── board.js        # 便利贴白板 clampNote/reorderToFront/cascadeXY（纯函数）
+│       ├── sketch.js       # 手绘/星点 mulberry32/roughRectPath/makeSparkles（纯函数）
 │       ├── hooks.js        # useInjectedStyle / usePrefersReducedMotion / useRaf
 │       └── *.test.js       # anim / interactions / command 三套单测
 ├── demo/                   # 画廊演示页源码（Gallery.jsx + bootstrap.jsx）
@@ -71,6 +74,8 @@ import { TiltCard, MagneticButton, CountUp } from 'muse-ui';
 | `<Marquee>` | `speed=60` `gap=40` |
 | `<ConfettiButton>` | `count=26` `as='button'` |
 | `<StickyCanvas>` | `initialNotes[]` `height=360` `colors[]` `onChange` |
+| `<Sketchy>` | `color` `strokeWidth=2` `roughness=2` `seed=42` `fill` `padding` |
+| `<Sparkles>` | `count=14` `color` `seed=7` |
 
 `<CommandPalette>` 非受控时自带 **⌘K / Ctrl+K** 热键；受控用法传 `open` + `onClose` 并设 `hotkey={false}`。
 
@@ -82,7 +87,7 @@ import { TiltCard, MagneticButton, CountUp } from 'muse-ui';
 ## 开发
 ```bash
 cd projects/muse-ui
-node --test                                          # 跑纯函数单测（32 例）
+node --test                                          # 跑纯函数单测（36 例）
 npm i --no-save esbuild react@18.3.1 react-dom@18.3.1
 node build.mjs   # 库 dist/index.js(ESM)+index.cjs(CJS) + 画廊 demo.js（并给 index.html 打 ?v= 戳）
 ```
