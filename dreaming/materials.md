@@ -166,3 +166,10 @@
 - 重点: 侧栏新增标签分区(top14 按频次)点击精确过滤、filterPrompts 加纯函数 tag 维度、活动标签可一键清除；概览行显示结果数与全库平均质量分(averageScore)；键盘快捷键 / 聚焦搜索、n 新增、Esc 关闭当前层；新增 tag/averageScore 单测，node --test 30 全过，Puppeteer 实测无报错
 - 解决的问题: 库变大后只靠分类/技巧不够细，缺标签维度的快速收敛；缺少全局质量水位感知与高频操作的键盘加速
 - 遗留/副作用: 平均质量分实时按全部 prompt 计算，量很大时为 O(n) 但成本可忽略
+
+## M-21 · 2026-06-20 · agent-cli 体验增强：矩阵导出 Markdown + ReAct 自动演示
+- 作者: claude
+- 提交: 0607694
+- 子项目: agent-cli
+- 重点: engine 加 matrixToMarkdown（纯函数+单测）；研究面板加「复制为 Markdown」按钮；ReAct 手写SVG 示意图加「▶ 自动演示」逐步高亮+计时讲解（推进 D-2 两条）
+- 解决的问题: 调研结论难外带、循环只静态——让六家矩阵可一键带走、agentic 循环能动起来讲清楚
