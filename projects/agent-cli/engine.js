@@ -405,6 +405,15 @@ export function transcriptToMarkdown(history) {
   return L.join('\n');
 }
 
+/** 把一次运行的统计格式化成一行小结（工具数 · 步数 · 用时 · token）。 */
+export function formatRunStats({ tools = 0, ms = 0, tokens = 0, steps } = {}) {
+  const parts = [`${tools} 个工具`];
+  if (steps != null) parts.push(`${steps} 步`);
+  parts.push(`${(ms / 1000).toFixed(1)}s`);
+  parts.push(`≈${tokens} tok`);
+  return '✓ ' + parts.join(' · ');
+}
+
 /* ----------------------------- 审批模式（分级放权） ----------------------------- */
 /** 三档审批模式，对应业界 Codex/Cline 等的「分级放权」。 */
 export const APPROVAL_MODES = [

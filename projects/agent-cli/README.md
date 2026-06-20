@@ -17,6 +17,7 @@ g-lab 的一个子项目：把 **Claude Code / OpenAI Codex CLI / Google Gemini 
 - **流式呈现**：思考行 `✻`、工具调用卡（`● Tool(arg) ⎿ 结果`）、行级 **diff**（绿增红删）、打字机式回答
 - **分级放权（审批模式）**：底部可切 `suggest`（每步批准）/ `auto-edit`（改文件自动·命令批准）/ `full-auto`（全自动），或 `/approval` 循环——亲手体验业界的「分级放权」
 - **导出会话**：标题栏「⤓ 导出会话」把本次对话（含工具卡/diff/审批轨迹）一键复制为 Markdown transcript（`transcriptToMarkdown`）
+- **运行统计**：每次任务结束给一行小结——工具数 · 步数（真实工具循环）· 用时 · token 估算（`formatRunStats`）
 - **两种模式**：
   - **离线模拟**（默认）：内置 agent 按意图操作一个虚拟 Node 项目（纯内存）
   - **真实 AI**（`/login` 后）：走 **function-calling 工具循环**——模型自行 `read_file / edit_file / write_file / grep / run_bash`，在内存 FS 上执行并回填，真实模式也出工具卡 + diff（BYOK，Key 仅存本地）
