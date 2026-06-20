@@ -21,7 +21,8 @@ g-lab/
     ├── muse-ui/            # ✨ UI 组件脑爆 & research 实验室（零依赖 React 创意交互组件，可发 npm）
     ├── prompt-lab/         # 🧠 Prompt 研究室：收集 / 展示 / 复用优秀 Prompt
     ├── swarm/              # 🐝 多智能体协作工作区原型 + 业界调研
-    └── agent-cli/          # 🖥️ Agent CLI 交互研究（复刻 + 对比业界命令行 agent）
+    ├── agent-cli/          # 🖥️ Agent CLI 交互研究（复刻 + 对比业界命令行 agent）
+    └── ai-coding-lab/      # 🤖 AI Coding 研究室：收集与展示 AI 编程范式与提效方式
 ```
 
 ## 📦 子项目
@@ -33,6 +34,7 @@ g-lab/
 | **prompt-lab** | Prompt 研究室：收集 / 整理 / 展示 / 复用优秀 Prompt（分类、技巧标签、变量模板、导入导出，本地存储） | `…/g-lab/projects/prompt-lab/` | `cd projects/prompt-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 | **swarm** | 多智能体协作工作区：需求进队列 → 多角色分工 → 给出结论（集群模式原型 + 业界调研） | `…/g-lab/projects/swarm/` | `cd projects/swarm && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 | **agent-cli** | Agent CLI 交互研究：复刻并对比业界命令行 agent（Claude Code / Codex / Gemini CLI / Aider）的交互方式——可上手把玩的终端控制台 + 玩法调研 | `…/g-lab/projects/agent-cli/` | `cd projects/agent-cli && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
+| **ai-coding-lab** | AI Coding 研究室：收集并展示 AI 编程范式与提效方式（范式/工作流/技巧/工具/护栏） | `…/g-lab/projects/ai-coding-lab/` | `cd projects/ai-coding-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 
 ## 🚀 本地预览
 
@@ -46,6 +48,7 @@ python3 -m http.server 8000
 # prompt-lab：http://localhost:8000/projects/prompt-lab/
 # swarm：    http://localhost:8000/projects/swarm/
 # agent-cli：http://localhost:8000/projects/agent-cli/
+# ai-coding-lab：http://localhost:8000/projects/ai-coding-lab/
 ```
 
 ## ➕ 新增一个子项目

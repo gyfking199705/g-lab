@@ -1,0 +1,19 @@
+{
+  "name": "ai-coding-lab",
+  "version": "0.1.0",
+  "description": "🤖 AI Coding 研究室：收集、提炼并展示业界正在用的 AI 编程范式与提效方式。",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "ai-coding",
+    "agentic",
+    "developer-productivity",
+    "best-practices",
+    "react"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.mjs"
+  }
+}

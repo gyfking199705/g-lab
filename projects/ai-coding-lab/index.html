@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Coding 研究室 · g-lab</title>
+  <meta name="description" content="收集、提炼并展示业界正在用的 AI 编程范式与提效方式：范式 / 工作流 / 提效技巧 / 工具生态 / 质量护栏，附成熟度、影响力与权威出处。" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <meta name="theme-color" content="#F6F5F0" />
+  <style>
+    body { margin: 0; background: #F6F5F0; min-height: 100vh; }
+    .acl-loading { text-align: center; color: #B0AFA5; font-family: Georgia, 'Songti SC', serif;
+      font-size: 17px; padding: 110px 0; }
+    #acl-error { max-width: 720px; margin: 40px auto; background: #FBEEEC; border: 1px solid #E8C9C3;
+      color: #9A3F36; border-radius: 12px; padding: 16px 20px;
+      font-family: ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 1.7;
+      white-space: pre-wrap; display: none; }
+  </style>
+</head>
+<body>
+  <div id="root"><div class="acl-loading">正在加载 AI Coding 研究室…</div></div>
+  <pre id="acl-error"></pre>
+
+  <!-- 自托管打包产物（含 React），同源单文件加载，无任何外部 CDN。
+       源码在 src/ + data/；改动后用 `cd projects/ai-coding-lab && node build.mjs` 重新生成 dist/app.js。 -->
+  <script type="module" src="./dist/app.js?v=d4f281fb1a"></script>
+  <script>
+    window.addEventListener('error', function (e) {
+      if (e && e.target && e.target.src && e.target.src.indexOf('app.js') > -1) {
+        var el = document.getElementById('acl-error');
+        el.style.display = 'block';
+        el.textContent = '应用脚本加载失败：请通过 HTTP 访问（GitHub Pages 或 `python3 -m http.server`），不要用 file:// 直接打开。';
+        var l = document.querySelector('.acl-loading');
+        if (l) l.remove();
+      }
+    }, true);
+  </script>
+</body>
+</html>
