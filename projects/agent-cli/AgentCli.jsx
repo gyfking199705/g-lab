@@ -17,7 +17,7 @@ import {
 import {
   PROVIDERS, callChat, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
 } from './ai.js';
-import { CLIS, PATTERNS, SOURCES } from './notes.js';
+import { CLIS, MATRIX, PATTERNS, SOURCES } from './notes.js';
 
 let _seq = 0;
 const nid = () => `it_${Date.now().toString(36)}_${_seq++}`;
@@ -42,8 +42,8 @@ export default function AgentCli() {
       </section>
 
       <section className="ac-section">
-        <div className="ac-sechead"><h2>② 调研：业界三家怎么做交互</h2>
-          <span className="ac-sub">Claude Code · Codex CLI · Gemini CLI</span></div>
+        <div className="ac-sechead"><h2>② 调研：业界四家怎么做交互</h2>
+          <span className="ac-sub">Claude Code · Codex CLI · Gemini CLI · Aider</span></div>
         <ResearchPanel />
       </section>
     </div>
@@ -81,6 +81,13 @@ function Console() {
     return () => window.removeEventListener('ai-config-changed', h);
   }, []);
   useEffect(() => { setMenuIdx(0); }, [input]);
+  // 输入框随内容自适应高度（Shift+Enter 多行时增高，发送清空后回落）
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(160, el.scrollHeight) + 'px';
+  }, [input]);
 
   const push = useCallback((item) => { setHistory((h) => [...h, { id: nid(), ...item }]); }, []);
   const update = useCallback((id, patch) => { setHistory((h) => h.map((it) => (it.id === id ? { ...it, ...patch } : it))); }, []);
@@ -444,6 +451,20 @@ function ResearchPanel() {
         ))}
       </div>
 
+      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">速查矩阵</h2><span className="ac-sub">维度 × 四家 · 横向滚动可看全</span></div>
+      <div className="ac-matrixwrap">
+        <table className="ac-matrix">
+          <thead>
+            <tr><th>维度</th>{MATRIX.cols.map((c) => <th key={c}>{c}</th>)}</tr>
+          </thead>
+          <tbody>
+            {MATRIX.rows.map((row) => (
+              <tr key={row[0]}><th scope="row">{row[0]}</th>{row.slice(1).map((cell, i) => <td key={i}>{cell}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">③ 共性设计模式</h2><span className="ac-sub">跨产品反复出现 · 也是上面 demo 复刻的对象</span></div>
       <div className="ac-patterns">
         {PATTERNS.map(([t, d]) => (<div className="ac-pat" key={t}><div className="ac-patt">{t}</div><div className="ac-patd">{d}</div></div>))}
@@ -497,6 +518,17 @@ const PAGE_CSS = `
 .ac-srcline{margin-top:13px;padding-top:11px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--t3);}
 .ac-srcline a,.ac-sources a{color:var(--accent-2);text-decoration:none;}
 .ac-srcline a:hover,.ac-sources a:hover{text-decoration:underline;}
+
+/* 速查矩阵 */
+.ac-matrixwrap{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);}
+.ac-matrix{border-collapse:collapse;width:100%;min-width:640px;font-size:12.5px;}
+.ac-matrix th,.ac-matrix td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top;line-height:1.5;}
+.ac-matrix thead th{font-family:var(--serif);font-weight:600;color:var(--t1);background:var(--surface-2);position:sticky;top:0;}
+.ac-matrix thead th:first-child{color:var(--t3);font-family:var(--sans);font-weight:500;}
+.ac-matrix tbody th{font-weight:600;color:var(--accent-2);white-space:nowrap;background:var(--surface-2);}
+.ac-matrix td{color:var(--t2);}
+.ac-matrix tbody tr:last-child th,.ac-matrix tbody tr:last-child td{border-bottom:none;}
+.ac-matrix tbody tr:hover td,.ac-matrix tbody tr:hover th{background:var(--surface-3);}
 
 /* 共性模式 */
 .ac-patterns{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
