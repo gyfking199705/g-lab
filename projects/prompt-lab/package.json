@@ -1,0 +1,18 @@
+{
+  "name": "prompt-lab",
+  "version": "0.1.0",
+  "description": "🧠 Prompt 研究室：收集、整理、展示与复用优秀 Prompt（纯前端、本地存储、可导入导出）。",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.mjs"
+  },
+  "keywords": [
+    "prompt",
+    "prompt-engineering",
+    "llm",
+    "library",
+    "react"
+  ],
+  "license": "MIT"
+}

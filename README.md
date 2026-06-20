@@ -18,7 +18,8 @@ g-lab/
 ├── .github/workflows/      # GitHub Pages 部署（整仓库原样上传）
 └── projects/
     ├── planner/            # 🎯 个人成长规划系统（详见 projects/planner/README.md）
-    └── muse-ui/         # ✨ UI 组件脑爆 & research 实验室（零依赖 React 创意交互组件，可发 npm）
+    ├── muse-ui/            # ✨ UI 组件脑爆 & research 实验室（零依赖 React 创意交互组件，可发 npm）
+    └── prompt-lab/         # 🧠 Prompt 研究室：收集 / 展示 / 复用优秀 Prompt
 ```
 
 ## 📦 子项目
@@ -27,6 +28,7 @@ g-lab/
 | --- | --- | --- | --- |
 | **planner** | 个人成长规划系统：个人/学习/健身/财富/股市/日程/习惯/目标/减脂/论文… 一体化应用 | `…/g-lab/projects/planner/` | `cd projects/planner && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node scripts/build.mjs` |
 | **muse-ui** | UI 组件脑爆 & research 实验室：零依赖 React 创意交互组件 + 画廊演示（可被 planner 复用、也可发 npm） | `…/g-lab/projects/muse-ui/` | `cd projects/muse-ui && npm i --no-save esbuild react react-dom && node build.mjs` |
+| **prompt-lab** | Prompt 研究室：收集 / 整理 / 展示 / 复用优秀 Prompt（分类、技巧标签、变量模板、导入导出，本地存储） | `…/g-lab/projects/prompt-lab/` | `cd projects/prompt-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 
 ## 🚀 本地预览
 
@@ -37,6 +39,7 @@ python3 -m http.server 8000
 # 门户：    http://localhost:8000/
 # planner： http://localhost:8000/projects/planner/
 # muse-ui：http://localhost:8000/projects/muse-ui/
+# prompt-lab：http://localhost:8000/projects/prompt-lab/
 ```
 
 ## ➕ 新增一个子项目
