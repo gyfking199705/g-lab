@@ -185,12 +185,42 @@ export function teamReportMarkdown({ bands = {}, statuses = {}, practices = PRAC
   return L.join('\n');
 }
 
+// ── 进度趋势快照（本地存档，看持续改进） ───────────────────────────
+
+/**
+ * 生成一份进度快照：当下的采纳落地率与 DORA 评分。
+ * @param {Date} now 注入时钟，便于测试。
+ */
+export function buildSnapshot(practices = PRACTICES, statuses = {}, bands = {}, now = new Date()) {
+  const a = adoptionStats(practices, statuses);
+  const d = classifyDora(bands);
+  return {
+    t: now.toISOString(),
+    date: now.toISOString().slice(0, 10),
+    percent: a.percent,
+    done: a.done,
+    doing: a.doing,
+    total: a.total,
+    score: d.score,
+    level: d.level.name,
+  };
+}
+
+/**
+ * 把新快照并入历史：同一天的覆盖（只留当天最新），按时间升序，限长 cap。
+ */
+export function upsertSnapshot(list, snap, cap = 60) {
+  const rest = (list || []).filter((s) => s.date !== snap.date);
+  const next = [...rest, snap].sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
+  return next.slice(-cap);
+}
+
 // ── 数据导出 / 导入（团队备份与共享，仅本地） ────────────────────────
 
 export const EXPORT_VERSION = 1;
 
-/** 组装可导出的快照对象（收藏 + 采纳状态 + DORA 自评）。 */
-export function buildExport({ favs = [], statuses = {}, bands = {} } = {}) {
+/** 组装可导出的快照对象（收藏 + 采纳状态 + DORA 自评 + 进度趋势）。 */
+export function buildExport({ favs = [], statuses = {}, bands = {}, snaps = [] } = {}) {
   return {
     app: 'devx-lab',
     version: EXPORT_VERSION,
@@ -198,6 +228,7 @@ export function buildExport({ favs = [], statuses = {}, bands = {} } = {}) {
     favs,
     statuses,
     bands,
+    snaps,
   };
 }
 
@@ -220,6 +251,7 @@ export function parseImport(text) {
     favs: Array.isArray(o.favs) ? o.favs.filter((x) => typeof x === 'string') : [],
     statuses: isObj(o.statuses) ? o.statuses : {},
     bands: isObj(o.bands) ? o.bands : {},
+    snaps: Array.isArray(o.snaps) ? o.snaps.filter((s) => s && typeof s === 'object') : [],
   };
 }
 

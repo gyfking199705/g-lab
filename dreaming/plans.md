@@ -128,3 +128,14 @@
   2. Console 顶部或状态栏加「导出会话」按钮，clipboard 失败回退 prompt
   3. 补单测并 node build.mjs 重新生成 app.js
 - 验收: 跑一遍 /demo 后点导出，得到可读 Markdown：含每步工具与 diff、审批结果；node --test 全绿
+## P-10 · 进度趋势快照：定期存档落地率/DORA 评分，画趋势线
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 采纳率与 DORA 评分已可计算，存一份带日期的快照即可画趋势；纯前端纯函数 + 手写 SVG，自包含不动其它子项目
+- 步骤:
+  1. calc 加 buildSnapshot(落地率/各数/DORA 评分) 与 upsertSnapshot(同日替换、按时间排序、限长)
+  2. store 持久化 snapshots；DevxLab 加保存快照与状态
+  3. Profile 加『进度趋势』区：SVG 双线（落地率 + DORA 评分）+ 保存今日快照按钮 + 与上次的变化
+  4. 补 buildSnapshot/upsertSnapshot 单测并重打包、SSR 验证
+- 验收: 保存多次快照后能看到落地率/评分随时间的趋势线；同日重存覆盖；node --test 全绿

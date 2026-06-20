@@ -194,6 +194,12 @@ export const CSS = `
 .dx-pf-report{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;
   margin-top:16px;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:20px 22px;}
 .dx-pf-actions{display:flex;gap:10px;flex-shrink:0;}
+.dx-pf-trend{margin-top:16px;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:20px 22px;}
+.dx-pf-trend-h{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:12px;}
+.dx-pf-trend-legend{display:flex;gap:16px;align-items:center;font-size:12px;color:var(--t2);margin-bottom:6px;flex-wrap:wrap;}
+.dx-pf-trend-legend span{display:flex;align-items:center;gap:6px;}
+.dx-pf-trend-legend .sw{width:16px;height:8px;border-radius:3px;display:inline-block;}
+.dx-pf-trend-legend .delta{font-weight:600;}
 
 /* roadmap */
 .dx-rm-sec{margin-bottom:30px;}

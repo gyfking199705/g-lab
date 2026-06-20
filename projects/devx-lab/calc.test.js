@@ -20,6 +20,8 @@ import {
   topoOrder,
   categoryRadar,
   teamReportMarkdown,
+  buildSnapshot,
+  upsertSnapshot,
 } from './calc.js';
 import { PRACTICES, CATEGORIES, FRAMEWORKS, ANTIPATTERNS } from './data.js';
 
@@ -179,23 +181,58 @@ test('frameworkCoverage: 与 FRAMEWORKS 同序，统计对齐与落地数', () =
   assert.ok(dora.percent > 0);
 });
 
-test('buildExport / parseImport: 往返一致', () => {
-  const snap = buildExport({ favs: ['a', 'b'], statuses: { a: 'done' }, bands: { deploy: 0 } });
+test('buildExport / parseImport: 往返一致（含趋势快照）', () => {
+  const snaps = [{ t: '2026-06-20T00:00:00.000Z', date: '2026-06-20', percent: 10 }];
+  const snap = buildExport({ favs: ['a', 'b'], statuses: { a: 'done' }, bands: { deploy: 0 }, snaps });
   assert.equal(snap.app, 'devx-lab');
   assert.equal(snap.version, 1);
   assert.ok(snap.exportedAt);
   const parsed = parseImport(JSON.stringify(snap));
-  assert.deepEqual(parsed, { favs: ['a', 'b'], statuses: { a: 'done' }, bands: { deploy: 0 } });
+  assert.deepEqual(parsed, { favs: ['a', 'b'], statuses: { a: 'done' }, bands: { deploy: 0 }, snaps });
 });
 
 test('parseImport: 拒绝非法/异源，字段降级', () => {
   assert.throws(() => parseImport('not json'), /JSON/);
   assert.throws(() => parseImport('{"app":"other"}'), /devx-lab/);
   // 字段类型不符 → 安全降级
-  const p = parseImport('{"app":"devx-lab","favs":"x","statuses":[1],"bands":null}');
-  assert.deepEqual(p, { favs: [], statuses: {}, bands: {} });
+  const p = parseImport('{"app":"devx-lab","favs":"x","statuses":[1],"bands":null,"snaps":{}}');
+  assert.deepEqual(p, { favs: [], statuses: {}, bands: {}, snaps: [] });
   // favs 内非字符串被过滤
   assert.deepEqual(parseImport('{"app":"devx-lab","favs":["ok",1,null]}').favs, ['ok']);
+});
+
+test('buildSnapshot: 含日期/落地率/DORA 评分', () => {
+  const now = new Date('2026-06-20T08:30:00.000Z');
+  const s = buildSnapshot(PRACTICES, { cicd: 'done' }, { deploy: 0, lead: 0, cfr: 0, mttr: 0 }, now);
+  assert.equal(s.date, '2026-06-20');
+  assert.equal(s.t, now.toISOString());
+  assert.equal(s.total, PRACTICES.length);
+  assert.equal(s.done, 1);
+  assert.equal(s.score, 100); // 全 Elite
+  assert.equal(s.level, 'Elite');
+  assert.ok(s.percent >= 0 && s.percent <= 100);
+});
+
+test('upsertSnapshot: 同日覆盖、按时间排序、限长', () => {
+  const a = { t: '2026-06-18T00:00:00.000Z', date: '2026-06-18', percent: 5 };
+  const b = { t: '2026-06-19T00:00:00.000Z', date: '2026-06-19', percent: 10 };
+  const b2 = { t: '2026-06-19T12:00:00.000Z', date: '2026-06-19', percent: 20 };
+  let list = upsertSnapshot([], a);
+  list = upsertSnapshot(list, b);
+  assert.equal(list.length, 2);
+  list = upsertSnapshot(list, b2); // 同日覆盖
+  assert.equal(list.length, 2);
+  assert.equal(list[1].percent, 20);
+  // 升序
+  assert.deepEqual(list.map((s) => s.date), ['2026-06-18', '2026-06-19']);
+  // 限长
+  const many = [];
+  let acc = [];
+  for (let i = 0; i < 70; i++) {
+    acc = upsertSnapshot(acc, { t: `2026-01-01T00:00:${String(i).padStart(2, '0')}.000Z`, date: 'd' + i, percent: i }, 60);
+  }
+  assert.equal(acc.length, 60);
+  assert.equal(acc[acc.length - 1].percent, 69); // 保留最新
 });
 
 test('prescribe: 弱项出处方、已落地剔除、全 Elite 无处方', () => {

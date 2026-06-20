@@ -5,7 +5,7 @@
 import React, { useRef, useState } from 'react';
 import { CSS } from './styles.js';
 import { PRACTICES, FRAMEWORKS } from './data.js';
-import { summaryStats, adoptionStats, buildExport, parseImport } from './calc.js';
+import { summaryStats, adoptionStats, buildExport, parseImport, buildSnapshot, upsertSnapshot } from './calc.js';
 import { load, save } from './store.js';
 import Practices from './Practices.jsx';
 import Frameworks from './Frameworks.jsx';
@@ -28,6 +28,7 @@ export default function DevxLab() {
   const [favs, setFavs] = useState(() => load('favs', []));
   const [bands, setBands] = useState(() => load('dora', {}));
   const [statuses, setStatuses] = useState(() => load('status', {}));
+  const [snaps, setSnaps] = useState(() => load('snaps', []));
 
   const stats = summaryStats(PRACTICES);
   const adoption = adoptionStats(PRACTICES, statuses);
@@ -60,6 +61,14 @@ export default function DevxLab() {
     });
   }
 
+  function saveSnapshot() {
+    setSnaps((prev) => {
+      const next = upsertSnapshot(prev, buildSnapshot(PRACTICES, statuses, bands));
+      save('snaps', next);
+      return next;
+    });
+  }
+
   const [focus, setFocus] = useState(null);
 
   function gotoPractice(id) {
@@ -71,7 +80,7 @@ export default function DevxLab() {
   const fileRef = useRef(null);
 
   function exportData() {
-    const snap = buildExport({ favs, statuses, bands });
+    const snap = buildExport({ favs, statuses, bands, snaps });
     const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -88,10 +97,11 @@ export default function DevxLab() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const { favs: f, statuses: s, bands: b } = parseImport(String(reader.result));
+        const { favs: f, statuses: s, bands: b, snaps: sn } = parseImport(String(reader.result));
         setFavs(f); save('favs', f);
         setStatuses(s); save('status', s);
         setBands(b); save('dora', b);
+        setSnaps(sn); save('snaps', sn);
       } catch (err) {
         window.alert('导入失败：' + (err && err.message ? err.message : '未知错误'));
       }
@@ -162,7 +172,9 @@ export default function DevxLab() {
           onGotoAssess={() => setTab('assess')}
         />
       )}
-      {tab === 'profile' && <Profile bands={bands} statuses={statuses} />}
+      {tab === 'profile' && (
+        <Profile bands={bands} statuses={statuses} snaps={snaps} onSnapshot={saveSnapshot} />
+      )}
 
       <div className="dx-data">
         <span className="dx-data-h">我的数据（收藏 / 采纳状态 / 自评）</span>
