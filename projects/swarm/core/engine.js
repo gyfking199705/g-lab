@@ -14,7 +14,7 @@ import {
 } from './queue.js';
 import {
   decompose, planToSpecs, buildPlanMessages, parsePlan,
-  buildAgentMessages, mockRun,
+  buildAgentMessages, mockRun, injectRework,
 } from './orchestrator.js';
 import { isConfigured, callChat } from './ai.js';
 
@@ -31,7 +31,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {AbortSignal} [o.signal]
  * @returns {Promise<object>} 最终 job
  */
-export async function runJob({ requirement, config, onUpdate = () => {}, concurrency = 2, stepDelay = 500, signal }) {
+export async function runJob({ requirement, config, onUpdate = () => {}, concurrency = 2, stepDelay = 500, maxRounds = 2, signal }) {
   let job = createJob(requirement);
   const useLLM = isConfigured(config);
 
@@ -54,7 +54,8 @@ export async function runJob({ requirement, config, onUpdate = () => {}, concurr
   }
 
   let i = 0;
-  const specs = planToSpecs(plan, () => `t${job.id}_${i++}`);
+  const mkId = () => `t${job.id}_${i++}`;
+  const specs = planToSpecs(plan, mkId);
   job = loadTasks(job, specs);
   onUpdate(job);
 
@@ -96,6 +97,13 @@ export async function runJob({ requirement, config, onUpdate = () => {}, concurr
         ? { ...job, tasks: failTask(job.tasks, r.id, r.error) }
         : { ...job, tasks: finishTask(job.tasks, r.id, r.output) };
     });
+
+    // 验证—返工闭环：评审未通过且未超轮次 → 注入「返工 + 复评」，汇总者顺延等待
+    const expanded = injectRework(job, { maxRounds, makeId: mkId });
+    if (expanded !== job) {
+      job = expanded;
+      if (job.status === 'synthesizing') job = { ...job, status: 'running' };
+    }
     onUpdate(job);
   }
 

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   classify, decompose, planToSpecs, parsePlan, synthesize,
   buildPlanMessages, buildAgentMessages, buildSynthesisMessages, mockRun, depOutputs,
+  parseVerdict, reworkSpecs, injectRework, isRework,
 } from './orchestrator.js';
 import { makeTask } from './queue.js';
 
@@ -110,4 +111,75 @@ test('synthesize 产出含结论/下一步/风险的最终文本', () => {
 
   const sm = buildSynthesisMessages(job);
   assert.match(sm.user, /做个应用/);
+});
+
+test('parseVerdict 识别通过/未通过，未知默认通过', () => {
+  assert.equal(parseVerdict('验收: 通过 ✅').pass, true);
+  assert.equal(parseVerdict('验收: 未通过（72/100）').pass, false); // 「未通过」优先于「通过」
+  assert.equal(parseVerdict('PASS').pass, true);
+  assert.equal(parseVerdict('随便一段话').pass, true); // 无信号默认通过，避免无限返工
+});
+
+test('mockRun：首版评审未通过、返工后复评通过', () => {
+  const worker = makeTask({ id: 'w', role: 'worker', title: '产出交付草案' });
+  const job1 = { requirement: 'x', tasks: [worker] };
+  const c1 = makeTask({ id: 'c', role: 'critic', title: '评审与挑错', deps: ['w'] });
+  job1.tasks.push(c1);
+  assert.equal(parseVerdict(mockRun(c1, job1)).pass, false);
+
+  const rework = makeTask({ id: 'w2', role: 'worker', title: '按评审返工（第1轮）' });
+  assert.equal(isRework(rework), true);
+  const c2 = makeTask({ id: 'c2', role: 'critic', title: '复评（第1轮）', deps: ['w2'] });
+  const job2 = { requirement: 'x', tasks: [rework, c2] };
+  assert.equal(parseVerdict(mockRun(c2, job2)).pass, true);
+});
+
+test('reworkSpecs 产出返工执行 + 复评，依赖正确', () => {
+  const [w, c] = reworkSpecs('cFail', 'wNew', 'cNew', 1);
+  assert.equal(w.role, 'worker');
+  assert.deepEqual(w.deps, ['cFail']);
+  assert.equal(c.role, 'critic');
+  assert.deepEqual(c.deps, ['wNew']);
+});
+
+test('injectRework：评审未通过时注入返工+复评，并顺延汇总者依赖', () => {
+  let n = 0;
+  const mk = () => `x${n++}`;
+  const tasks = [
+    makeTask({ id: 'w', role: 'worker', title: '产出交付草案' }),
+    { ...makeTask({ id: 'c', role: 'critic', title: '评审', deps: ['w'] }), status: 'done', output: '验收: 未通过' },
+    makeTask({ id: 's', role: 'synthesizer', title: '汇总', deps: ['w', 'c'] }),
+  ];
+  const job = injectRework({ requirement: 'x', tasks }, { maxRounds: 2, makeId: mk });
+  // 新增了 2 个任务
+  assert.equal(job.tasks.length, 5);
+  const rework = job.tasks.find((t) => isRework(t));
+  assert.ok(rework);
+  const reReview = job.tasks.find((t) => t.role === 'critic' && t.deps.includes(rework.id));
+  assert.ok(reReview);
+  // 汇总者改为也依赖复评
+  const synth = job.tasks.find((t) => t.role === 'synthesizer');
+  assert.ok(synth.deps.includes(reReview.id));
+});
+
+test('injectRework：评审通过 / 已有下游 / 超轮次 时不注入', () => {
+  // 通过 → 不注入
+  const pass = injectRework({ tasks: [
+    { ...makeTask({ id: 'c', role: 'critic', title: '评审', deps: ['w'] }), status: 'done', output: '验收: 通过' },
+  ] }, { makeId: () => 'z' });
+  assert.equal(pass.tasks.length, 1);
+
+  // 失败但已有返工下游 → 不重复注入
+  const handled = injectRework({ tasks: [
+    { ...makeTask({ id: 'c', role: 'critic', title: '评审', deps: ['w'] }), status: 'done', output: '未通过' },
+    makeTask({ id: 'w2', role: 'worker', title: '按评审返工（第1轮）', deps: ['c'] }),
+  ] }, { makeId: () => 'z' });
+  assert.equal(handled.tasks.length, 2);
+
+  // 已达轮次上限 → 不注入
+  const capped = injectRework({ tasks: [
+    makeTask({ id: 'w2', role: 'worker', title: '按评审返工（第1轮）' }),
+    { ...makeTask({ id: 'c2', role: 'critic', title: '复评（第1轮）', deps: ['w2'] }), status: 'done', output: '未通过' },
+  ] }, { maxRounds: 1, makeId: () => 'z' });
+  assert.equal(capped.tasks.length, 2);
 });

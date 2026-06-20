@@ -11,6 +11,7 @@
  */
 
 import { getRole } from './roles.js';
+import { makeTask } from './queue.js';
 
 /* ============================ 1. 需求分类 ============================ */
 
@@ -109,6 +110,13 @@ export function mockRun(task, job) {
         `· 依赖调研结论：${ctx ? '已采纳上游要点' : '（无上游）'}。`,
       ].join('\n');
     case 'worker':
+      if (isRework(task)) {
+        return [
+          `【${role.name}·${task.title}】`,
+          `· 已逐条回应评审意见：补全边界情况说明、为关键结论补充数据论据。`,
+          `· 交付草案 v2：在 v1 基础上修订，质量达到可交付标准。`,
+        ].join('\n');
+      }
       return [
         `【${role.name}·${task.title}】`,
         `· 交付草案 v1：针对「${req}」给出可直接落地的第一版成果。`,
@@ -116,11 +124,19 @@ export function mockRun(task, job) {
         `· 已按规划覆盖全部里程碑要点，留 2 处待评审确认。`,
       ].join('\n');
     case 'critic':
+      // 评审「返工后的草案」→ 通过；评审「首版草案」→ 未通过（触发返工，演示闭环）
+      if (reviewsRework(task, job)) {
+        return [
+          `【${role.name}·${task.title}】`,
+          `· 上轮问题已解决：边界情况已补充、关键结论已加数据论据。`,
+          `· 验收: 通过 ✅（达到验收标准，可交付）`,
+        ].join('\n');
+      }
       return [
         `【${role.name}·${task.title}】`,
         `· 通过项：结构完整、覆盖核心需求。`,
         `· 待改：① 缺少边界情况说明；② 第 3 点论据偏弱，建议补数据。`,
-        `· 验收判断：达到 80% 验收标准，按建议小改即可交付。`,
+        `· 验收: 未通过（72/100，按建议返工后复评）`,
       ].join('\n');
     case 'synthesizer':
       return synthesize(job);
@@ -137,6 +153,74 @@ export function depOutputs(task, job) {
     .filter((t) => t && t.output)
     .map((t) => `〔${getRole(t.role).name}〕${t.output}`)
     .join('\n\n');
+}
+
+/* ===================== 3b. 验证—返工闭环（generator-critic 迭代） ===================== */
+
+/** 该任务本身是不是一次「返工」。 */
+export function isRework(task) {
+  return /返工/.test(task?.title || '');
+}
+
+/** 该评审任务评的是不是「返工后的草案」（用于判断是否该放行）。 */
+export function reviewsRework(task, job) {
+  const map = Object.fromEntries((job.tasks || []).map((t) => [t.id, t]));
+  return (task.deps || []).some((d) => map[d] && isRework(map[d]));
+}
+
+/** 从评审产出解析是否通过验收。无明确信号时默认通过，避免无限返工。 */
+export function parseVerdict(text) {
+  const s = String(text || '');
+  if (/未通过|不通过|不达标|未达标|FAIL|REJECT/i.test(s)) return { pass: false };
+  if (/通过|达标|PASS|APPROVE/i.test(s)) return { pass: true };
+  return { pass: true };
+}
+
+/** 构造一轮返工的两个任务规格：执行者返工 + 复评。 */
+export function reworkSpecs(failedCriticId, reworkWorkerId, reReviewId, round) {
+  return [
+    {
+      id: reworkWorkerId, role: 'worker', title: `按评审返工（第${round}轮）`,
+      brief: '根据评审意见修订上一版交付物，逐条回应被指出的问题。', deps: [failedCriticId],
+    },
+    {
+      id: reReviewId, role: 'critic', title: `复评（第${round}轮）`,
+      brief: '检查返工是否解决了上一轮问题，给出验收判断（通过/未通过）。', deps: [reworkWorkerId],
+    },
+  ];
+}
+
+/**
+ * 若存在「已完成、未通过、且还没有下游返工」的评审，且未超轮次上限，
+ * 则注入「返工 + 复评」两个任务，并让仍排队的汇总者改为依赖最新复评。纯函数。
+ * @param {object} job
+ * @param {{maxRounds?:number, makeId?:()=>string}} o
+ * @returns {object} 新 job（无需注入时原样返回）
+ */
+export function injectRework(job, { maxRounds = 2, makeId } = {}) {
+  const tasks = job.tasks || [];
+  const round = tasks.filter((t) => isRework(t)).length; // 已发生的返工轮数
+  if (round >= maxRounds) return job;
+  // 是否已为该评审注入过返工（看下游有没有 rework 任务依赖它）；
+  // 注意汇总者也会依赖评审，故不能用「任意下游」判断。
+  const alreadyHandled = (id) => tasks.some((t) => isRework(t) && (t.deps || []).includes(id));
+  const failed = tasks.find(
+    (t) => t.role === 'critic' && t.status === 'done' && !parseVerdict(t.output).pass && !alreadyHandled(t.id),
+  );
+  if (!failed) return job;
+
+  const n = round + 1;
+  const gen = makeId || (() => `rw${n}_${Math.random().toString(36).slice(2, 8)}`);
+  const wId = gen();
+  const cId = gen();
+  const added = reworkSpecs(failed.id, wId, cId, n).map(makeTask);
+  // 汇总者若还没跑，改为依赖最新复评，确保等返工闭环完成再汇总
+  const updated = tasks.map((t) =>
+    t.role === 'synthesizer' && t.status === 'queued'
+      ? { ...t, deps: [...new Set([...(t.deps || []), cId])] }
+      : t,
+  );
+  return { ...job, tasks: [...updated, ...added] };
 }
 
 /* ============================ 4. 汇总结论（离线） ============================ */
@@ -209,11 +293,16 @@ export function parsePlan(text, requirement) {
 export function buildAgentMessages(task, job) {
   const role = getRole(task.role);
   const ctx = depOutputs(task, job);
+  const verdictRule =
+    task.role === 'critic'
+      ? '\n\n最后必须单独用一行给出验收判断，格式严格为「验收: 通过」或「验收: 未通过」。'
+      : '';
   const user =
     `用户原始需求：${job.requirement}\n\n` +
     `你的子任务：${task.title}\n要求：${task.brief}\n\n` +
     (ctx ? `上游同事的产出（供你参考/衔接）：\n${ctx}\n\n` : '') +
-    '请直接给出你这一步的产出，简洁、具体、可被下游同事使用。';
+    '请直接给出你这一步的产出，简洁、具体、可被下游同事使用。' +
+    verdictRule;
   return { system: role.system, user };
 }
 
