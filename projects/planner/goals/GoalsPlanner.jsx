@@ -33,7 +33,7 @@ const CATEGORIES = [
 ];
 const CAT = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 
-export default function GoalsPlanner({ storageKey = STORE_KEY, onChange }) {
+export default function GoalsPlanner({ storageKey = STORE_KEY, onChange, linkOptions = [], resolveLink }) {
   const [data, setData] = useState(() => loadState(storageKey, DEFAULTS));
   const [filter, setFilter] = useState('active'); // active | done | all
   const [adding, setAdding] = useState(false);
@@ -43,7 +43,14 @@ export default function GoalsPlanner({ storageKey = STORE_KEY, onChange }) {
     if (onChange) onChange();
   }, [data, storageKey, onChange]);
 
-  const goals = data.goals || [];
+  // 跨模块链接型目标：用真实数据填充 metric.current（resolveLink 由主应用注入）
+  const goals = (data.goals || []).map((g) => {
+    const link = g.metric && g.metric.link;
+    if (!link || typeof resolveLink !== 'function') return g;
+    const cur = resolveLink(link);
+    if (cur == null) return g;
+    return { ...g, metric: { ...g.metric, current: cur } };
+  });
   const today = todayStr();
   const stats = useMemo(() => overallStats(goals), [goals]);
 
@@ -62,7 +69,7 @@ export default function GoalsPlanner({ storageKey = STORE_KEY, onChange }) {
     mutate((gs) => [
       { id: uid('goal'), title: g.title, note: '', category: g.category, deadline: g.deadline || '',
         createdAt: new Date().toISOString(), archived: false, subtasks: [],
-        metric: g.useMetric ? { current: 0, target: g.target, unit: g.unit || '' } : null },
+        metric: g.useMetric ? { current: 0, target: g.target, unit: g.unit || '', link: g.link || null } : null },
       ...gs,
     ]);
     setAdding(false);
@@ -94,7 +101,7 @@ export default function GoalsPlanner({ storageKey = STORE_KEY, onChange }) {
         </div>
       )}
 
-      {adding && <GoalForm onSubmit={addGoal} onCancel={() => setAdding(false)} />}
+      {adding && <GoalForm onSubmit={addGoal} onCancel={() => setAdding(false)} linkOptions={linkOptions} />}
 
       <div className="gx-card">
         <div className="gx-sechead">
@@ -119,17 +126,24 @@ export default function GoalsPlanner({ storageKey = STORE_KEY, onChange }) {
 }
 
 /* ----------------------------- 新建表单 ----------------------------- */
-function GoalForm({ onSubmit, onCancel }) {
+function GoalForm({ onSubmit, onCancel, linkOptions = [] }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('fitness');
   const [deadline, setDeadline] = useState('');
   const [useMetric, setUseMetric] = useState(false);
   const [target, setTarget] = useState('');
   const [unit, setUnit] = useState('');
+  const [link, setLink] = useState(''); // '' = 手动；否则跨模块自动追踪来源 id
+
+  const pickLink = (id) => {
+    setLink(id);
+    const src = linkOptions.find((o) => o.id === id);
+    if (src && src.unit) setUnit(src.unit); // 选了来源自动带出单位
+  };
 
   const submit = () => {
     if (!title.trim()) return;
-    onSubmit({ title: title.trim(), category, deadline, useMetric: useMetric && Number(target) > 0, target: Number(target), unit: unit.trim() });
+    onSubmit({ title: title.trim(), category, deadline, useMetric: useMetric && Number(target) > 0, target: Number(target), unit: unit.trim(), link: link || null });
   };
 
   return (
@@ -154,10 +168,24 @@ function GoalForm({ onSubmit, onCancel }) {
           用数值衡量进度（否则按子任务完成比）
         </label>
         {useMetric && (
-          <div className="gx-inrow">
-            <input className="gx-in" style={{ width: 130 }} type="number" min="0" placeholder="目标值，如 100" value={target} onChange={(e) => setTarget(e.target.value)} />
-            <input className="gx-in" style={{ width: 110 }} placeholder="单位，如 km" value={unit} onChange={(e) => setUnit(e.target.value)} />
-          </div>
+          <>
+            <div className="gx-inrow">
+              <input className="gx-in" style={{ width: 130 }} type="number" min="0" placeholder="目标值，如 100" value={target} onChange={(e) => setTarget(e.target.value)} />
+              <input className="gx-in" style={{ width: 110 }} placeholder="单位，如 km" value={unit} onChange={(e) => setUnit(e.target.value)} />
+            </div>
+            {linkOptions.length > 0 && (
+              <div className="gx-inrow">
+                <label style={{ fontSize: 12.5, color: 'var(--text-2)' }}>进度来源</label>
+                <select className="gx-in" style={{ flex: 1 }} value={link} onChange={(e) => pickLink(e.target.value)}>
+                  <option value="">手动输入</option>
+                  {linkOptions.map((o) => (
+                    <option key={o.id} value={o.id}>自动 · {o.label}（{o.unit}）</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {link && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>进度将自动从所选模块的真实数据读取，无需手动更新。</div>}
+          </>
         )}
         <div className="gx-inrow">
           <button className="gx-btn gx-btn-primary" onClick={submit}>创建</button>
@@ -199,6 +227,7 @@ function GoalCard({ goal, today, onUpdate, onRemove }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14.5, fontWeight: 500, letterSpacing: '-.1px', overflowWrap: 'anywhere' }}>{goal.title}</span>
             {cat && <span className="gx-tag">{cat.icon} {cat.label}</span>}
+            {goal.metric && goal.metric.link && <span className="gx-tag accent">🔗 自动</span>}
             {achieved && <span className="gx-tag good">✓ 已达成</span>}
             {!achieved && dlStatus === 'overdue' && <span className="gx-tag bad">逾期 {-dl} 天</span>}
             {!achieved && dlStatus === 'due-soon' && <span className="gx-tag accent">{relDay(goal.deadline, today)}截止</span>}
@@ -219,7 +248,12 @@ function GoalCard({ goal, today, onUpdate, onRemove }) {
 
       {open && (
         <div style={{ marginTop: 12, borderTop: '1px solid var(--bd-soft)', paddingTop: 12 }}>
-          {isMetric ? (
+          {isMetric && goal.metric.link ? (
+            <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginBottom: 10 }}>
+              🔗 自动追踪：<strong style={{ fontVariantNumeric: 'tabular-nums' }}>{goal.metric.current}</strong> / {goal.metric.target} {goal.metric.unit}
+              <span style={{ color: 'var(--text-3)' }}> · 来自其它模块的真实数据，自动更新</span>
+            </div>
+          ) : isMetric ? (
             <div className="gx-inrow" style={{ marginBottom: 10 }}>
               <label style={{ fontSize: 12.5, color: 'var(--text-2)' }}>当前进度</label>
               <input className="gx-in" style={{ width: 120 }} type="number" min="0" value={goal.metric.current} onChange={(e) => setMetric(e.target.value)} />
