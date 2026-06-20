@@ -322,3 +322,10 @@
 - 子项目: skill-lab
 - 重点: skill-lab 新增 skills/agentic-cli-interaction/SKILL.md：终端式 coding-agent 交互设计（REPL 工具循环/斜杠命令/工具卡+diff/分级放权/计划模式/项目记忆/运行统计），A 100/100、index.json 收录 21 个
 - 解决的问题: agent-cli 的研究只活在它自己页面里——沉淀成可移植 Agent Skill 让别处也能复用
+
+## M-42 · 2026-06-20 · devx-lab 范式证据点 + 采纳清单导出（落地 P-13）
+- 作者: claude
+- 提交: f2c98c9
+- 子项目: devx-lab
+- 重点: 34 条范式各加一句 evidence（归因到出处、不杜撰数字），详情显示『研究怎么说』；纯逻辑 adoptionChecklistMarkdown 按状态分组导出 Markdown checklist，数据栏加按钮；数据自洽测试要求 evidence 齐全；单测 24→25 全过
+- 解决的问题: 范式只讲怎么做，缺'为什么有效'的证据；采纳状态也无法导成可贴 wiki 的清单
