@@ -24,9 +24,10 @@ ai-coding-lab/
 ├── AGENTS.md            # 你正在读的这份（agent 工作约定）
 ├── README.md            # 人类向说明（更详细的背景与命令）
 ├── KNOWLEDGE.md         # ★ 全量知识库纯文本摘要（build.mjs 自动生成，供直接吸收；勿手改）★
+├── llms.txt             # llms.txt 规范索引（build.mjs 自动生成，供 LLM/agent 快速定位；勿手改）
 ├── index.html           # 独立演示页，加载 ./dist/app.js?v=<hash>
 ├── favicon.svg
-├── build.mjs            # 打包脚本：src+data → dist/app.js + 写 index.html 的 ?v= + 生成 KNOWLEDGE.md
+├── build.mjs            # 打包脚本：src+data → dist/app.js + 写 index.html 的 ?v= + 生成 KNOWLEDGE.md / llms.txt
 ├── package.json         # { "type": "module" }
 ├── data/
 │   └── practices.js     # ★ 知识库数据：导出 CATEGORIES / MATURITY / LEVEL / ITEMS / TEMPLATES（纯数据，可单测）★
@@ -94,7 +95,7 @@ ai-coding-lab/
    npm i --no-save esbuild react@18.3.1 react-dom@18.3.1   # 若 node_modules 不在
    node build.mjs
    ```
-6. 提交 `data/practices.js` + `dist/app.js` + `index.html` + `KNOWLEDGE.md`（四者一起，缺一不可）。
+6. 提交 `data/practices.js` + `dist/app.js` + `index.html` + `KNOWLEDGE.md` + `llms.txt`（一起提交，缺一不可）。
    - 想给某条加「可复制模板」：在 `data/practices.js` 末尾的 `TEMPLATES` 对象里按 `id` 加一项
      `{ label, lang, code }`；详情页会展示并支持一键复制，卡片会自动显示「📋 模板」徽章。
 
@@ -124,7 +125,7 @@ ai-coding-lab/
 
 ## 必须遵守（提交前自检）
 1. **`node --test` 全绿**：`filter.test.js` 里的「数据集健全性检查」会拦截缺字段、非法枚举、重复 id、非 `http(s)` 的 refs。
-2. **改完必重建并提交 `dist/app.js` + `KNOWLEDGE.md`**：`node build.mjs` 会把内容哈希写进 `index.html` 的 `?v=`，并据 `data/practices.js` 重新生成 `KNOWLEDGE.md`；确认 `?v=<hash>` == bundle 的 sha1 前 10 位。
+2. **改完必重建并提交 `dist/app.js` + `KNOWLEDGE.md` + `llms.txt`**：`node build.mjs` 会把内容哈希写进 `index.html` 的 `?v=`，并据 `data/practices.js` 重新生成 `KNOWLEDGE.md` 与 `llms.txt`；确认 `?v=<hash>` == bundle 的 sha1 前 10 位。
 3. **跟随 [`/DESIGN.md`](../../DESIGN.md)**：暖纸色 `#F6F5F0` + 陶土橙 `#CC785C`、衬线标题、发丝级边框、几乎无阴影、克制留白；**图表手写 SVG，不引图表库**。
 4. **无外部 CDN / 无运行时转译**：React 18 + esbuild 预打包成自托管单文件；样式走 `style.js` 的设计令牌，类名前缀统一 `acl-`。
 5. **无后端、不入库密钥**：本页纯静态、不收集数据；任何示例都不要写入真实密钥或私密数据。

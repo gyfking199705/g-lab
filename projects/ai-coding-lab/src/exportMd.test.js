@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { toMarkdown } from './exportMd.js';
-import { ITEMS } from '../data/practices.js';
+import { toMarkdown, toLlmsTxt } from './exportMd.js';
+import { ITEMS, CATEGORIES } from '../data/practices.js';
 
 const sample = [
   {
@@ -57,6 +57,23 @@ test('toMarkdown: omits optional fields when absent', () => {
 test('toMarkdown: empty list still valid', () => {
   const md = toMarkdown([]);
   assert.match(md, /> 共 0 条/);
+});
+
+test('toLlmsTxt: follows llms.txt shape (H1, blockquote, sections)', () => {
+  const txt = toLlmsTxt(sample, CATEGORIES);
+  assert.match(txt, /^# AI Coding 研究室/);     // 必须以 H1 开头
+  assert.match(txt, /\n> /);                     // 含 blockquote 摘要
+  assert.match(txt, /## 知识库/);
+  assert.match(txt, /\[全量知识库摘要 \(KNOWLEDGE\.md\)\]\(KNOWLEDGE\.md\)/);
+  assert.match(txt, /## 分类/);
+  assert.match(txt, /## Optional/);
+});
+
+test('toLlmsTxt: lists every category with a count', () => {
+  const txt = toLlmsTxt(ITEMS, CATEGORIES);
+  for (const c of CATEGORIES) {
+    assert.ok(txt.includes(`${c.label} (${c.id})`), `lists ${c.id}`);
+  }
 });
 
 test('toMarkdown: real dataset exports without throwing and ends with newline', () => {

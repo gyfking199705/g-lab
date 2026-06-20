@@ -8,8 +8,8 @@
 import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { ITEMS, TEMPLATES } from './data/practices.js';
-import { toMarkdown } from './src/exportMd.js';
+import { ITEMS, CATEGORIES, TEMPLATES } from './data/practices.js';
+import { toMarkdown, toLlmsTxt } from './src/exportMd.js';
 
 await build({
   bundle: true,
@@ -46,4 +46,7 @@ const header = [
 ].join('\n');
 writeFileSync('KNOWLEDGE.md', header + body);
 
-console.log('✅ ai-coding-lab 已打包：dist/app.js（已写入 ?v= 缓存号）+ KNOWLEDGE.md 摘要');
+// 生成 llms.txt（https://llmstxt.org）——给 LLM/agent 的精简结构化索引
+writeFileSync('llms.txt', toLlmsTxt(ITEMS, CATEGORIES));
+
+console.log('✅ ai-coding-lab 已打包：dist/app.js（已写入 ?v=）+ KNOWLEDGE.md + llms.txt');

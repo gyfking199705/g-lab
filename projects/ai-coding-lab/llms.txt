@@ -1,0 +1,20 @@
+# AI Coding 研究室 (ai-coding-lab)
+
+> 收集、提炼并展示业界正在用的 AI 编程范式与提效方式；共 74 条结构化实践，覆盖范式/工作流/提效技巧/工具生态/质量护栏，每条含「为什么有效 / 怎么落地 / 何时用 / 常见坑」以及成熟度·影响力·落地成本评级与权威出处。
+
+本文件供 LLM/agent 快速理解与取用本知识库。要直接吸收全部内容读 KNOWLEDGE.md；要扩展/修改读 AGENTS.md。
+
+## 知识库
+- [全量知识库摘要 (KNOWLEDGE.md)](KNOWLEDGE.md): 所有实践的完整纯文本，可直接通读、吸收
+- [结构化数据源 (data/practices.js)](data/practices.js): 导出 CATEGORIES / ITEMS / TEMPLATES，可被 Node 直接 import
+- [扩展约定 (AGENTS.md)](AGENTS.md): 数据结构、字段口径、新增条目步骤与提交前自检
+
+## 分类
+- 范式 (paradigm)：14 条 — 高层方法论：决定「人与 AI 如何分工」的根本姿势。
+- 工作流 (workflow)：14 条 — 把范式落到日常协作的可重复流程。
+- 提效技巧 (technique)：18 条 — 具体、可立即上手的操作手法。
+- 工具与生态 (tooling)：13 条 — 支撑 AI Coding 的标准、协议与工具类别。
+- 质量与护栏 (guardrail)：15 条 — 保证速度不牺牲安全、正确性与可维护性。
+
+## Optional
+- [交互式应用](./): 在线浏览、搜索、按成熟度/标签筛选、四象限与总览图、导出 Markdown
