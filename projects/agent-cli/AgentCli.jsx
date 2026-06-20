@@ -430,6 +430,51 @@ function AISettings({ onClose }) {
   );
 }
 
+/* ============================ agentic 循环示意（手写 SVG，无图表库） ============================ */
+function LoopDiagram() {
+  const C = { bd: '#E3E0D7', t1: '#26241F', t2: '#83827A', t3: '#B0AFA5', accent: '#CC785C', accent2: '#B5654A', surf: '#FFFFFF', soft: '#F5ECE5' };
+  const boxes = [
+    { cx: 64, label: '诉求', sub: 'prompt' },
+    { cx: 220, label: '推理', sub: 'reason' },
+    { cx: 376, label: '调用工具', sub: 'act' },
+    { cx: 532, label: '观察', sub: 'observe' },
+    { cx: 668, label: '回答', sub: 'answer', accent: true },
+  ];
+  const w = 104, h = 46, y = 78;
+  const Box = ({ cx, label, sub, accent }) => (
+    <g>
+      <rect x={cx - w / 2} y={y} width={w} height={h} rx={11} fill={accent ? C.soft : C.surf} stroke={accent ? C.accent : C.bd} strokeWidth={accent ? 1.4 : 1.2} />
+      <text x={cx} y={y + 20} textAnchor="middle" fontSize="14" fontFamily="Georgia, serif" fontWeight="600" fill={accent ? C.accent2 : C.t1}>{label}</text>
+      <text x={cx} y={y + 36} textAnchor="middle" fontSize="9.5" fill={C.t3} letterSpacing="0.5">{sub}</text>
+    </g>
+  );
+  const arrow = (x1, x2) => <line x1={x1} y1={y + h / 2} x2={x2} y2={y + h / 2} stroke={C.t3} strokeWidth="1.4" markerEnd="url(#ac-ah)" />;
+  return (
+    <svg viewBox="0 0 730 168" width="100%" style={{ display: 'block', minWidth: 560 }} role="img" aria-label="agentic ReAct 循环示意图">
+      <defs>
+        <marker id="ac-ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.t3} /></marker>
+        <marker id="ac-ah-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill={C.accent} /></marker>
+      </defs>
+      {/* 直线箭头：诉求→推理→工具→观察→回答 */}
+      {arrow(64 + w / 2, 220 - w / 2)}
+      {arrow(220 + w / 2, 376 - w / 2)}
+      {arrow(376 + w / 2, 532 - w / 2)}
+      {arrow(532 + w / 2, 668 - w / 2)}
+      {/* 审批 / 沙箱门：在「推理→调用工具」之间 */}
+      <g>
+        <line x1={298} y1={y + h / 2 - 10} x2={298} y2={y + h / 2 + 10} stroke={C.accent} strokeWidth="1.4" strokeDasharray="3 2" />
+        <text x={298} y={y - 6} textAnchor="middle" fontSize="10" fill={C.accent2}>审批 · 沙箱</text>
+      </g>
+      {/* 回环箭头：观察 → 推理（继续循环） */}
+      <path d={`M532,${y} C532,28 220,28 220,${y - 2}`} fill="none" stroke={C.accent} strokeWidth="1.5" strokeDasharray="4 3" markerEnd="url(#ac-ah-a)" />
+      <text x={376} y={22} textAnchor="middle" fontSize="11" fill={C.accent2}>继续循环（还需要更多信息 / 下一步动作）</text>
+      {/* 完成标注：观察 → 回答 */}
+      <text x={600} y={y + h + 20} textAnchor="middle" fontSize="10" fill={C.t2}>满足后才结束</text>
+      {boxes.map((b) => <Box key={b.label} {...b} />)}
+    </svg>
+  );
+}
+
 /* ============================ 调研对比面板 ============================ */
 function ResearchPanel() {
   return (
@@ -464,6 +509,9 @@ function ResearchPanel() {
           </tbody>
         </table>
       </div>
+
+      <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">agentic 循环长什么样</h2><span className="ac-sub">ReAct：推理 → 调工具 → 观察 → 再推理，满足后才回答</span></div>
+      <div className="ac-diagram"><LoopDiagram /></div>
 
       <div className="ac-sechead" style={{ marginTop: 26 }}><h2 className="ac-h3">③ 共性设计模式</h2><span className="ac-sub">跨产品反复出现 · 也是上面 demo 复刻的对象</span></div>
       <div className="ac-patterns">
@@ -518,6 +566,9 @@ const PAGE_CSS = `
 .ac-srcline{margin-top:13px;padding-top:11px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--t3);}
 .ac-srcline a,.ac-sources a{color:var(--accent-2);text-decoration:none;}
 .ac-srcline a:hover,.ac-sources a:hover{text-decoration:underline;}
+
+/* agentic 循环示意 */
+.ac-diagram{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);padding:14px 16px;}
 
 /* 速查矩阵 */
 .ac-matrixwrap{overflow-x:auto;border:1px solid var(--bd);border-radius:14px;background:var(--surface);}
