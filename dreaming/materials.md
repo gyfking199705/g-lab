@@ -288,9 +288,16 @@
 - 重点: 纯逻辑 prerequisitesOf/unlocksOf/curesOf；Practices 卡片详情加『关系』块：前置(requires)与解锁(被依赖)范式 chip 点击就地搜索、对治反模式 chip 跳反模式页；DevxLab 传 onGotoAntipatterns；单测 22→23 全过
 - 解决的问题: 范式卡片彼此孤立——依赖图与反模式数据已有却没在卡片层暴露，连成关系网才能顺着'前置→解锁→对治'探索
 
-## M-37 · 2026-06-20 · swarm 结论可导出（落地 P-12）
+## M-37 · 2026-06-20 · muse-ui v0.6：Sketchy + Sparkles
+- 作者: claude
+- 提交: 3a729d2
+- 子项目: muse-ui
+- 重点: 手绘风边框 Sketchy（mulberry32+roughRectPath，免测量）；星点 Sparkles（makeSparkles）。
+- 解决的问题: 补生成式装饰两件套，确定性种子随机纯函数化、可测、不闪烁。
+
+## M-38 · 2026-06-20 · swarm 结论可导出（落地 P-12）
 - 作者: claude
 - 提交: d25840f
 - 子项目: swarm
-- 重点: core/export.js jobToMarkdown（纯函数：标题/元信息/结论/逐角色过程/署名，结论自带标题则不重复外套）+exportFilename；App 结论区加 复制结论/复制Markdown/下载.md（剪贴板+Blob，含降级）；新增 export.test.js，46 单测全绿；重打包
+- 重点: core/export.js jobToMarkdown（纯函数：标题/元信息/结论/逐角色过程/署名）+exportFilename；App 结论区加 复制结论/复制Markdown/下载.md（剪贴板+Blob，含降级）；46 单测全绿；重打包
 - 解决的问题: 结论只能看不能带走——补上一键复制/下载 Markdown
