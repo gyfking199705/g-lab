@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CLIS, MATRIX, PATTERNS, SOURCES } from './notes.js';
-import { matrixToMarkdown } from './engine.js';
+import { matrixToMarkdown, researchReportMarkdown } from './engine.js';
 
 test('CLIS 结构完整且来源下标有效', () => {
   assert.ok(CLIS.length >= 4);
@@ -47,6 +47,19 @@ test('matrixToMarkdown 生成合法表格', () => {
   // 每行列数一致（| 数 = 列数 + 2）
   const pipes = (lines[0].match(/\|/g) || []).length;
   for (const l of lines.slice(2)) assert.equal((l.match(/\|/g) || []).length, pipes);
+});
+
+test('researchReportMarkdown 含各节与全部条目', () => {
+  const md = researchReportMarkdown(CLIS, MATRIX, PATTERNS, SOURCES);
+  assert.match(md, /^# Agent CLI 交互研究/);
+  assert.ok(md.includes('## 速查矩阵'));
+  assert.ok(md.includes('| 维度 |'));
+  assert.ok(md.includes('## 各家要点'));
+  for (const c of CLIS) assert.ok(md.includes(`### ${c.name}`), `缺 ${c.name}`);
+  assert.ok(md.includes('## 共性设计模式'));
+  for (const [t] of PATTERNS) assert.ok(md.includes(t), `缺模式 ${t}`);
+  assert.ok(md.includes('## 来源'));
+  for (const s of SOURCES) assert.ok(md.includes(s.url), `缺来源 ${s.url}`);
 });
 
 test('SOURCES 都有 label 与 https URL', () => {
