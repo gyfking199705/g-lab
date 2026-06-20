@@ -1,0 +1,125 @@
+/**
+ * 执行引擎 —— 把队列调度（queue.js）、编排（orchestrator.js）、模型调用（ai.js）串起来。
+ * ------------------------------------------------------------------
+ * 这是唯一「有副作用」的模块（异步 / 计时 / 网络）；调度判断仍复用 queue.js 的纯函数。
+ * 通过 onUpdate 回调把每一步状态推给 UI，实现「集群波次」的实时可视化。
+ *
+ * 两种执行模式自动切换：
+ *   - 配了 AI Key（isConfigured）→ 真实大模型逐个角色处理。
+ *   - 没配 Key → 离线模拟引擎（mockRun），同样完整跑通分工→协作→汇总。
+ */
+
+import {
+  createJob, loadTasks, runnableTasks, startTask, finishTask, failTask, hasPending, isDeadlocked,
+} from './queue.js';
+import {
+  decompose, planToSpecs, buildPlanMessages, parsePlan,
+  buildAgentMessages, mockRun,
+} from './orchestrator.js';
+import { isConfigured, callChat } from './ai.js';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * 跑完一个需求的完整多智能体协作流程。
+ * @param {object} o
+ * @param {string} o.requirement   用户需求
+ * @param {object} o.config        AI 配置（BYOK），未配置则走离线模拟
+ * @param {(job)=>void} o.onUpdate 每次状态变化的回调（传入最新 job 快照）
+ * @param {number} [o.concurrency] 集群并发上限（同一波次最多同时跑几个 agent）
+ * @param {number} [o.stepDelay]   每步之间的演示延时（离线模式让过程可见）
+ * @param {AbortSignal} [o.signal]
+ * @returns {Promise<object>} 最终 job
+ */
+export async function runJob({ requirement, config, onUpdate = () => {}, concurrency = 2, stepDelay = 500, signal }) {
+  let job = createJob(requirement);
+  const useLLM = isConfigured(config);
+
+  // 1) 规划阶段：协调者拆解需求
+  job = { ...job, status: 'planning' };
+  onUpdate(job);
+  await sleep(stepDelay);
+
+  let plan;
+  if (useLLM) {
+    try {
+      const { system, user } = buildPlanMessages(requirement);
+      const text = await callChat({ config, system, user, maxTokens: 1200, signal });
+      plan = parsePlan(text, requirement);
+    } catch (e) {
+      plan = decompose(requirement); // 规划失败回落离线拆解
+    }
+  } else {
+    plan = decompose(requirement);
+  }
+
+  let i = 0;
+  const specs = planToSpecs(plan, () => `t${job.id}_${i++}`);
+  job = loadTasks(job, specs);
+  onUpdate(job);
+
+  // 2) 调度循环：每轮取出可并行的任务（集群波次），并发执行
+  while (hasPending(job.tasks)) {
+    if (signal?.aborted) throw new Error('已取消');
+    const ready = runnableTasks(job.tasks).slice(0, concurrency);
+    if (ready.length === 0) {
+      if (isDeadlocked(job.tasks)) {
+        job = { ...job, status: 'failed', error: '任务依赖无法满足（可能存在依赖环或上游失败）' };
+        onUpdate(job);
+        return job;
+      }
+      await sleep(50);
+      continue;
+    }
+
+    // 标记本波次为 running
+    ready.forEach((t) => {
+      job = { ...job, tasks: startTask(job.tasks, t.id) };
+    });
+    if (ready.some((t) => t.role === 'synthesizer')) job = { ...job, status: 'synthesizing' };
+    onUpdate(job);
+    await sleep(stepDelay);
+
+    // 并发执行本波次
+    const results = await Promise.all(
+      ready.map(async (t) => {
+        try {
+          const output = await runTask(t, job, { useLLM, config, signal });
+          return { id: t.id, output };
+        } catch (e) {
+          return { id: t.id, error: e?.message || String(e) };
+        }
+      }),
+    );
+    results.forEach((r) => {
+      job = r.error
+        ? { ...job, tasks: failTask(job.tasks, r.id, r.error) }
+        : { ...job, tasks: finishTask(job.tasks, r.id, r.output) };
+    });
+    onUpdate(job);
+  }
+
+  // 3) 收尾：取汇总者产出作为最终结论
+  const synth = job.tasks.find((t) => t.role === 'synthesizer' && t.status === 'done');
+  job = {
+    ...job,
+    conclusion: synth ? synth.output : null,
+    status: job.tasks.some((t) => t.status === 'failed') && !synth ? 'failed' : 'done',
+  };
+  onUpdate(job);
+  return job;
+}
+
+/** 执行单个子任务：LLM 模式调模型，否则离线模拟。 */
+async function runTask(task, job, { useLLM, config, signal }) {
+  if (useLLM) {
+    if (task.role === 'synthesizer') {
+      const { buildSynthesisMessages } = await import('./orchestrator.js');
+      const { system, user } = buildSynthesisMessages(job);
+      return callChat({ config, system, user, maxTokens: 1500, signal });
+    }
+    const { system, user } = buildAgentMessages(task, job);
+    return callChat({ config, system, user, maxTokens: 1200, signal });
+  }
+  return mockRun(task, job);
+}

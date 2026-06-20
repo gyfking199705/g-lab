@@ -8,6 +8,7 @@
 mini-project lives under `projects/<name>/`.
 - `projects/planner/` — Personal Growth Planner (multi-module single-page app)
 - `projects/popcorn-ui/` — zero-dependency React creative-interaction component library
+- `projects/swarm/` — multi-agent collaboration workspace prototype (requirement queue → role division → conclusion) + industry survey
 
 ## Must follow
 1. **Code goes inside a sub-project dir** `projects/<name>/`. The repo root only holds the portal `index.html`, `README`, `DESIGN.md`, `AGENTS.md`, `CONTRIBUTING.md`, `assets/`, `.github/`. **Do not add app code to the root.**

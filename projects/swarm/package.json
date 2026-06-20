@@ -1,0 +1,12 @@
+{
+  "name": "swarm",
+  "version": "0.1.0",
+  "description": "🐝 多智能体协作工作区：需求进队列 → 多智能体分工 → 给出结论（集群模式原型 + 业界调研）。",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.mjs"
+  },
+  "license": "MIT"
+}

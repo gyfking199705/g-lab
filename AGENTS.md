@@ -7,6 +7,7 @@
 `g-lab` 是**伞形 monorepo**：根目录是一个静态门户首页，每个独立小项目放在 `projects/<name>/` 下。
 - `projects/planner/` — 个人成长规划系统（多模块单页应用）
 - `projects/popcorn-ui/` — 零依赖 React 创意交互组件库
+- `projects/swarm/` — 多智能体协作工作区原型（需求队列→多角色分工→结论）+ 业界调研
 
 ## 必须遵守
 1. **代码进子项目目录**：所有应用代码放 `projects/<name>/` 内；根目录只放门户 `index.html`、`README`、`DESIGN.md`、`CONTRIBUTING.md`、`assets/`、`.github/`。**不要往根目录加应用代码。**
