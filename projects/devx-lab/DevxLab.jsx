@@ -11,12 +11,14 @@ import Practices from './Practices.jsx';
 import Frameworks from './Frameworks.jsx';
 import Assessment from './Assessment.jsx';
 import Roadmap from './Roadmap.jsx';
+import Profile from './Profile.jsx';
 
 const TABS = [
   { id: 'practices', name: '提效范式库' },
   { id: 'frameworks', name: '业界框架' },
   { id: 'assess', name: 'DORA 自评' },
   { id: 'roadmap', name: '落地路线' },
+  { id: 'profile', name: '团队画像' },
 ];
 
 export default function DevxLab() {
@@ -157,6 +159,7 @@ export default function DevxLab() {
           onGotoAssess={() => setTab('assess')}
         />
       )}
+      {tab === 'profile' && <Profile bands={bands} statuses={statuses} />}
 
       <div className="dx-data">
         <span className="dx-data-h">我的数据（收藏 / 采纳状态 / 自评）</span>

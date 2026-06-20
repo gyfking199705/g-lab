@@ -124,6 +124,67 @@ export function frameworkCoverage(practices, statuses = {}) {
   });
 }
 
+/**
+ * 能力画像：按类别统计落地率，供雷达图使用（与 CATEGORIES 同序）。
+ * @returns {Array<{id,name,icon,total,done,doing,donePct,activePct}>}
+ *   donePct = 已落地占比；activePct = (已落地+进行中) 占比，均 0..100。
+ */
+export function categoryRadar(practices = PRACTICES, statuses = {}) {
+  return CATEGORIES.map((c) => {
+    const items = (practices || []).filter((p) => p.category === c.id);
+    const total = items.length;
+    const done = items.filter((p) => statusOf(statuses, p.id) === 'done').length;
+    const doing = items.filter((p) => statusOf(statuses, p.id) === 'doing').length;
+    return {
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      total,
+      done,
+      doing,
+      donePct: total ? Math.round((done / total) * 100) : 0,
+      activePct: total ? Math.round(((done + doing) / total) * 100) : 0,
+    };
+  });
+}
+
+/**
+ * 一键《团队研发提效报告》：聚合 DORA 评级 + 采纳总览 + 能力画像 + 框架覆盖度 + 优先处方，
+ * 输出可粘贴/存档的 Markdown（贴文档、分享给管理层）。
+ */
+export function teamReportMarkdown({ bands = {}, statuses = {}, practices = PRACTICES } = {}) {
+  const dora = classifyDora(bands);
+  const adopt = adoptionStats(practices, statuses);
+  const radar = categoryRadar(practices, statuses);
+  const cov = frameworkCoverage(practices, statuses);
+  const rx = prescribe(bands, practices, statuses);
+  const L = [];
+  L.push('# 团队研发提效报告', '', `_生成于 ${new Date().toISOString().slice(0, 10)} · 数据来自本地 devx-lab_`, '');
+
+  L.push('## 一、DORA 自评', '', `综合评级：**${dora.level.name} · ${dora.level.cn}**（${dora.score}/100）`, '');
+  L.push('| 指标 | 等级 |', '| --- | --- |');
+  for (const pm of dora.perMetric) L.push(`| ${pm.name} | ${pm.level.name} |`);
+
+  L.push('', '## 二、范式采纳总览', '', `共 ${adopt.total} 条 · 已落地 ${adopt.done} · 进行中 ${adopt.doing} · 落地率 ${adopt.percent}%`, '');
+
+  L.push('## 三、能力画像（按类别落地率）', '', '| 类别 | 已落地/总数 | 落地率 |', '| --- | --- | --- |');
+  for (const r of radar) L.push(`| ${r.icon} ${r.name} | ${r.done}/${r.total} | ${r.donePct}% |`);
+
+  L.push('', '## 四、框架覆盖度', '', '| 框架 | 对齐范式 | 已落地 |', '| --- | --- | --- |');
+  for (const c of cov) L.push(`| ${c.name} | ${c.total} | ${c.done} |`);
+
+  if (rx.hasWeak) {
+    L.push('', '## 五、优先处方（针对薄弱指标）', '');
+    for (const it of rx.items) {
+      const names = it.practices.slice(0, 3).map((p) => p.title).join('、') || '（相关范式已全部落地）';
+      L.push(`- **${it.name}**（${it.level.name}）：${names}`);
+    }
+  }
+
+  L.push('', '> 口径：DORA State of DevOps；本报告仅用于团队自我对标与改进规划，非个人考核。');
+  return L.join('\n');
+}
+
 // ── 数据导出 / 导入（团队备份与共享，仅本地） ────────────────────────
 
 export const EXPORT_VERSION = 1;

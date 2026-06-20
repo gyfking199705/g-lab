@@ -18,6 +18,8 @@ import {
   parseImport,
   prescribe,
   topoOrder,
+  categoryRadar,
+  teamReportMarkdown,
 } from './calc.js';
 import { PRACTICES, CATEGORIES, FRAMEWORKS } from './data.js';
 
@@ -249,6 +251,41 @@ test('topoOrder: 前置先于依赖、无环、波内按性价比、缺依赖容
   ]);
   assert.equal(cyc.hasCycle, true);
   assert.equal(cyc.waves.flat().length, 2);
+});
+
+test('categoryRadar: 与 CATEGORIES 同序、占比正确、总数守恒', () => {
+  const r = categoryRadar(PRACTICES, {});
+  assert.equal(r.length, CATEGORIES.length);
+  assert.equal(r[0].id, CATEGORIES[0].id);
+  assert.equal(r.reduce((s, c) => s + c.total, 0), PRACTICES.length);
+  for (const c of r) {
+    assert.equal(c.donePct, 0); // 无状态
+    assert.ok(c.activePct >= 0 && c.activePct <= 100);
+    assert.ok(c.icon && c.name);
+  }
+  // 把某 ai 范式标 done → ai 类 donePct>0 且 >= 其它为 0 的类
+  const aiP = PRACTICES.find((p) => p.category === 'ai');
+  const r2 = categoryRadar(PRACTICES, { [aiP.id]: 'done' });
+  const ai = r2.find((c) => c.id === 'ai');
+  assert.ok(ai.done === 1 && ai.donePct > 0);
+  // 进行中计入 activePct 但不计 donePct
+  const r3 = categoryRadar(PRACTICES, { [aiP.id]: 'doing' });
+  const ai3 = r3.find((c) => c.id === 'ai');
+  assert.equal(ai3.done, 0);
+  assert.ok(ai3.activePct > 0);
+});
+
+test('teamReportMarkdown: 含五节标题与评级', () => {
+  const md = teamReportMarkdown({ bands: { deploy: 0, lead: 0, cfr: 3, mttr: 2 }, statuses: { cicd: 'done' } });
+  assert.match(md, /# 团队研发提效报告/);
+  assert.match(md, /## 一、DORA 自评/);
+  assert.match(md, /## 二、范式采纳总览/);
+  assert.match(md, /## 三、能力画像/);
+  assert.match(md, /## 四、框架覆盖度/);
+  assert.match(md, /## 五、优先处方/); // 有弱项
+  // 全 Elite 无第五节
+  const elite = teamReportMarkdown({ bands: { deploy: 0, lead: 0, cfr: 0, mttr: 0 } });
+  assert.doesNotMatch(elite, /## 五、优先处方/);
 });
 
 test('doraMarkdown: 含评级、四指标行与口径说明', () => {
