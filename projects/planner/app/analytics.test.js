@@ -2,8 +2,34 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ledgerMonthly, ledgerProjMonthEnd, habitsCompletionSeries, papersDailyDone,
-  buildAnalytics, hasBoard,
+  buildAnalytics, hasBoard, todayDigest,
 } from './analytics.js';
+
+test('todayDigest 跨模块今日聚合', () => {
+  const T = '2026-06-20';
+  const data = {
+    'habits-planner': { habits: [{ id: 'h1', type: 'check' }], checkins: { h1: { '2026-06-20': 1 } } }, // 1/1
+    'schedule-planner': {
+      items: [
+        { id: 's1', date: '2026-06-20', done: true },
+        { id: 's2', date: '2026-06-20', done: false },
+        { id: 's3', date: '2026-01-01', done: false }, // 逾期
+      ],
+    },
+  };
+  const get = (k) => (k in data ? data[k] : null);
+  const d = todayDigest(get, T);
+  assert.equal(d.rows.length, 2);
+  assert.equal(d.done, 2); // 习惯1 + 日程1
+  assert.equal(d.due, 4); // 习惯1 + 日程(2+逾期1)
+  assert.equal(d.remaining, 2);
+  assert.equal(d.pct, 50);
+  assert.equal(d.rows.find((r) => r.id === 'schedule').overdue, 1);
+});
+
+test('todayDigest 空数据', () => {
+  assert.deepEqual(todayDigest(() => null, '2026-06-20'), { rows: [], due: 0, done: 0, remaining: 0, pct: 0 });
+});
 
 test('ledgerMonthly 近 n 月收支', () => {
   const E = [
