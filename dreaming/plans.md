@@ -160,3 +160,46 @@
   2. App 结论区加『复制结论』『复制 Markdown』『下载 .md』(剪贴板 + Blob 下载)
   3. 补 jobToMarkdown/exportFilename 单测；重打包
 - 验收: node --test 全绿；离线跑完一单可复制结论、下载完整 Markdown
+
+## P-13 · muse-ui 更多落地到 planner（标题/欢迎语）
+- 状态: active
+- 作者: claude
+- 来源脑爆: D-5
+- 可行性: 复用路径已验证(#47)，GradientText/Typewriter 零交互风险；只动对应 planner 模块并按规则只提交该 bundle，范围小、可回滚。
+- 步骤:
+  1. 挑 2~3 个 planner 模块标题改用 <GradientText>
+  2. 在某处欢迎语/空状态用 <Typewriter> 多句循环
+  3. 重建并只提交受影响的 dist 与其 index.html ?v=，其余还原
+- 验收: 对应模块标题/欢迎语生效，muse-/模块前缀无冲突，仅相关 bundle 变化，SSR 正常
+
+## P-14 · muse-ui 命令系统化：useCommands 注册中心 + 嵌套子命令
+- 状态: proposed
+- 作者: claude
+- 来源脑爆: D-5
+- 可行性: CommandPalette 已有分组/最近/高亮；注册中心是纯函数 store + hook，子命令是渲染层栈，依赖具备、风险低。
+- 步骤:
+  1. 纯函数 command store（register/unregister/list/resolve）+ 单测
+  2. useCommands hook；CommandPalette 支持 children 子命令 + 面包屑 + Esc 返回
+  3. 画廊演示动态注册与子命令
+- 验收: 可进入/返回子命令、可动态增删命令、node --test 覆盖、SSR 正常
+
+## P-15 · StickyCanvas 白板增强：连线 + 导出 + 持久化
+- 状态: proposed
+- 作者: claude
+- 来源脑爆: D-5
+- 可行性: 已有 StickyCanvas + board.js；连线=两贴中心 SVG 路径(纯几何)，导出=序列化，持久化=可选 localStorage，范围可控。
+- 步骤:
+  1. board.js 加 connectorPath(a,b) 纯函数 + 测
+  2. 支持便利贴间连线（拖连接柄）与删除连线
+  3. 导出 JSON 按钮 + 可选 storageKey 持久化
+- 验收: 可连线/删线、导出合法 JSON、带 storageKey 刷新保留、几何有测试
+
+## P-16 · muse-ui playground 文档站 + 发 npm 准备
+- 状态: proposed
+- 作者: claude
+- 来源脑爆: D-5
+- 可行性: 库已 ESM+CJS+types 就绪；playground 在画廊上加可调 props 与代码片段即可；npm publish 由用户执行，先把可发布性与文档做扎实。
+- 步骤:
+  1. 画廊每区块加「可调 props 控件 + 实时代码片段 + 一键复制」
+  2. README/独立页补发布指南；校验 npm pack 内容(dist+index.d.ts+README)
+- 验收: playground 可调 props 实时预览并复制代码；npm pack 产物正确完整
