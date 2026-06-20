@@ -24,6 +24,7 @@ import {
   financialHealth,
 } from './calc.js';
 import { HOLDING_KINDS, kindMeta, buildPriceCtx, holdingsValue } from '../holdings/calc.js';
+import { dcaStats, dcaProgress, buyGrams, fmtYuan, CADENCE_LABEL } from './goldDca.js';
 import { fetchQuotes } from '../stocks/api.js';
 import { fetchFundNavs } from '../funds/api.js';
 import { simulate, VOL_PRESETS } from './montecarlo.js';
@@ -63,6 +64,8 @@ export const DEFAULT_STATE = {
   netWorth: { accounts: DEFAULT_ACCOUNTS, snapshots: [] },
   // 积存金持仓（克）：按首页「行情」抓取的实时金价自动折算，计入净资产
   goldGrams: 0,
+  // 黄金定投：计划 + 每笔买入记录（分批接刀，用均价对抗择时）
+  goldDca: { plan: { perAmount: 1000, cadence: 'weekly', count: 0, startDate: '' }, records: [] },
 };
 
 function emptySpecials() {
@@ -234,6 +237,7 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
       <div className="sp-tabs">
         <button className={`sp-tab ${tab === 'plan' ? 'active' : ''}`} onClick={() => setTab('plan')}>测算</button>
         <button className={`sp-tab ${tab === 'networth' ? 'active' : ''}`} onClick={() => setTab('networth')}>净资产</button>
+        <button className={`sp-tab ${tab === 'golddca' ? 'active' : ''}`} onClick={() => setTab('golddca')}>黄金定投</button>
         <button className={`sp-tab ${tab === 'health' ? 'active' : ''}`} onClick={() => setTab('health')}>体检</button>
         <button className={`sp-tab ${tab === 'mc' ? 'active' : ''}`} onClick={() => setTab('mc')}>压力测试</button>
       </div>
@@ -434,6 +438,7 @@ export default function SavingsPlanner({ initialState, onChange, storageKey = 's
       )}
 
       {tab === 'networth' && <NetWorthTab netWorth={state.netWorth} setNW={setNW} holdings={state.holdings || []} onHoldings={(list) => update(['holdings'], list)} priceCtx={priceCtx} onRefreshHoldings={refreshHoldings} holdBusy={holdBusy} />}
+      {tab === 'golddca' && <GoldDcaTab dca={state.goldDca || { plan: {}, records: [] }} onChange={(v) => update(['goldDca'], v)} goldPrice={priceCtx.goldPrice || 0} />}
       {tab === 'health' && <HealthTab netWorth={state.netWorth} budget={budget} />}
       {tab === 'mc' && <MonteCarloTab forecast={state.forecast} budget={budget} investment={investment} />}
     </div>
@@ -965,6 +970,109 @@ function NetWorthChart({ series }) {
   );
 }
 
+/* ============================ 黄金定投助手 ============================ */
+/* 分批接刀，用「持仓均价 vs 现价」对抗择时：记每笔买入，算累计/均价/浮盈亏 + 计划进度。 */
+function GoldDcaTab({ dca, onChange, goldPrice }) {
+  const plan = dca.plan || {};
+  const records = dca.records || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const stats = useMemo(() => dcaStats(records, goldPrice), [records, goldPrice]);
+  const prog = useMemo(() => dcaProgress(plan, records, today), [plan, records, today]);
+
+  const setPlan = (patch) => onChange({ ...dca, plan: { ...plan, ...patch } });
+  const addBuy = () => {
+    const amount = Number(plan.perAmount) || 1000;
+    const price = goldPrice > 0 ? Math.round(goldPrice * 100) / 100 : 0;
+    onChange({ ...dca, records: [{ id: uid('buy'), date: today, amount, pricePerGram: price }, ...records] });
+  };
+  const patchBuy = (id, patch) => onChange({ ...dca, records: records.map((r) => (r.id === id ? { ...r, ...patch } : r)) });
+  const delBuy = (id) => onChange({ ...dca, records: records.filter((r) => r.id !== id) });
+
+  const sorted = [...records].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  return (
+    <div className="sp-nw">
+      <div className="sp-kpis sp-kpis-4">
+        <Kpi label="累计持有" value={`${stats.totalGrams.toFixed(2)} 克`} tone="hero" />
+        <Kpi label="持仓均价" value={stats.avgCost > 0 ? `${fmtYuan(stats.avgCost)} 元/克` : '—'} tone="calc" />
+        <Kpi label="累计投入" value={formatMoney(stats.totalCost)} tone="calc" />
+        <Kpi
+          label="浮动盈亏"
+          value={goldPrice > 0 ? `${stats.pnl >= 0 ? '▲' : '▼'} ${formatMoney(Math.abs(stats.pnl))}` : '需金价'}
+          tone={goldPrice <= 0 ? 'calc' : stats.pnl >= 0 ? 'good' : 'bad'}
+        />
+      </div>
+
+      {/* 此刻该不该补：均价 vs 现价 */}
+      <Section title="此刻定投信号" badge="结果">
+        {goldPrice <= 0 ? (
+          <p className="sp-note">去首页「行情」刷新一次金价，这里会用<b>持仓均价 vs 实时金价</b>告诉你此刻加仓是拉低还是抬高均价。</p>
+        ) : stats.totalGrams === 0 ? (
+          <p className="sp-note">现价 <b>{fmtYuan(goldPrice)}</b> 元/克。还没有买入记录——按下面计划开始第一笔，定投赢在「不猜底、摊均价」。</p>
+        ) : (
+          <div className={`sp-dca-signal ${stats.belowAvg ? 'good' : 'warn'}`}>
+            <div className="sp-dca-sig-h">{stats.belowAvg ? '🟢 现价低于你的持仓均价' : '🟡 现价高于你的持仓均价'}</div>
+            <div className="sp-dca-sig-b">
+              现价 <b>{fmtYuan(goldPrice)}</b> · 你的均价 <b>{fmtYuan(stats.avgCost)}</b> 元/克
+              （{stats.belowAvg ? '此刻加仓会拉低均价，正是定投发力处' : '此刻加仓会略抬高均价；定投的纪律是照常买、不追高也不停手'}）。
+              浮动 {stats.pnl >= 0 ? '盈' : '亏'} <b className={stats.pnl >= 0 ? 'pos' : 'neg'}>{formatMoney(Math.abs(stats.pnl))}（{stats.pnlPct >= 0 ? '+' : ''}{stats.pnlPct.toFixed(1)}%）</b>
+            </div>
+          </div>
+        )}
+      </Section>
+
+      {/* 计划设置 + 进度 */}
+      <Section title="定投计划" badge="输入">
+        <div className="sp-dca-plan">
+          <NumberField label="每期金额" value={Number(plan.perAmount) || 0} onChange={(v) => setPlan({ perAmount: Math.max(0, v) })} unit="元" step={100} />
+          <label className="sp-dca-field">
+            <span>周期</span>
+            <select value={plan.cadence || 'weekly'} onChange={(e) => setPlan({ cadence: e.target.value })}>
+              {Object.keys(CADENCE_LABEL).map((k) => <option key={k} value={k}>{CADENCE_LABEL[k]}</option>)}
+            </select>
+          </label>
+          <NumberField label="总期数(0=不限)" value={Number(plan.count) || 0} onChange={(v) => setPlan({ count: Math.max(0, Math.round(v)) })} unit="期" step={1} />
+        </div>
+        {prog.total > 0 && (
+          <div className="sp-dca-prog">
+            <div className="sp-dca-prog-bar"><i style={{ width: prog.investedPct + '%' }} /></div>
+            <div className="sp-dca-prog-sub">已投 {prog.done}/{prog.total} 期 · {formatMoney(prog.invested)} / {formatMoney(prog.plannedTotal)}（{prog.investedPct}%）</div>
+          </div>
+        )}
+        <div className={`sp-dca-next ${prog.due ? 'due' : ''}`}>
+          {prog.nextDate
+            ? (prog.due
+                ? <>📌 <b>该买了</b>：计划日 {prog.nextDate} 已到{prog.daysToNext < 0 ? `（晚了 ${-prog.daysToNext} 天）` : ''}。</>
+                : <>下一期：<b>{prog.nextDate}</b>{prog.daysToNext != null ? `（还有 ${prog.daysToNext} 天）` : ''}。</>)
+            : <>计划已完成 {prog.done} 期 🎉</>}
+          <button className="sp-dca-buybtn" onClick={addBuy}>＋ 记一笔买入（按现价 {goldPrice > 0 ? fmtYuan(goldPrice) : '—'}）</button>
+        </div>
+      </Section>
+
+      {/* 买入流水 */}
+      <Section title="买入记录" badge="结果">
+        {records.length === 0 ? (
+          <p className="sp-note">还没有买入。点上面「记一笔买入」开始——每笔填金额和当时单价，自动算克数与均价。</p>
+        ) : (
+          <div className="sp-dca-list">
+            <div className="sp-dca-row sp-dca-head"><span>日期</span><span>金额(元)</span><span>单价(元/克)</span><span>克数</span><span></span></div>
+            {sorted.map((r) => (
+              <div className="sp-dca-row" key={r.id}>
+                <input type="date" value={r.date || ''} onChange={(e) => patchBuy(r.id, { date: e.target.value })} />
+                <input type="number" inputMode="decimal" value={r.amount || ''} onChange={(e) => patchBuy(r.id, { amount: Number(e.target.value) || 0 })} />
+                <input type="number" inputMode="decimal" value={r.pricePerGram || ''} onChange={(e) => patchBuy(r.id, { pricePerGram: Number(e.target.value) || 0 })} />
+                <span className="sp-dca-g">{buyGrams(r).toFixed(3)} g</span>
+                <button className="sp-link sp-link-del" onClick={() => delBuy(r.id)}>删</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="sp-note" style={{ marginTop: 10 }}>提示：黄金是组合保险（建议占净资产 5–10%），不是生钱资产；定投是为了摊平成本、对抗择时焦虑，不是为了短期赚价差。</p>
+      </Section>
+    </div>
+  );
+}
+
 /* ============================ 财务体检 ============================ */
 function HealthTab({ netWorth, budget }) {
   const snaps = netWorth.snapshots || [];
@@ -1416,6 +1524,35 @@ const CSS = `
 
 /* ===== Tab ===== */
 .sp-tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin-bottom:16px;}
+.sp-dca-signal{border-radius:12px;padding:14px 16px;border:1px solid var(--bd);}
+.sp-dca-signal.good{background:var(--success-soft,#E8EFE9);border-color:#6E9079;}
+.sp-dca-signal.warn{background:#FBF3E6;border-color:#BE9356;}
+.sp-dca-sig-h{font-family:var(--serif);font-size:15px;font-weight:500;margin-bottom:5px;}
+.sp-dca-sig-b{font-size:12.5px;color:var(--t2);line-height:1.7;}
+.sp-dca-sig-b b{color:var(--t1);}
+.sp-dca-sig-b b.pos{color:#6E9079;}
+.sp-dca-sig-b b.neg{color:var(--danger,#BC6055);}
+.sp-dca-plan{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+.sp-dca-field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--t2);}
+.sp-dca-field select{border:1px solid var(--bd);background:var(--surface-2,#FBFAF6);border-radius:9px;padding:8px 10px;font-size:13.5px;font-family:var(--sans);color:var(--t1);min-width:110px;}
+.sp-dca-prog{margin-top:14px;}
+.sp-dca-prog-bar{height:8px;border-radius:99px;background:var(--surface-3,#F1EFE8);overflow:hidden;}
+.sp-dca-prog-bar i{display:block;height:100%;background:var(--accent);}
+.sp-dca-prog-sub{font-size:11.5px;color:var(--t3);margin-top:6px;font-variant-numeric:tabular-nums;}
+.sp-dca-next{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;padding:11px 14px;border-radius:10px;background:var(--surface-2,#FBFAF6);border:1px solid var(--bd);font-size:12.5px;color:var(--t2);}
+.sp-dca-next.due{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);}
+.sp-dca-next b{color:var(--t1);}
+.sp-dca-next.due b{color:var(--accent-2);}
+.sp-dca-buybtn{margin-left:auto;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:500;cursor:pointer;transition:.15s;font-family:var(--sans);}
+.sp-dca-buybtn:hover{background:var(--accent-2);}
+.sp-dca-list{display:flex;flex-direction:column;gap:4px;}
+.sp-dca-row{display:grid;grid-template-columns:1.3fr 1fr 1.1fr .8fr 36px;gap:8px;align-items:center;}
+.sp-dca-row input{border:1px solid var(--bd);background:var(--surface-2,#FBFAF6);border-radius:7px;padding:6px 8px;font-size:12.5px;font-family:var(--sans);color:var(--t1);width:100%;}
+.sp-dca-row input[type=number]{text-align:right;font-variant-numeric:tabular-nums;}
+.sp-dca-g{font-size:12.5px;color:var(--accent-2);font-variant-numeric:tabular-nums;text-align:right;font-family:var(--serif);}
+.sp-dca-head{font-size:10.5px;color:var(--t3);letter-spacing:.5px;padding:0 2px 2px;}
+.sp-dca-head span{text-align:right;}
+.sp-dca-head span:first-child{text-align:left;}
 .sp-tab{background:none;border:none;padding:9px 15px;font-size:13px;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:var(--sans);transition:.15s;}
 .sp-tab:hover{color:var(--t1);}
 .sp-tab.active{color:var(--accent-2);border-bottom-color:var(--accent);font-weight:600;}
