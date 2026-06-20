@@ -49,3 +49,45 @@ export function filterCommands(commands, query) {
   scored.sort((a, b) => b.s - a.s);
   return scored.map((x) => x.c);
 }
+
+/**
+ * 返回 query 在 text 中（子序列、贪心）命中的字符下标数组；
+ * 空 query → []；未全部命中 → null。用于高亮。
+ */
+export function fuzzyMatchIndices(query, text) {
+  const q = String(query || '').toLowerCase();
+  const t = String(text || '').toLowerCase();
+  if (!q) return [];
+  const idx = [];
+  let qi = 0;
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) {
+      idx.push(ti);
+      qi += 1;
+    }
+  }
+  return qi === q.length ? idx : null;
+}
+
+/** 按 group 字段把命令分组（保持首次出现顺序）；无 group 归到 fallback。 */
+export function groupCommands(items, fallback = '') {
+  const order = [];
+  const map = new Map();
+  for (const c of items || []) {
+    const g = c.group || fallback;
+    if (!map.has(g)) {
+      map.set(g, []);
+      order.push(g);
+    }
+    map.get(g).push(c);
+  }
+  return order.map((g) => ({ group: g, items: map.get(g) }));
+}
+
+/** 按 id 列表挑出命令（保持 id 顺序、跳过不存在）。用于「最近使用」。 */
+export function pickByIds(items, ids) {
+  const byId = new Map((items || []).map((c) => [c.id, c]));
+  const out = [];
+  for (const id of ids || []) if (byId.has(id)) out.push(byId.get(id));
+  return out;
+}

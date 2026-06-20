@@ -51,11 +51,11 @@ function Section({ title, tag, desc, children }) {
 }
 
 const DEMO_COMMANDS = (run) => [
-  { id: 'new', label: '新建任务', hint: '⌘N', keywords: 'add task create xinjian', onRun: () => run('新建任务') },
-  { id: 'search', label: '全局搜索', hint: '⌘F', keywords: 'find search sousuo', onRun: () => run('全局搜索') },
-  { id: 'theme', label: '切换深/浅色主题', hint: '', keywords: 'dark light theme zhuti', onRun: () => run('切换主题') },
-  { id: 'sync', label: '同步到云端', hint: '', keywords: 'cloud drive sync tongbu', onRun: () => run('同步到云端') },
-  { id: 'export', label: '导出数据', hint: '', keywords: 'backup json export daochu', onRun: () => run('导出数据') },
+  { id: 'new', label: '新建任务', hint: '⌘N', group: '操作', keywords: 'add task create xinjian', onRun: () => run('新建任务') },
+  { id: 'search', label: '全局搜索', hint: '⌘F', group: '操作', keywords: 'find search sousuo', onRun: () => run('全局搜索') },
+  { id: 'theme', label: '切换深/浅色主题', group: '偏好', keywords: 'dark light theme zhuti', onRun: () => run('切换主题') },
+  { id: 'sync', label: '同步到云端', group: '数据', keywords: 'cloud drive sync tongbu', onRun: () => run('同步到云端') },
+  { id: 'export', label: '导出数据', group: '数据', keywords: 'backup json export daochu', onRun: () => run('导出数据') },
 ];
 
 export default function Gallery() {
@@ -159,13 +159,13 @@ export default function Gallery() {
         </GradientText>
       </Section>
 
-      <Section title="打字机" tag="<Typewriter>" desc="文字逐字打出 + 闪烁光标；开启「减少动效」时直接显示完整文本。">
+      <Section title="打字机" tag="<Typewriter>" desc="单句或多句循环（打字 → 停留 → 退格 → 下一句）；尊重「减少动效」。">
         <div className="gx-card" style={{ fontSize: 18 }}>
-          <Typewriter text="一套任务，三种看法：日程 · 甘特 · 番茄。" cps={16} />
+          <Typewriter text={['一套任务，三种看法。', '日程 · 甘特 · 番茄。', '复制即用，零依赖。']} cps={14} hold={1} />
         </div>
       </Section>
 
-      <Section title="命令面板 ⌘K" tag="<CommandPalette>" desc="模糊搜索 + 方向键移动 + 回车执行 + Esc 关闭。非受控时自带 ⌘K/Ctrl+K 热键。">
+      <Section title="命令面板 ⌘K" tag="<CommandPalette>" desc="模糊搜索 + 命中高亮 + 分组 + 最近使用 + 方向键/回车/Esc。非受控时自带 ⌘K/Ctrl+K 热键。">
         <RippleButton onClick={() => setCmdOpen(true)}>打开命令面板</RippleButton>
         <span className="gx-kbd-note">
           或按 <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>K</kbd>

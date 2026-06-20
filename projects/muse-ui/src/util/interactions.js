@@ -133,3 +133,52 @@ export function scrambleText(target, revealed, charset = '!<>-_\\/[]{}=+*^?#', r
   }
   return out;
 }
+
+/**
+ * 打字机状态机（多句循环 + 退格）：给定经过秒数 t 与时序参数，
+ * 返回当前应显示文本、所在句子下标与阶段。纯函数、确定性，便于单测。
+ * 时序：每句 = 打字(len/cps) → 停留(hold) → 删除(len/delCps) → 间隔(gap)。
+ * @returns {{text:string, index:number, phase:'typing'|'hold'|'deleting'|'gap'|'done'}}
+ */
+export function typewriterState(texts, t, opts = {}) {
+  const cps = opts.cps || 22;
+  const delCps = opts.delCps || 40;
+  const hold = opts.hold == null ? 1.2 : opts.hold;
+  const gap = opts.gap == null ? 0.4 : opts.gap;
+  const loop = opts.loop !== false;
+  const list = (Array.isArray(texts) ? texts : [texts]).map((s) => String(s == null ? '' : s));
+  if (!list.length) return { text: '', index: 0, phase: 'done' };
+
+  const multi = loop || list.length > 1;
+  const seg = list.map((s) => ({
+    s,
+    type: s.length / cps,
+    hold,
+    del: multi ? s.length / delCps : 0,
+    gap: multi ? gap : 0,
+  }));
+  const total = seg.reduce((a, x) => a + x.type + x.hold + x.del + x.gap, 0);
+
+  let time = t < 0 ? 0 : t;
+  if (loop && total > 0) time %= total;
+
+  for (let i = 0; i < seg.length; i++) {
+    const g = seg[i];
+    if (time < g.type) {
+      const n = g.type > 0 ? Math.floor((time / g.type) * g.s.length) : g.s.length;
+      return { text: g.s.slice(0, Math.min(g.s.length, n)), index: i, phase: 'typing' };
+    }
+    time -= g.type;
+    if (time < g.hold) return { text: g.s, index: i, phase: 'hold' };
+    time -= g.hold;
+    if (time < g.del) {
+      const left = Math.ceil(g.s.length * (1 - time / g.del));
+      return { text: g.s.slice(0, left), index: i, phase: 'deleting' };
+    }
+    time -= g.del;
+    if (time < g.gap) return { text: '', index: i, phase: 'gap' };
+    time -= g.gap;
+  }
+  const last = list[list.length - 1];
+  return { text: last, index: list.length - 1, phase: 'done' };
+}

@@ -65,8 +65,8 @@ import { TiltCard, MagneticButton, CountUp } from 'muse-ui';
 | `<MeshGradient>` | `colors[]` `speed=0.05` |
 | `<CountUp>` | `value` `from=0` `duration=1.4` `decimals=0` `prefix` `suffix` `ease` |
 | `<GradientText>` | `colors[]` `angle=90` `speed=6` `animate=true` `as='span'` |
-| `<Typewriter>` | `text` `cps=22` `caret=true` |
-| `<CommandPalette>` | `commands[]` `open?` `onClose?` `hotkey=true` `placeholder` |
+| `<Typewriter>` | `text`(串/数组) `cps=22` `delCps=40` `hold` `gap` `loop` `caret` |
+| `<CommandPalette>` | `commands[]`(支持 `group`) `open?` `onClose?` `hotkey=true` `placeholder`（分组/最近/高亮） |
 | `<ScrambleText>` | `text` `duration=1.2` `charset` |
 | `<Marquee>` | `speed=60` `gap=40` |
 | `<ConfettiButton>` | `count=26` `as='button'` |
@@ -82,7 +82,7 @@ import { TiltCard, MagneticButton, CountUp } from 'muse-ui';
 ## 开发
 ```bash
 cd projects/muse-ui
-node --test                                          # 跑纯函数单测（27 例）
+node --test                                          # 跑纯函数单测（32 例）
 npm i --no-save esbuild react@18.3.1 react-dom@18.3.1
 node build.mjs   # 库 dist/index.js(ESM)+index.cjs(CJS) + 画廊 demo.js（并给 index.html 打 ?v= 戳）
 ```

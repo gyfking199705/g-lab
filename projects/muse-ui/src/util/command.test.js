@@ -1,6 +1,28 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fuzzyScore, filterCommands } from './command.js';
+import { fuzzyScore, filterCommands, fuzzyMatchIndices, groupCommands, pickByIds } from './command.js';
+
+test('fuzzyMatchIndices：命中下标 / 空 query / 未命中', () => {
+  assert.deepEqual(fuzzyMatchIndices('cd', 'Command'), [0, 6]); // command: c0 o1 m2 m3 a4 n5 d6 → 'c'@0,'d'@6
+  assert.deepEqual(fuzzyMatchIndices('', 'abc'), []);
+  assert.equal(fuzzyMatchIndices('xyz', 'abc'), null);
+});
+
+test('groupCommands：按 group 保持首现顺序、无 group 归 fallback', () => {
+  const g = groupCommands([
+    { id: '1', label: 'A', group: '文件' },
+    { id: '2', label: 'B' },
+    { id: '3', label: 'C', group: '文件' },
+    { id: '4', label: 'D', group: '编辑' },
+  ], '其他');
+  assert.deepEqual(g.map((x) => x.group), ['文件', '其他', '编辑']);
+  assert.deepEqual(g[0].items.map((c) => c.id), ['1', '3']);
+});
+
+test('pickByIds：按 id 顺序挑、跳过不存在', () => {
+  const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  assert.deepEqual(pickByIds(items, ['c', 'a', 'z']).map((x) => x.id), ['c', 'a']);
+});
 
 test('fuzzyScore：子序列命中 / 不命中 / 空 query', () => {
   assert.ok(fuzzyScore('cmd', 'Command') > 0);
