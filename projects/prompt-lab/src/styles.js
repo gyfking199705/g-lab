@@ -162,6 +162,27 @@ export const CSS = `
 .pl-batch-field input:focus{border-color:var(--accent);}
 .pl-batch-out{font-size:11.5px;max-height:200px;overflow:auto;margin-top:2px;}
 
+/* quality lint */
+.pl-lint{border:1px solid var(--bd);border-radius:12px;background:var(--surface);padding:14px;}
+.pl-lint-top{display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.pl-lint-grade{font-family:var(--serif);font-size:17px;font-weight:600;}
+.pl-lint-sub{color:var(--t2);font-size:12.5px;margin-top:2px;}
+.pl-lint-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.pl-lint-list li{display:flex;gap:9px;align-items:flex-start;}
+.pl-ck-mark{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;margin-top:1px;}
+.pl-ck-on .pl-ck-mark{background:rgba(110,144,121,.16);color:var(--ok);}
+.pl-ck-off .pl-ck-mark{background:rgba(190,147,86,.18);color:var(--warn);}
+.pl-ck-body{display:flex;flex-direction:column;gap:1px;}
+.pl-ck-label{font-size:13px;color:var(--t1);}
+.pl-ck-off .pl-ck-label{color:var(--t2);}
+.pl-ck-tip{font-size:12px;color:var(--t3);line-height:1.5;}
+.pl-lint-mini{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--t2);
+  border:1px solid var(--bd);border-radius:8px;padding:7px 11px;background:var(--surface-2);}
+.pl-lint-mini b{font-family:var(--serif);font-size:15px;}
+.pl-lint-bar{flex:1;height:5px;border-radius:3px;background:var(--fill);overflow:hidden;}
+.pl-lint-bar i{display:block;height:100%;border-radius:3px;transition:width .25s;}
+
 /* toast */
 .pl-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#33302A;color:#fff;
   font-size:13px;padding:9px 16px;border-radius:10px;z-index:100;display:flex;align-items:center;gap:7px;

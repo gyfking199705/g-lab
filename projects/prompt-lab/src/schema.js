@@ -211,6 +211,30 @@ export function tagCounts(prompts = []) {
   return [...map.entries()].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count);
 }
 
+/** 把一条 prompt 渲染成可分享的 Markdown（用于「复制为 Markdown」）。 */
+export function promptToMarkdown(p = {}) {
+  const lines = [];
+  lines.push(`# ${p.title || '未命名 Prompt'}`);
+  if (p.summary) lines.push('', `> ${p.summary}`);
+  const meta = [];
+  if (p.category) meta.push(`分类：${categoryLabel(p.category)}`);
+  if ((p.models || []).length) meta.push(`模型：${p.models.join(' / ')}`);
+  if ((p.techniques || []).length) meta.push(`技巧：${p.techniques.map(techniqueLabel).join(' / ')}`);
+  if (p.version) meta.push(`版本：${p.version}`);
+  if (meta.length) lines.push('', meta.join(' · '));
+  if ((p.tags || []).length) lines.push('', (p.tags || []).map((t) => `\`#${t}\``).join(' '));
+  if (p.system) lines.push('', '## System', '', '```text', p.system, '```');
+  lines.push('', '## Prompt', '', '```text', p.content || '', '```');
+  if (p.exampleInput || p.exampleOutput) {
+    lines.push('', '## 示例');
+    if (p.exampleInput) lines.push('', `**输入**：${p.exampleInput}`);
+    if (p.exampleOutput) lines.push('', `**输出**：${p.exampleOutput}`);
+  }
+  if (p.notes) lines.push('', '## 笔记', '', p.notes);
+  if (p.source) lines.push('', `_出处：${p.source}_`);
+  return lines.join('\n');
+}
+
 /** 可移植导出格式（带 schema 版本，便于他处导入/迁移）。 */
 export const EXPORT_FORMAT = 'prompt-lab/v1';
 

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Icon } from '../icons.jsx';
-import { CATEGORIES, TECHNIQUES, MODELS, extractVariables } from '../schema.js';
+import { CATEGORIES, TECHNIQUES, MODELS, extractVariables, normalizePrompt } from '../schema.js';
+import { lintPrompt } from '../lint.js';
+
+const TONE = { ok: 'var(--ok)', warn: 'var(--warn)', danger: 'var(--danger)' };
 
 const empty = {
   title: '',
@@ -32,6 +35,12 @@ export default function PromptEditor({ initial, onSave, onClose }) {
     });
 
   const vars = extractVariables(f.content);
+  const lint = lintPrompt(
+    normalizePrompt({
+      ...f,
+      tags: String(f.tags).split(/[,，]/).map((t) => t.trim()).filter(Boolean),
+    })
+  );
 
   const submit = () => {
     onSave({
@@ -164,7 +173,14 @@ export default function PromptEditor({ initial, onSave, onClose }) {
           </div>
         </div>
 
-        <div className="pl-foot">
+        <div className="pl-foot" style={{ flexWrap: 'wrap' }}>
+          <div className="pl-lint-mini" title={`通过 ${lint.passed}/${lint.total} 项业界最佳实践`} style={{ marginRight: 'auto' }}>
+            质量 <b style={{ color: TONE[lint.grade.tone] }}>{lint.score}</b>
+            <span className="pl-lint-bar">
+              <i style={{ width: `${lint.score}%`, background: TONE[lint.grade.tone] }} />
+            </span>
+            <span style={{ color: TONE[lint.grade.tone] }}>{lint.grade.label}</span>
+          </div>
           <button className="pl-btn" onClick={onClose}>取消</button>
           <button className="pl-btn pl-primary" onClick={submit} disabled={!f.title.trim() || !f.content.trim()}>
             <Icon.check width={15} height={15} /> {isEdit ? '保存' : '添加'}
