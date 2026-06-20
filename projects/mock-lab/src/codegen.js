@@ -190,6 +190,107 @@ export function pythonRespx(state) {
   return lines.join('\n');
 }
 
+// ───────────────────────── Python: pytest fixture（复用 g_mock）─────────────────────────
+
+/** 复用型 pytest fixture：放进 conftest.py，任意测试加 `mocked_api` 参数即可。 */
+export function pytestFixture(state) {
+  const s = withState(state);
+  const localSrc = s.mode === 'local' && s.source ? s.source : 'mocks/g-mock.json';
+  const remoteSrc = s.mode === 'remote' && s.source ? s.source : 'https://config.example.com/g-mock.json';
+  const primary = s.mode === 'remote' ? remoteSrc : localSrc;
+  return [
+    '# conftest.py — 复用型 mock fixture（依赖项目内的 adapters/g_mock.py）。',
+    '# 任意测试函数加上 `mocked_api` 参数即可自动按配置 mock，退出自动还原。',
+    'import os',
+    'import pytest',
+    'import g_mock',
+    '',
+    `MOCK_SOURCE = os.getenv("MOCK_SOURCE", ${pyStr(primary)})`,
+    '',
+    '',
+    '@pytest.fixture',
+    'def mocked_api():',
+    '    # 本地文件或 http(s):// 远端配置都行，靠 MOCK_SOURCE 切换，无需改测试代码。',
+    '    with g_mock.bind_responses(MOCK_SOURCE) as rsps:',
+    '        yield rsps',
+    '',
+    '',
+    '# ── 用法（写在你的 test_*.py 里）──',
+    '# def test_calls_external_api(mocked_api):',
+    '#     ...  # 调用被测代码；requests 请求会被拦截、按配置离线返回',
+    `#     assert mocked_api.call_count >= 0   # 也可对捕获的请求做断言`,
+  ].join('\n');
+}
+
+// ───────────────────────── Python: requests-mock ─────────────────────────
+
+export function pythonRequestsMock(state) {
+  const s = withState(state);
+  const lines = [
+    'import json',
+    'import requests_mock',
+    '',
+    '',
+    'def test_with_requests_mock():',
+    '    with requests_mock.Mocker() as m:',
+  ];
+  if (!s.routes.length) {
+    lines.push('        # 还没有定义路由，先在工坊里加几条。');
+    lines.push('        ...');
+    lines.push('        return');
+    return lines.join('\n');
+  }
+  for (const r of s.routes) {
+    const body = parseBody(r.body);
+    const url = fullUrl(s.baseUrl, r.path);
+    lines.push('        m.register_uri(');
+    lines.push(`            ${pyStr(r.method)},`);
+    lines.push(`            ${pyStr(url)},`);
+    if (body.kind === 'json') lines.push(`            json=${pyJsonLoads(body.text)},`);
+    else if (body.kind === 'text') lines.push(`            text=${pyStr(body.text)},`);
+    lines.push(`            status_code=${r.status},`);
+    lines.push(`            headers={"Content-Type": ${pyStr(contentTypeFor(body))}},`);
+    lines.push('        )');
+  }
+  lines.push('');
+  lines.push('        # 调用你的被测代码（requests 请求会被拦截、离线返回上面的响应）');
+  lines.push('        ...');
+  return lines.join('\n');
+}
+
+// ───────────────────────── VCR.py 磁带（JSON cassette，离线回放）─────────────────────────
+
+const HTTP_REASON = {
+  200: 'OK', 201: 'Created', 202: 'Accepted', 204: 'No Content',
+  301: 'Moved Permanently', 302: 'Found', 304: 'Not Modified',
+  400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not Found',
+  409: 'Conflict', 422: 'Unprocessable Entity', 429: 'Too Many Requests',
+  500: 'Internal Server Error', 502: 'Bad Gateway', 503: 'Service Unavailable',
+};
+
+/** 手写一盘 VCR.py JSON 磁带，可用 record_mode='none' 直接离线回放（无需先联网录制）。 */
+export function vcrCassette(state) {
+  const s = withState(state);
+  const interactions = s.routes.map((r) => {
+    const body = parseBody(r.body);
+    const text = body.kind === 'json' ? JSON.stringify(body.json) : (body.kind === 'text' ? body.text : '');
+    return {
+      request: {
+        method: r.method,
+        uri: fullUrl(s.baseUrl, r.path),
+        body: null,
+        headers: {},
+      },
+      response: {
+        status: { code: r.status, message: HTTP_REASON[r.status] || 'OK' },
+        headers: { 'Content-Type': [contentTypeFor(body)] },
+        body: { string: text },
+      },
+    };
+  });
+  return JSON.stringify({ version: 1, interactions }, null, 2);
+}
+
 // ───────────────────────── WireMock stub mappings ─────────────────────────
 
 export function wiremockMappings(state) {
@@ -255,6 +356,12 @@ export const GENERATORS = [
     hint: 'mock requests 的 HTTP 调用，离线、确定、可断言。' },
   { id: 'respx', label: 'Python · respx', lang: 'python', file: 'test_respx.py', gen: pythonRespx,
     hint: 'mock httpx（含 async），FastAPI/异步栈首选。' },
+  { id: 'pytest', label: 'Python · pytest fixture', lang: 'python', file: 'conftest.py', gen: pytestFixture,
+    hint: '复用型 fixture：放进 conftest.py，测试加 mocked_api 参数即用，本地/远端配置切换。' },
+  { id: 'requests-mock', label: 'Python · requests-mock', lang: 'python', file: 'test_requests_mock.py', gen: pythonRequestsMock,
+    hint: 'requests 的另一主流 mock 库，Mocker 上下文注册路由。' },
+  { id: 'vcr', label: 'VCR.py 磁带', lang: 'json', file: 'cassettes/g-mock.json', gen: vcrCassette,
+    hint: '手写 JSON 磁带，record_mode=\'none\' 直接离线回放，无需先联网录制。' },
   { id: 'wiremock', label: 'WireMock 映射', lang: 'json', file: 'wiremock/mappings.json', gen: wiremockMappings,
     hint: '独立 mock 服务的 stub 映射，可经 admin API 远端下发。' },
   { id: 'openapi', label: 'OpenAPI 3.1', lang: 'json', file: 'openapi.json', gen: openapiSpec,

@@ -234,7 +234,7 @@ export default function App() {
         <div className="mkl-statline">
           <span><b>{stats.total}</b> 条沉淀</span>
           <span><b>{CATEGORIES.length}</b> 大类</span>
-          <span><b>6</b> 种产物格式</span>
+          <span><b>9</b> 种产物格式</span>
           <span><b>{stats.byMaturity.established || 0}</b> 项已成熟</span>
         </div>
       </header>
