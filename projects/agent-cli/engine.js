@@ -380,6 +380,31 @@ export function researchReportMarkdown(clis, matrix, patterns, sources) {
   return L.join('\n');
 }
 
+/** 把一次控制台会话（history 事件流）序列化成 Markdown 记录（便于复盘/分享）。 */
+export function transcriptToMarkdown(history) {
+  const L = ['# Agent CLI 会话记录', ''];
+  for (const it of history || []) {
+    switch (it.type) {
+      case 'user': L.push(`### › ${it.text}`, ''); break;
+      case 'cmd': L.push('`' + it.text + '`', ''); break;
+      case 'thinking': L.push(`_✻ ${it.text}_`, ''); break;
+      case 'assistant': if ((it.text || '').trim()) L.push(it.text, ''); break;
+      case 'tool': L.push(`- ● **${it.tool}**(${it.arg})${it.detail ? ' — ' + it.detail : ''}`); break;
+      case 'diff':
+        L.push('', '```diff');
+        for (const d of it.diff || []) L.push((d.type === 'add' ? '+' : d.type === 'del' ? '-' : ' ') + (d.text || ''));
+        L.push('```', '');
+        break;
+      case 'file': L.push('', '`' + it.file + '`', '```', it.text, '```', ''); break;
+      case 'approval': L.push(`- ⏸ 需批准 ${it.tool}(${it.arg}) → ${it.status === 'approve' ? '已批准' : it.status === 'reject' ? '已拒绝' : '待决'}`); break;
+      case 'system': L.push(`> ${String(it.text).replace(/\n/g, '\n> ')}`, ''); break;
+      case 'error': L.push(`> ⚠ ${it.text}`, ''); break;
+      default: break; // banner / help / about 等 UI 装饰跳过
+    }
+  }
+  return L.join('\n');
+}
+
 /* ----------------------------- 审批模式（分级放权） ----------------------------- */
 /** 三档审批模式，对应业界 Codex/Cline 等的「分级放权」。 */
 export const APPROVAL_MODES = [
