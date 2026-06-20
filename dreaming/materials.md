@@ -315,3 +315,10 @@
 - 子项目: agent-cli
 - 重点: engine 加 formatRunStats（纯函数+单测）；ai.js runRealAgent 返回 steps；Console 每次任务结束追加一行小结（离线=工具/用时/tok，真实另含步数）
 - 解决的问题: 跑完没有量化反馈——现在每次运行可见工具数/步数/用时/token
+
+## M-41 · 2026-06-20 · 沉淀 agent-cli 调研为技能 agentic-cli-interaction（D-4 跨子项目联动）
+- 作者: claude
+- 提交: 25bb651
+- 子项目: skill-lab
+- 重点: skill-lab 新增 skills/agentic-cli-interaction/SKILL.md：终端式 coding-agent 交互设计（REPL 工具循环/斜杠命令/工具卡+diff/分级放权/计划模式/项目记忆/运行统计），A 100/100、index.json 收录 21 个
+- 解决的问题: agent-cli 的研究只活在它自己页面里——沉淀成可移植 Agent Skill 让别处也能复用
