@@ -447,6 +447,198 @@ export const TEMPLATES = [
     ],
   },
   {
+    id: 'tpl-finance',
+    icon: '💰',
+    title: '顶尖投资人 / 金融从业者 · 全方位提升计划',
+    subject: '金融与投资',
+    level: '进阶到精通',
+    weeks: 52,
+    hoursPerWeek: 10,
+    summary:
+      '面向「顶尖投资人 / 金融从业者」的一年期全方位成长路线：金融市场基础 + 财报与估值 + 投资组合理论 + 宏观与周期 + 各类资产 + 量化与数据 + 风险管理 + 交易心理 + 合规与职业 + 精力与长期主义。建议每季度复盘一次，与本应用的财富规划/股市观测联动使用。',
+    modules: [
+      {
+        title: '① 金融与市场基础',
+        lessons: [
+          { title: '货币时间价值与复利', note: '一切估值的地基' },
+          { title: '金融市场与主要工具（股/债/衍生品）' },
+          { title: '利率、收益率与折现' },
+          { title: '市场参与者与微观结构' },
+        ],
+      },
+      {
+        title: '② 财务报表与估值',
+        lessons: [
+          { title: '读懂三大报表' },
+          { title: '财务比率与质量分析' },
+          { title: '绝对估值：DCF / 自由现金流' },
+          { title: '相对估值：可比公司 / 倍数' },
+        ],
+      },
+      {
+        title: '③ 投资组合与资产配置',
+        lessons: [
+          { title: '风险与收益、波动与相关性' },
+          { title: '现代组合理论与有效前沿' },
+          { title: '资产配置与再平衡' },
+          { title: '指数化与因子投资' },
+        ],
+      },
+      {
+        title: '④ 宏观经济与周期',
+        lessons: [
+          { title: '宏观指标（GDP/通胀/就业）' },
+          { title: '货币与财政政策、利率周期' },
+          { title: '经济周期与大类资产轮动' },
+        ],
+      },
+      {
+        title: '⑤ 各类资产与策略',
+        lessons: [
+          { title: '权益：成长 vs 价值' },
+          { title: '固定收益与信用' },
+          { title: '衍生品与对冲基础' },
+          { title: '另类资产（地产 / 商品 / 私募）' },
+        ],
+      },
+      {
+        title: '⑥ 量化与数据',
+        lessons: [
+          { title: '金融数据获取与处理' },
+          { title: '回测与策略评估', note: '小心过拟合与幸存者偏差' },
+          { title: '统计与概率在投资中的应用' },
+        ],
+      },
+      {
+        title: '⑦ 风险管理',
+        lessons: [
+          { title: '风险度量（波动 / VaR / 回撤）' },
+          { title: '仓位管理与分散' },
+          { title: '黑天鹅与尾部风险' },
+        ],
+      },
+      {
+        title: '⑧ 交易与投资心理',
+        lessons: [
+          { title: '行为金融与认知偏差' },
+          { title: '纪律、复盘与交易日志', note: '亏在心态的人远多于亏在分析' },
+          { title: '逆向思维与独立判断' },
+        ],
+      },
+      {
+        title: '⑨ 合规与职业发展',
+        lessons: [
+          { title: '职业证书路径（CFA / FRM 等）' },
+          { title: '合规、道德与受托责任' },
+          { title: '行业角色与职业地图' },
+        ],
+      },
+      {
+        title: '⑩ 精力 · 韧性 · 长期主义',
+        lessons: [
+          { title: '身心健康与情绪稳定', note: '可与「健身规划」联动' },
+          { title: '深度研究与专注', note: '可用「学习规划」番茄计时器记录' },
+          { title: '长期复利思维与延迟满足', note: '可与「财富规划」「股市观测」联动' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'tpl-growth',
+    icon: '📣',
+    title: '顶尖市场 / 增长操盘手 · 全方位提升计划',
+    subject: '市场与增长',
+    level: '进阶到精通',
+    weeks: 52,
+    hoursPerWeek: 10,
+    summary:
+      '面向「顶尖市场 / 增长操盘手」的一年期全方位成长路线：营销基础 + 用户与市场洞察 + 品牌与内容 + 渠道与投放 + 增长实验 + 用户生命周期 + 私域与社群 + 数据与归因 + 跨团队协作 + 职业发展。建议每季度复盘一次，与本应用的番茄/间隔复习联动使用。',
+    modules: [
+      {
+        title: '① 营销与增长基础',
+        lessons: [
+          { title: '营销的本质与 4P / STP' },
+          { title: '增长模型与 AARRR 海盗指标' },
+          { title: 'CAC / LTV 与单位经济', note: '增长是否健康全看这两个数' },
+          { title: '北极星指标的选择' },
+        ],
+      },
+      {
+        title: '② 用户与市场洞察',
+        lessons: [
+          { title: '用户研究与画像' },
+          { title: '市场细分与定位' },
+          { title: '竞品分析与差异化' },
+        ],
+      },
+      {
+        title: '③ 品牌与内容',
+        lessons: [
+          { title: '品牌定位与心智占领' },
+          { title: '内容营销与故事化表达' },
+          { title: '文案与转化撰写' },
+        ],
+      },
+      {
+        title: '④ 渠道与投放',
+        lessons: [
+          { title: 'SEO 与搜索营销（SEM）' },
+          { title: '社媒与信息流投放' },
+          { title: '渠道组合与预算分配' },
+          { title: 'KOL / 联盟 / 裂变' },
+        ],
+      },
+      {
+        title: '⑤ 增长实验与数据',
+        lessons: [
+          { title: '增长黑客方法与实验流程' },
+          { title: 'A/B 测试设计与显著性' },
+          { title: '落地页与转化率优化（CRO）' },
+        ],
+      },
+      {
+        title: '⑥ 用户生命周期',
+        lessons: [
+          { title: '获客 → 激活 → 留存 → 推荐' },
+          { title: '激活与「啊哈时刻」设计' },
+          { title: '留存与流失召回' },
+        ],
+      },
+      {
+        title: '⑦ 私域与社群',
+        lessons: [
+          { title: '私域运营与用户分层' },
+          { title: '社群与忠诚度' },
+          { title: 'CRM 与生命周期营销' },
+        ],
+      },
+      {
+        title: '⑧ 数据与归因',
+        lessons: [
+          { title: '数据看板与关键指标' },
+          { title: '多触点归因模型' },
+          { title: 'ROI / ROAS 与效果评估' },
+        ],
+      },
+      {
+        title: '⑨ 沟通与跨团队协作',
+        lessons: [
+          { title: '与产品 / 销售 / 设计协作' },
+          { title: '写清楚 brief 与营销方案' },
+          { title: '向上汇报与资源争取' },
+        ],
+      },
+      {
+        title: '⑩ 职业发展与精力',
+        lessons: [
+          { title: '个人品牌与作品集（操盘案例）' },
+          { title: '市场 / 增长职级与成长路径' },
+          { title: '精力管理与长期成长', note: '可与「健身规划」「番茄计时」联动' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'tpl-aiml',
     icon: '🤖',
     title: '人工智能 / 机器学习入门',
@@ -595,4 +787,48 @@ export const TEMPLATES = [
 /** 按 id 取模板。 */
 export function getTemplate(id) {
   return TEMPLATES.find((t) => t.id === id) || null;
+}
+
+/* =============================================================
+ * 模板分类（方向多了便于归纳）：按类别 + 类内 id 顺序分组展示。
+ * 新增模板时把它的 id 归到对应类别即可；未归类的会落入「其他」。
+ * ============================================================= */
+export const TEMPLATE_CATEGORIES = [
+  {
+    id: 'mastery',
+    label: '🎯 顶尖人才 · 全方位提升',
+    hint: '一年期、十大维度的旗舰成长计划，按职业方向选择',
+    ids: ['tpl-top-talent', 'tpl-founder', 'tpl-researcher', 'tpl-product', 'tpl-finance', 'tpl-growth'],
+  },
+  {
+    id: 'skill',
+    label: '📚 技能与学科',
+    hint: '具体技能 / 学科的上手到进阶',
+    ids: ['tpl-aiml', 'tpl-programming', 'tpl-language'],
+  },
+  {
+    id: 'exam',
+    label: '🎓 考试与阅读',
+    hint: '备考闭环与主题精读',
+    ids: ['tpl-exam', 'tpl-reading'],
+  },
+  {
+    id: 'custom',
+    label: '✨ 自定义',
+    hint: '从零开始自己搭',
+    ids: ['tpl-blank'],
+  },
+];
+
+/** 返回分组后的模板：[{ id, label, hint, templates:[...] }]，并把未归类模板兜底到「其他」。 */
+export function groupedTemplates() {
+  const used = new Set();
+  const groups = TEMPLATE_CATEGORIES.map((c) => {
+    const templates = c.ids.map((id) => TEMPLATES.find((t) => t.id === id)).filter(Boolean);
+    templates.forEach((t) => used.add(t.id));
+    return { ...c, templates };
+  }).filter((c) => c.templates.length);
+  const rest = TEMPLATES.filter((t) => !used.has(t.id));
+  if (rest.length) groups.push({ id: 'other', label: '📦 其他', hint: '', templates: rest });
+  return groups;
 }

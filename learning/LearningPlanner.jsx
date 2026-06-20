@@ -40,7 +40,7 @@ import {
   encodePlanShare,
   decodePlanShare,
 } from './calc.js';
-import { TEMPLATES } from './templates.js';
+import { groupedTemplates } from './templates.js';
 import { PROVIDERS, defaultAIConfig, isConfigured, generatePlan, explainLesson } from './ai.js';
 
 const AI_STORAGE_KEY = 'learning-ai';
@@ -905,14 +905,24 @@ function Creator({ aiConfig, onClose, onCreate, onNeedAI }) {
       </div>
 
       {mode === 'template' && (
-        <div className="lp-tplgrid">
-          {TEMPLATES.map((t) => (
-            <button key={t.id} className="lp-tpl" onClick={() => onCreate(scaffoldPlan(t))}>
-              <div className="lp-tpl-icon">{t.icon}</div>
-              <div className="lp-tpl-title">{t.title}</div>
-              <div className="lp-tpl-sum">{t.summary}</div>
-              <div className="lp-tpl-meta">{t.modules.length} 模块 · 建议 {t.weeks} 周</div>
-            </button>
+        <div className="lp-tplgroups">
+          {groupedTemplates().map((g) => (
+            <div className="lp-tplgroup" key={g.id}>
+              <div className="lp-tplgroup-head">
+                <span className="lp-tplgroup-label">{g.label}</span>
+                {g.hint && <span className="lp-tplgroup-hint">{g.hint}</span>}
+              </div>
+              <div className="lp-tplgrid">
+                {g.templates.map((t) => (
+                  <button key={t.id} className="lp-tpl" onClick={() => onCreate(scaffoldPlan(t))}>
+                    <div className="lp-tpl-icon">{t.icon}</div>
+                    <div className="lp-tpl-title">{t.title}</div>
+                    <div className="lp-tpl-sum">{t.summary}</div>
+                    <div className="lp-tpl-meta">{t.modules.length} 模块 · 建议 {t.weeks} 周</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -1570,6 +1580,10 @@ const CSS = `
   cursor:pointer;color:var(--t2);transition:.15s;font-family:var(--sans);}
 .lp-modetabs button:hover{border-color:var(--bd-2);}
 .lp-modetabs button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);font-weight:600;}
+.lp-tplgroups{display:flex;flex-direction:column;gap:20px;}
+.lp-tplgroup-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.lp-tplgroup-label{font-size:14px;font-weight:600;color:var(--t1);}
+.lp-tplgroup-hint{font-size:12px;color:var(--t3);}
 .lp-tplgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .lp-tpl{text-align:left;background:var(--surface);border:1px solid var(--bd);border-radius:13px;padding:15px;cursor:pointer;transition:.15s;font-family:var(--sans);}
 .lp-tpl:hover{border-color:var(--accent);box-shadow:var(--shadow-2);transform:translateY(-2px);}
