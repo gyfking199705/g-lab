@@ -37,7 +37,18 @@
     with g_mock.bind_respx(MOCK_SOURCE):
         ...
 
+    # requests-mock 栈
+    with g_mock.bind_requests_mock(MOCK_SOURCE):
+        ...
+
+也能当一个真正的本地 mock 服务跑起来（零依赖，纯标准库）::
+
+    python -m g_mock serve mocks/g-mock.json --port 8000
+    python -m g_mock serve https://config.example.com/g-mock.json   # 远端配置
+    python -m g_mock load mocks/g-mock.json                          # 打印规整后的配置
+
 本模块自身不依赖 requests / httpx / responses / respx；只有用到对应 binder 时才 import。
+serve 仅用标准库 http.server，无任何第三方依赖。
 """
 from __future__ import annotations
 
@@ -46,7 +57,14 @@ import urllib.request
 from contextlib import contextmanager
 from typing import Any, Dict, List, Union
 
-__all__ = ["load_config", "normalize", "bind_responses", "bind_respx"]
+__all__ = [
+    "load_config",
+    "normalize",
+    "bind_responses",
+    "bind_respx",
+    "bind_requests_mock",
+    "serve",
+]
 
 Source = Union[str, Dict[str, Any]]
 
@@ -137,8 +155,128 @@ def bind_respx(source: Source):
         yield router
 
 
-if __name__ == "__main__":  # 简单自检：加载并打印规整后的配置
+@contextmanager
+def bind_requests_mock(source: Source):
+    """把配置注册到 `requests_mock`，拦截 requests 发起的 HTTP 调用。
+
+    需要安装 `requests-mock`（pip install requests-mock）。yield 出 Mocker，便于断言。
+    """
+    import requests_mock
+
+    cfg = load_config(source)
+    with requests_mock.Mocker() as m:
+        for r in cfg["routes"]:
+            kwargs: Dict[str, Any] = {"status_code": r["status"], "headers": r["headers"]}
+            if _is_json_body(r["body"]):
+                kwargs["json"] = r["body"]
+            else:
+                kwargs["text"] = _text_body(r["body"])
+            m.register_uri(r["method"], r["url"], **kwargs)
+        yield m
+
+
+# ── 当一个真正的本地 mock 服务跑起来（纯标准库，无第三方依赖）──
+
+def _build_handler(routes: List[Dict[str, Any]]):
+    import time
+    from http.server import BaseHTTPRequestHandler
+    from urllib.parse import urlparse
+
+    # 按 (method, path) 建索引；path 用配置里的 path 字段（忽略 baseUrl 与 query）
+    index = {(r["method"], r["path"]): r for r in routes}
+
+    class Handler(BaseHTTPRequestHandler):
+        server_version = "g-mock/1.0"
+
+        def _dispatch(self):
+            path = urlparse(self.path).path
+            route = index.get((self.command, path))
+            if route is None:
+                payload = json.dumps(
+                    {"error": "no_mock", "method": self.command, "path": path},
+                    ensure_ascii=False,
+                ).encode("utf-8")
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                return
+            if route["delayMs"]:
+                time.sleep(route["delayMs"] / 1000.0)
+            body = _text_body(route["body"]).encode("utf-8")
+            headers = dict(route["headers"])
+            headers.setdefault(
+                "Content-Type",
+                "application/json; charset=utf-8" if _is_json_body(route["body"]) else "text/plain; charset=utf-8",
+            )
+            self.send_response(route["status"])
+            for key, value in headers.items():
+                self.send_header(key, str(value))
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if self.command != "HEAD":
+                self.wfile.write(body)
+
+        # 把常见方法都路由到统一分发
+        do_GET = _dispatch
+        do_POST = _dispatch
+        do_PUT = _dispatch
+        do_PATCH = _dispatch
+        do_DELETE = _dispatch
+        do_HEAD = _dispatch
+        do_OPTIONS = _dispatch
+
+        def log_message(self, fmt, *args):  # noqa: A003 - 安静日志
+            return
+
+    return Handler
+
+
+def serve(source: Source, host: str = "127.0.0.1", port: int = 8000):
+    """用标准库 http.server 把配置当本地 mock 服务跑起来（Ctrl+C 停止）。"""
+    from http.server import ThreadingHTTPServer
+
+    cfg = load_config(source)
+    handler = _build_handler(cfg["routes"])
+    httpd = ThreadingHTTPServer((host, port), handler)
+    print(f"g-mock serving {len(cfg['routes'])} route(s) on http://{host}:{port}  (Ctrl+C to stop)")
+    for r in cfg["routes"]:
+        print(f"  {r['method']:7} {r['path']}  ->  {r['status']}")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nstopped.")
+    finally:
+        httpd.server_close()
+
+
+def _main(argv: List[str]) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="g_mock", description="g-mock 适配器 CLI")
+    sub = parser.add_subparsers(dest="cmd")
+
+    p_serve = sub.add_parser("serve", help="把配置当本地 mock 服务跑起来")
+    p_serve.add_argument("source", help="本地路径或 http(s):// 远端配置 URL")
+    p_serve.add_argument("--host", default="127.0.0.1")
+    p_serve.add_argument("--port", type=int, default=8000)
+
+    p_load = sub.add_parser("load", help="加载并打印规整后的配置")
+    p_load.add_argument("source", help="本地路径或 http(s):// 远端配置 URL")
+
+    args = parser.parse_args(argv)
+    if args.cmd == "serve":
+        serve(args.source, host=args.host, port=args.port)
+        return 0
+    if args.cmd == "load":
+        print(json.dumps(load_config(args.source), ensure_ascii=False, indent=2))
+        return 0
+    parser.print_help()
+    return 1
+
+
+if __name__ == "__main__":
     import sys
 
-    src = sys.argv[1] if len(sys.argv) > 1 else {"version": 1, "baseUrl": "", "routes": []}
-    print(json.dumps(load_config(src), ensure_ascii=False, indent=2))
+    raise SystemExit(_main(sys.argv[1:]))

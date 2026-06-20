@@ -4,6 +4,7 @@ import {
   parseBody, normalizeRoute, gmockConfig, pythonGmock, pythonResponses,
   pythonRespx, pytestFixture, pythonRequestsMock, vcrCassette,
   wiremockMappings, openapiSpec, generateAll, GENERATORS,
+  parseGmockConfig, parseOpenApi, importConfig,
 } from './codegen.js';
 
 const state = {
@@ -152,6 +153,66 @@ test('vcrCassette: valid JSON cassette with interactions + reason phrase', () =>
   assert.deepEqual(JSON.parse(first.response.body.string), { id: 1, name: 'Ada' });
   assert.equal(cas.interactions[1].response.status.message, 'Unauthorized'); // 401
   assert.equal(cas.interactions[1].response.body.string, 'unauthorized');
+});
+
+test('parseGmockConfig: round-trips gmockConfig output back to routes', () => {
+  const cfg = gmockConfig(state);
+  const parsed = parseGmockConfig(cfg);
+  assert.equal(parsed.baseUrl, 'https://api.example.com');
+  assert.equal(parsed.routes.length, 2);
+  assert.equal(parsed.routes[0].method, 'GET');
+  assert.equal(parsed.routes[0].path, '/users/1');
+  assert.equal(parsed.routes[0].status, 200);
+  assert.equal(parsed.routes[0].delayMs, 150);
+  // JSON body 反填成文本，能再次 parse 回对象
+  assert.deepEqual(JSON.parse(parsed.routes[0].body), { id: 1, name: 'Ada' });
+  assert.equal(parsed.routes[1].body, 'unauthorized');
+});
+
+test('parseGmockConfig: rejects non-gmock input', () => {
+  assert.throws(() => parseGmockConfig('{"foo":1}'), /routes/);
+});
+
+test('parseOpenApi: round-trips openapiSpec output back to routes', () => {
+  const spec = openapiSpec(state);
+  const parsed = parseOpenApi(spec);
+  assert.equal(parsed.baseUrl, 'https://api.example.com');
+  const get = parsed.routes.find((r) => r.method === 'GET' && r.path === '/users/1');
+  const post = parsed.routes.find((r) => r.method === 'POST' && r.path === '/login');
+  assert.ok(get && post);
+  assert.equal(get.status, 200);
+  assert.deepEqual(JSON.parse(get.body), { id: 1, name: 'Ada' });
+  assert.equal(post.status, 401);
+  assert.equal(post.body, 'unauthorized');
+});
+
+test('parseOpenApi: Swagger 2 host/basePath/schemes → baseUrl', () => {
+  const swagger = {
+    swagger: '2.0',
+    host: 'api.example.com',
+    basePath: '/v1',
+    schemes: ['https'],
+    paths: { '/ping': { get: { responses: { 200: { description: 'ok' } } } } },
+  };
+  const parsed = parseOpenApi(swagger);
+  assert.equal(parsed.baseUrl, 'https://api.example.com/v1');
+  assert.equal(parsed.routes[0].path, '/ping');
+  assert.equal(parsed.routes[0].status, 200);
+});
+
+test('parseOpenApi: picks lowest 2xx when multiple responses', () => {
+  const spec = {
+    openapi: '3.0.0',
+    paths: { '/x': { get: { responses: { 500: { description: 'e' }, 204: { description: 'n' }, 200: { description: 'o' } } } } },
+  };
+  assert.equal(parseOpenApi(spec).routes[0].status, 200);
+});
+
+test('importConfig: auto-detects openapi vs gmock vs invalid', () => {
+  assert.equal(importConfig(openapiSpec(state)).kind, 'openapi');
+  assert.equal(importConfig(gmockConfig(state)).kind, 'gmock');
+  assert.throws(() => importConfig('not json'), /JSON/);
+  assert.throws(() => importConfig('{"hello":1}'), /无法识别/);
 });
 
 test('generateAll: produces a string for every generator id', () => {

@@ -6,7 +6,7 @@
  * 生成逻辑全在纯函数 codegen.js 里（可单测）；本组件只管交互与展示。
  */
 import React, { useMemo, useState } from 'react';
-import { GENERATORS, generateAll, parseBody } from './codegen.js';
+import { GENERATORS, generateAll, parseBody, importConfig } from './codegen.js';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -75,6 +75,9 @@ export default function Workshop() {
   const [source, setSource] = useState('mocks/g-mock.json');
   const [routes, setRoutes] = useState(() => STARTER_ROUTES.map(withId));
   const [out, setOut] = useState(GENERATORS[0].id);
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importMsg, setImportMsg] = useState(null); // {ok:boolean, text:string}
 
   const state = useMemo(() => ({
     baseUrl,
@@ -91,6 +94,21 @@ export default function Workshop() {
   const updateRoute = (id, next) => setRoutes((rs) => rs.map((r) => (r._id === id ? { ...next, _id: id } : r)));
   const removeRoute = (id) => setRoutes((rs) => rs.filter((r) => r._id !== id));
   const reset = () => setRoutes(STARTER_ROUTES.map(withId));
+
+  const doImport = () => {
+    try {
+      const r = importConfig(importText);
+      if (!r.routes.length) { setImportMsg({ ok: false, text: '解析成功，但没有可导入的路由。' }); return; }
+      if (r.baseUrl) setBaseUrl(r.baseUrl);
+      setRoutes(r.routes.map(withId));
+      const label = r.kind === 'openapi' ? 'OpenAPI' : 'g-mock 配置';
+      setImportMsg({ ok: true, text: `已从 ${label} 导入 ${r.routes.length} 条路由。` });
+      setShowImport(false);
+      setImportText('');
+    } catch (e) {
+      setImportMsg({ ok: false, text: `导入失败：${e.message}` });
+    }
+  };
 
   const onModeChange = (m) => {
     setMode(m);
@@ -134,6 +152,25 @@ export default function Workshop() {
               <input value={source} onChange={(e) => setSource(e.target.value)}
                 placeholder={mode === 'remote' ? 'https://config.example.com/g-mock.json' : 'mocks/g-mock.json'} />
             </div>
+          </div>
+
+          <div className="mkl-import">
+            <button type="button" className="mkl-importtog" onClick={() => setShowImport((v) => !v)}>
+              {showImport ? '▾' : '▸'} 从已有 OpenAPI / g-mock 配置导入
+            </button>
+            {showImport && (
+              <div className="mkl-importbox">
+                <textarea value={importText} onChange={(e) => setImportText(e.target.value)}
+                  placeholder='粘贴 OpenAPI（含 paths）或 g-mock 配置（含 routes）JSON…自动识别' aria-label="导入配置" />
+                <div className="mkl-addrow" style={{ marginTop: 8 }}>
+                  <button type="button" className="mkl-btn primary" onClick={doImport} disabled={!importText.trim()}>解析并填入</button>
+                  <button type="button" className="mkl-btn ghost" onClick={() => { setImportText(''); setImportMsg(null); }}>清空</button>
+                </div>
+              </div>
+            )}
+            {importMsg && (
+              <div className={`mkl-importmsg ${importMsg.ok ? 'ok' : 'err'}`}>{importMsg.text}</div>
+            )}
           </div>
 
           <div className="mkl-routes">

@@ -57,6 +57,96 @@ function fullUrl(baseUrl, path) {
   return `${baseUrl}${path}`;
 }
 
+// ===== 导入：把已有配置反填成路由（闭环）=====
+
+/** body 值 → 编辑器用的文本：对象/数组 JSON 化，其它转字符串。 */
+function bodyToText(body) {
+  if (body == null) return '';
+  if (typeof body === 'object') return JSON.stringify(body, null, 2);
+  return String(body);
+}
+
+/** 解析 g-mock 配置（dict 或 JSON 文本）→ {baseUrl, routes}。 */
+export function parseGmockConfig(input) {
+  const cfg = typeof input === 'string' ? JSON.parse(input) : input;
+  if (!cfg || !Array.isArray(cfg.routes)) throw new Error('不是合法的 g-mock 配置（缺少 routes 数组）');
+  const routes = cfg.routes.map((r) => ({
+    method: String(r.method || 'GET').toUpperCase(),
+    path: String(r.path || '/'),
+    status: Number.isFinite(+r.status) ? Math.trunc(+r.status) : 200,
+    delayMs: Math.max(0, Math.trunc(+r.delayMs || 0)),
+    body: bodyToText(r.body),
+  }));
+  return { baseUrl: String(cfg.baseUrl || '').replace(/\/+$/, ''), routes };
+}
+
+/** 从 OpenAPI 响应对象里挑一个示例体（优先 example，其次 examples 首个，再次 schema.example）。 */
+function openapiExample(responseObj) {
+  const content = responseObj && responseObj.content;
+  if (!content || typeof content !== 'object') return '';
+  const ct = content['application/json'] ? 'application/json' : Object.keys(content)[0];
+  if (!ct) return '';
+  const media = content[ct] || {};
+  if (media.example !== undefined) return bodyToText(media.example);
+  if (media.examples && typeof media.examples === 'object') {
+    const first = Object.values(media.examples)[0];
+    if (first && first.value !== undefined) return bodyToText(first.value);
+  }
+  if (media.schema && media.schema.example !== undefined) return bodyToText(media.schema.example);
+  return '';
+}
+
+/** 解析 OpenAPI 2/3（dict 或 JSON 文本）→ {baseUrl, routes}。每个 path×method 取一条响应。 */
+export function parseOpenApi(input) {
+  const spec = typeof input === 'string' ? JSON.parse(input) : input;
+  if (!spec || !spec.paths || typeof spec.paths !== 'object') {
+    throw new Error('不是合法的 OpenAPI（缺少 paths）');
+  }
+  let baseUrl = '';
+  if (Array.isArray(spec.servers) && spec.servers[0] && spec.servers[0].url) {
+    baseUrl = String(spec.servers[0].url);
+  } else if (spec.host) {
+    const scheme = (spec.schemes && spec.schemes[0]) || 'https';
+    baseUrl = `${scheme}://${spec.host}${spec.basePath || ''}`;
+  }
+  const routes = [];
+  for (const [path, item] of Object.entries(spec.paths)) {
+    if (!item || typeof item !== 'object') continue;
+    for (const m of HTTP_METHODS) {
+      const op = item[m.toLowerCase()];
+      if (!op || typeof op !== 'object' || !op.responses) continue;
+      const codes = Object.keys(op.responses).filter((c) => /^\d{3}$/.test(c));
+      const ok = codes.filter((c) => c[0] === '2').sort();
+      const status = +(ok[0] || codes.sort()[0] || 200);
+      routes.push({
+        method: m,
+        path,
+        status,
+        delayMs: 0,
+        body: openapiExample(op.responses[String(status)] || op.responses[codes[0]] || {}),
+      });
+    }
+  }
+  return { baseUrl: baseUrl.replace(/\/+$/, ''), routes };
+}
+
+/** 自动识别并导入：OpenAPI（有 openapi/swagger/paths）或 g-mock（有 routes）。返回 {kind, baseUrl, routes}。 */
+export function importConfig(text) {
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch (e) {
+    throw new Error('粘贴的内容不是合法 JSON');
+  }
+  if (obj && (obj.openapi || obj.swagger || (obj.paths && !obj.routes))) {
+    return { kind: 'openapi', ...parseOpenApi(obj) };
+  }
+  if (obj && Array.isArray(obj.routes)) {
+    return { kind: 'gmock', ...parseGmockConfig(obj) };
+  }
+  throw new Error('无法识别格式：需要 g-mock 配置（含 routes）或 OpenAPI（含 paths）');
+}
+
 /** 生成一个合法的 Python 字符串字面量（借助 JSON 转义，对中文输出 \uXXXX，Python 同样接受）。 */
 function pyStr(s) {
   return JSON.stringify(String(s == null ? '' : s));

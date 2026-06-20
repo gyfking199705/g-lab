@@ -1,0 +1,6 @@
+# Python 适配器运行产物
+__pycache__/
+*.pyc
+
+# Node 构建依赖（按需临时安装，不入库）
+node_modules/

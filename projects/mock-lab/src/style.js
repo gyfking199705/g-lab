@@ -176,6 +176,19 @@ export const STYLE = `
 .mkl-modetog button{border:none;background:var(--surface);color:var(--t2);font-size:12.5px;padding:6px 12px;}
 .mkl-modetog button.on{background:var(--accent);color:#fff;}
 
+.mkl-import{margin:14px 0 4px;}
+.mkl-importtog{border:none;background:none;color:var(--accent-2);font-size:12.5px;font-weight:600;padding:4px 0;}
+.mkl-importtog:hover{text-decoration:underline;}
+.mkl-importbox{margin-top:8px;}
+.mkl-importbox textarea{width:100%;border:1px solid var(--bd);background:var(--surface-2);border-radius:8px;
+  padding:9px 10px;font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--t1);outline:none;
+  resize:vertical;min-height:90px;}
+.mkl-importbox textarea:focus{border-color:var(--accent);background:var(--surface);}
+.mkl-importmsg{margin-top:8px;font-size:12px;border-radius:8px;padding:7px 11px;line-height:1.5;}
+.mkl-importmsg.ok{background:#EEF4EF;border:1px solid #CFE0D4;color:#4B6B55;}
+.mkl-importmsg.err{background:#FBEEEC;border:1px solid #E8C9C3;color:#9A3F36;}
+.mkl-btn:disabled{opacity:.5;cursor:not-allowed;}
+
 .mkl-routes{display:flex;flex-direction:column;gap:12px;margin-top:6px;}
 .mkl-route{border:1px solid var(--bd);border-radius:11px;padding:12px 12px 13px;background:var(--surface-2);position:relative;}
 .mkl-route-head{display:flex;gap:8px;align-items:center;margin-bottom:9px;}
