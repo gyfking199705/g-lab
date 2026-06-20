@@ -224,3 +224,9 @@
 - 子项目: agent-cli
 - 重点: 新增 Cursor/Devin 对比卡+矩阵列（分 CLI 系/IDE 云端系）；UI 加任选两家并排对比（≠ 标差异）
 - 解决的问题: 对照覆盖 IDE/云端自治形态并支持任意两家精确对比（D-2 收尾）
+## M-28 · 2026-06-20 · mock-lab 工坊扩到 9 种产物（pytest fixture/requests-mock/VCR 磁带）
+- 作者: claude
+- 提交: 4a6f0a6
+- 子项目: mock-lab
+- 重点: codegen 新增 pytestFixture/pythonRequestsMock/vcrCassette 三个纯函数生成器并注册到工坊，+4 单测共 30 全绿，重建 bundle
+- 解决的问题: 原 6 种产物偏 responses/respx；补齐 pytest 复用 fixture、requests-mock、离线可回放磁带，强化 Python 优先与可植入
