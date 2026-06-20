@@ -47,7 +47,7 @@ export default function GoalsPlanner({ storageKey = STORE_KEY, onChange, linkOpt
   const goals = (data.goals || []).map((g) => {
     const link = g.metric && g.metric.link;
     if (!link || typeof resolveLink !== 'function') return g;
-    const cur = resolveLink(link);
+    const cur = resolveLink(link, g.id);
     if (cur == null) return g;
     return { ...g, metric: { ...g.metric, current: cur } };
   });

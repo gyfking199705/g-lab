@@ -24,8 +24,12 @@ const DATA = {
   },
   'project-planner': { tasks: [{ status: 'done' }, { status: 'doing' }, { status: 'done' }] }, // done 2
   'schedule-planner': {
-    items: [{ done: true, date: '2026-06-10' }, { done: false, date: '2026-06-20' }, { done: true, date: '2026-06-19' }],
-  }, // 2
+    items: [
+      { done: true, date: '2026-06-10', goalId: 'G1' }, // 关联 G1，已完成
+      { done: false, date: '2026-06-20', goalId: 'G1' }, // 关联 G1，未完成
+      { done: true, date: '2026-06-19' }, // 无关联
+    ],
+  }, // 全局 done=2；G1 关联完成=1
   'habits-planner': { habits: [{ id: 'h1', type: 'check' }], checkins: { h1: { '2026-06-20': 1, '2026-06-19': 1 } } }, // streak 2
   'savings-planner': {
     netWorth: {
@@ -105,6 +109,24 @@ test('learning：累计学习时长', () => {
 
 test('savings：净资产', () => {
   assert.equal(computeLink('savings.networth', makeGet(DATA), TODAY), 1100);
+});
+
+test('goal.scheduleDone（scoped）：只统计挂到该目标的已完成日程', () => {
+  const get = makeGet(DATA);
+  assert.equal(computeLink('goal.scheduleDone', get, TODAY, { goalId: 'G1' }), 1);
+  assert.equal(computeLink('goal.scheduleDone', get, TODAY, { goalId: '不存在' }), null); // 没关联项
+  assert.equal(computeLink('goal.scheduleDone', get, TODAY), null); // 无 ctx
+  assert.equal(LINK_OPTIONS.find((o) => o.id === 'goal.scheduleDone').scoped, true);
+});
+
+test('resolveGoalsLinks 对 scoped 来源按各目标自身 id 取数', () => {
+  const out = resolveGoalsLinks(
+    [{ id: 'G1', metric: { current: 0, target: 5, unit: '', link: 'goal.scheduleDone' } }],
+    makeGet(DATA),
+    TODAY
+  );
+  assert.equal(out[0].metric.current, 1);
+  assert.equal(out[0].metric.unit, '项');
 });
 
 test('新来源无数据 → null', () => {

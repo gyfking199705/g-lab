@@ -360,7 +360,7 @@ export default function App() {
           ) : active === 'schedule' ? (
             <SchedulePlanner storageKey="schedule-planner" onChange={bump} />
           ) : active === 'goals' ? (
-            <GoalsPlanner storageKey="goals-planner" onChange={bump} linkOptions={LINK_OPTIONS} resolveLink={(id) => computeLink(id, readModule)} />
+            <GoalsPlanner storageKey="goals-planner" onChange={bump} linkOptions={LINK_OPTIONS} resolveLink={(id, goalId) => computeLink(id, readModule, undefined, { goalId })} />
           ) : active === 'habits' ? (
             <HabitsPlanner storageKey="habits-planner" onChange={bump} />
           ) : active === 'cut' ? (
