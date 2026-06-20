@@ -18,7 +18,7 @@ import { totalVolume, weekStreak } from '../fitness/calc.js';
 import { balance } from '../ledger/calc.js';
 import { trendSeries as cutTrend } from '../cut/calc.js';
 import { taskStats } from '../project/calc.js';
-import { currentStreak, fitnessWorkoutDates } from '../habits/calc.js';
+import { currentStreak, isDoneOn, fitnessWorkoutDates } from '../habits/calc.js';
 import { netWorthSeries } from '../savings/calc.js';
 
 const arr = (v) => (Array.isArray(v) ? v : []);
@@ -132,6 +132,24 @@ export const LINK_SOURCES = [
       if (!ctx || !ctx.goalId) return null;
       const items = arr((get('schedule-planner') || {}).items).filter((i) => i && i.goalId === ctx.goalId);
       return items.length ? items.filter((i) => i.done).length : null;
+    },
+  },
+  {
+    id: 'goal.habitsChecks', label: '本目标·关联习惯打卡', unit: '次', module: 'habits-planner', scoped: true,
+    compute: (get, today, ctx) => {
+      if (!ctx || !ctx.goalId) return null;
+      const d = get('habits-planner') || {};
+      const habits = arr(d.habits).filter((h) => h && h.goalId === ctx.goalId && !h.archived);
+      if (!habits.length) return null;
+      const ext = fitnessWorkoutDates(get('fitness-planner'));
+      const ci = d.checkins || {};
+      let n = 0;
+      for (const h of habits) {
+        const dates = new Set(Object.keys(ci[h.id] || {}));
+        if (h.source === 'fitness' && ext) for (const dd of ext) dates.add(dd);
+        for (const dd of dates) if (isDoneOn(h, dd, ci, ext)) n += 1;
+      }
+      return n;
     },
   },
 ];
