@@ -240,6 +240,9 @@ function TaskCard({ task }) {
           {TASK_LABEL[task.status]}
         </span>
       </div>
+      {task.status === 'running' && task.output && (
+        <pre className="sw-task-out streaming">{task.output}<span className="sw-caret" /></pre>
+      )}
       {task.status === 'done' && !isSynth && task.output && (
         <>
           <button className="sw-task-toggle" onClick={() => setOpen((o) => !o)}>
@@ -415,6 +418,9 @@ function Style() {
 .sw-task-toggle{margin-top:10px;background:transparent;border:none;color:var(--t2);font-size:11.5px;cursor:pointer;padding:0;}
 .sw-task-toggle:hover{color:var(--accent-2);}
 .sw-task-out{margin-top:8px;background:var(--surface-2);border:1px solid var(--bd-2);border-radius:8px;padding:10px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;color:var(--t1);max-height:220px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.sw-task-out.streaming{border-color:var(--accent);background:#FFFDFB;}
+.sw-caret{display:inline-block;width:6px;height:12px;margin-left:2px;background:var(--accent);vertical-align:text-bottom;animation:sw-blink 1s steps(2) infinite;}
+@keyframes sw-blink{0%,50%{opacity:1;}50.01%,100%{opacity:0;}}
 .sw-task-fail{margin-top:8px;font-size:11.5px;color:var(--danger);}
 .sw-conclusion{margin-top:26px;background:var(--surface);border:1px solid var(--bd);border-radius:16px;padding:24px;border-top:3px solid var(--accent);}
 .sw-conclusion-h{font-family:var(--serif);font-size:16px;font-weight:600;margin-bottom:12px;}

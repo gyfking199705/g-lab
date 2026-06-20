@@ -39,3 +39,14 @@
   3. mockRun 让评审首轮不通过、复评通过，离线即可演示闭环
   4. 补单测（parseVerdict/injectRework/有限轮次终止）+ 重打包
 - 验收: 离线跑一个需求能看到：评审未通过→返工波次→复评通过→汇总；最多 2 轮即终止；node --test 全绿
+
+## P-4 · swarm 真实 LLM 流式输出 + BYOK 实跑链路
+- 状态: done
+- 作者: claude
+- 可行性: BYOK 代码已具备但未做流式、产出一次性返回，体验差且未验证；流式是真实 agent 工作区的标配（Anthropic/OpenAI SSE）
+- 步骤:
+  1. ai.js 加 callChatStream + 纯函数 extractDelta(provider) + streamSSE(可单测)
+  2. engine runTask 支持 onToken：流式时把分片实时写进对应 task.output 并 onUpdate
+  3. App TaskCard 在 running 且有 output 时实时显示流式文本（带光标）
+  4. 补单测：extractDelta(anthropic/openai/[DONE]) + streamSSE 用 ReadableStream 喂分片；重打包
+- 验收: node --test 全绿（含流式解析）；离线流程不受影响；填 Key 后产出逐字出现

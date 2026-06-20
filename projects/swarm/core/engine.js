@@ -14,9 +14,9 @@ import {
 } from './queue.js';
 import {
   decompose, planToSpecs, buildPlanMessages, parsePlan,
-  buildAgentMessages, mockRun, injectRework,
+  buildAgentMessages, buildSynthesisMessages, mockRun, injectRework,
 } from './orchestrator.js';
-import { isConfigured, callChat } from './ai.js';
+import { isConfigured, callChatStream } from './ai.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -81,11 +81,19 @@ export async function runJob({ requirement, config, onUpdate = () => {}, concurr
     onUpdate(job);
     await sleep(stepDelay);
 
+    // 流式分片：把某任务的实时产出写进它的 output 并刷新 UI（多任务并发，同步读改写安全）
+    const onPartial = (id, full) => {
+      job = { ...job, tasks: job.tasks.map((t) => (t.id === id ? { ...t, output: full } : t)) };
+      onUpdate(job);
+    };
+
     // 并发执行本波次
     const results = await Promise.all(
       ready.map(async (t) => {
         try {
-          const output = await runTask(t, job, { useLLM, config, signal });
+          const output = await runTask(t, job, {
+            useLLM, config, signal, onToken: (_piece, full) => onPartial(t.id, full),
+          });
           return { id: t.id, output };
         } catch (e) {
           return { id: t.id, error: e?.message || String(e) };
@@ -118,16 +126,12 @@ export async function runJob({ requirement, config, onUpdate = () => {}, concurr
   return job;
 }
 
-/** 执行单个子任务：LLM 模式调模型，否则离线模拟。 */
-async function runTask(task, job, { useLLM, config, signal }) {
+/** 执行单个子任务：LLM 模式流式调模型，否则离线模拟。 */
+async function runTask(task, job, { useLLM, config, signal, onToken }) {
   if (useLLM) {
-    if (task.role === 'synthesizer') {
-      const { buildSynthesisMessages } = await import('./orchestrator.js');
-      const { system, user } = buildSynthesisMessages(job);
-      return callChat({ config, system, user, maxTokens: 1500, signal });
-    }
-    const { system, user } = buildAgentMessages(task, job);
-    return callChat({ config, system, user, maxTokens: 1200, signal });
+    const isSynth = task.role === 'synthesizer';
+    const { system, user } = isSynth ? buildSynthesisMessages(job) : buildAgentMessages(task, job);
+    return callChatStream({ config, system, user, maxTokens: isSynth ? 1500 : 1200, signal, onToken });
   }
   return mockRun(task, job);
 }

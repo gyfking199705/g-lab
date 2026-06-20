@@ -87,3 +87,10 @@
 - 子项目: swarm
 - 重点: engine 调度循环里动态注入「执行者返工+复评」：评审未通过且未超轮次即扩展任务 DAG，汇总者顺延依赖最新复评；orchestrator 加 parseVerdict/reworkSpecs/injectRework 纯函数与 mock 首轮不通过/复评通过；24 单测全绿
 - 解决的问题: 原线性管线评审只给意见不返工——补上业界最被验证的 generator-critic 迭代质量闭环
+
+## M-12 · 2026-06-20 · swarm 流式输出 + BYOK 实跑链路（落地 P-4）
+- 作者: claude
+- 提交: e69598b
+- 子项目: swarm
+- 重点: ai.js 加 callChatStream/extractDelta/streamSSE（SSE，Anthropic+OpenAI，纯函数可测）；engine 流式把分片实时写进 task.output 并 onUpdate；TaskCard running 态逐字显示+光标；30 单测全绿，含 mock fetch 全链路验证流式中间态
+- 解决的问题: 原产出一次性返回、体验差且 BYOK 未验证——补上流式 + 端到端验证（mock fetch）

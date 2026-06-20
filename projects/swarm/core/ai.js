@@ -126,3 +126,116 @@ function networkHint(e) {
     (e && e.message ? e.message : String(e))
   );
 }
+
+/* ----------------------------- 流式输出（SSE） ----------------------------- */
+
+/**
+ * 从一条 SSE `data:` 负载里抽取「本次新增的文本分片」。纯函数，便于单测。
+ * @param {'anthropic'|'openai'} provider
+ * @param {string} dataStr  `data:` 后面的内容
+ * @returns {string} 文本分片（无内容或控制事件时返回 ''）
+ */
+export function extractDelta(provider, dataStr) {
+  const s = String(dataStr || '').trim();
+  if (!s || s === '[DONE]') return '';
+  let obj;
+  try {
+    obj = JSON.parse(s);
+  } catch {
+    return '';
+  }
+  if (provider === 'anthropic') {
+    // content_block_delta → delta.text；其余事件（message_start/ping/…）无文本
+    if (obj.type === 'content_block_delta') return obj.delta?.text || '';
+    return '';
+  }
+  // OpenAI 兼容：choices[0].delta.content
+  return obj.choices?.[0]?.delta?.content || '';
+}
+
+/**
+ * 读取一个 SSE 响应体（ReadableStream），逐分片回调，返回完整文本。
+ * 抽成独立函数以便用假 ReadableStream 单测。
+ * @param {ReadableStream<Uint8Array>} body
+ * @param {'anthropic'|'openai'} provider
+ * @param {(piece:string, full:string)=>void} [onToken]
+ * @returns {Promise<string>}
+ */
+export async function streamSSE(body, provider, onToken) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+  const flushLine = (line) => {
+    const t = line.trim();
+    if (!t || !t.startsWith('data:')) return;
+    const piece = extractDelta(provider, t.slice(5));
+    if (piece) {
+      full += piece;
+      if (onToken) onToken(piece, full);
+    }
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      flushLine(buffer.slice(0, nl));
+      buffer = buffer.slice(nl + 1);
+    }
+  }
+  if (buffer) flushLine(buffer);
+  return full;
+}
+
+/**
+ * 流式对话补全：逐分片回调 onToken，最终返回完整文本。
+ * 服务端不支持流（无 body）时回退为整体读取。
+ */
+export async function callChatStream({ config, system, user, maxTokens = 1500, signal, onToken }) {
+  if (typeof fetch !== 'function') throw new Error('当前环境不支持 fetch');
+  if (!isConfigured(config)) throw new Error('尚未配置 AI Key');
+  const provider = config.provider || 'anthropic';
+  const model = resolveModel(config);
+  const baseURL = resolveBaseURL(config);
+  const apiKey = config.apiKey.trim();
+
+  const url = provider === 'anthropic' ? `${baseURL}/v1/messages` : `${baseURL}/v1/chat/completions`;
+  const headers =
+    provider === 'anthropic'
+      ? {
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        }
+      : { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` };
+  const payload =
+    provider === 'anthropic'
+      ? { model, max_tokens: maxTokens, stream: true, system, messages: [{ role: 'user', content: user }] }
+      : {
+          model,
+          max_tokens: maxTokens,
+          stream: true,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+        };
+
+  let res;
+  try {
+    res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload), signal });
+  } catch (e) {
+    throw new Error(networkHint(e));
+  }
+  if (!res.ok) throw new Error(await errorText(res));
+  if (!res.body || typeof res.body.getReader !== 'function') {
+    // 环境/代理不支持流式 → 回退非流式
+    return callChat({ config, system, user, maxTokens, signal });
+  }
+  const text = (await streamSSE(res.body, provider, onToken)).trim();
+  if (!text) throw new Error('模型未返回文本内容');
+  return text;
+}
