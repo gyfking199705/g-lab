@@ -105,19 +105,49 @@ export const CLIS = [
     ],
     sources: [11, 12],
   },
+  {
+    id: 'cursor',
+    name: 'Cursor',
+    vendor: 'Anysphere（AI 编辑器 + CLI）',
+    glyph: '◭',
+    tagline: 'AI 编辑器：Agent/Composer 自治改码',
+    loop: 'Agent 模式：读码库 → 改文件 → 跑命令 → 迭代修错，多步自治；Cmd+. 在 Agent/Ask/Manual 间切',
+    rows: [
+      ['形态', 'AI 代码编辑器（VS Code 衍生）+ cursor-agent CLI + Background Agent'],
+      ['模式', 'Chat / Ask / Manual / Agent(Composer)，Agent 为默认'],
+      ['交互', '自然语言描述任务 → 自动多步执行（读/改/跑/搜/修错）'],
+      ['可扩展', 'MCP；.cursor/rules 项目规则；Background Agent 后台跑'],
+    ],
+    sources: [13, 14],
+  },
+  {
+    id: 'devin',
+    name: 'Devin',
+    vendor: 'Cognition（云端自治）',
+    glyph: '◮',
+    tagline: '云端自治软件工程师：先规划后执行',
+    loop: 'agentic 循环：拆解目标 → 读文档 → 改码 → 跑测试 → 分析失败 → 迭代直到收尾；先给计划、人可前置介入（human-in-the-loop）',
+    rows: [
+      ['形态', '云端沙箱环境（shell + 编辑器 + 浏览器）；Slack / Web 下单，长跨度任务'],
+      ['交互', '自然语言下单 → 产出 step-by-step 计划 → 自治执行，进度可 steer'],
+      ['计费', '按 ACU（Agent Compute Unit）；Devin 2.0 起 $20 入门'],
+      ['定位', 'agent-native IDE：长跨度任务 + 人审'],
+    ],
+    sources: [15, 16],
+  },
 ];
 
 /** 维度 × 四家 的速查矩阵（cols 与 rows[i][1..] 一一对应）。 */
 export const MATRIX = {
-  cols: ['Claude Code', 'Codex CLI', 'Gemini CLI', 'Aider', 'Cline', 'Continue'],
+  cols: ['Claude Code', 'Codex CLI', 'Gemini CLI', 'Aider', 'Cline', 'Continue', 'Cursor', 'Devin'],
   rows: [
-    ['放权 / 审批', 'default/acceptEdits/plan/bypass', 'Suggest/Auto-Edit/Full-Auto', '工具调用按需确认', '展示 diff 后应用', 'Plan/Act + 每步批准（可自动）', 'Agent 模式自行决定'],
-    ['沙箱边界', '权限规则 + 目录范围', 'read-only/workspace-write/full', '本地执行', '本地执行（git 兜底）', '本地执行', '本地 / IDE'],
-    ['上下文 / 记忆', 'CLAUDE.md', 'AGENTS.md + config.toml', 'GEMINI.md', '仓库地图 + /add 选文件', '规则 / 自定义指令', '@ context providers'],
-    ['计划模式', 'plan mode（Shift+Tab）', '审批即门禁', '逐步 ReAct', 'architect（规划/实现分离）', 'Plan 模式（核心）', 'Agent 自行规划'],
-    ['Git 集成', '按权限调用 git', '按权限调用 git', '可调用 git', '自动 commit（核心特性）', '可调用 git', '@ git diff 上下文'],
-    ['扩展', 'MCP / hooks / subagents', 'MCP / profiles', 'MCP + 搜索接地', '多模型；开源自托管', 'MCP；多模型', 'MCP + 自定义命令'],
-    ['开源', '否（商用）', '是（CLI 开源）', '是（Apache-2.0）', '是', '是', '是'],
+    ['放权 / 审批', 'default/acceptEdits/plan/bypass', 'Suggest/Auto-Edit/Full-Auto', '工具调用按需确认', '展示 diff 后应用', 'Plan/Act + 每步批准（可自动）', 'Agent 模式自行决定', 'Agent 自治（可审阅/回滚）', '先计划→自治执行，人可介入'],
+    ['沙箱边界', '权限规则 + 目录范围', 'read-only/workspace-write/full', '本地执行', '本地执行（git 兜底）', '本地执行', '本地 / IDE', '本地 / IDE + Background', '云端沙箱（shell/编辑器/浏览器）'],
+    ['上下文 / 记忆', 'CLAUDE.md', 'AGENTS.md + config.toml', 'GEMINI.md', '仓库地图 + /add 选文件', '规则 / 自定义指令', '@ context providers', '@ 符号 + .cursor/rules', '自带环境 + 任务计划'],
+    ['计划模式', 'plan mode（Shift+Tab）', '审批即门禁', '逐步 ReAct', 'architect（规划/实现分离）', 'Plan 模式（核心）', 'Agent 自行规划', 'Plan/Agent 迭代', '显式计划→执行（核心）'],
+    ['Git 集成', '按权限调用 git', '按权限调用 git', '可调用 git', '自动 commit（核心特性）', '可调用 git', '@ git diff 上下文', '可调用 git', '自动开 PR / 跑 CI'],
+    ['扩展', 'MCP / hooks / subagents', 'MCP / profiles', 'MCP + 搜索接地', '多模型；开源自托管', 'MCP；多模型', 'MCP + 自定义命令', 'MCP + Background Agent', '集成 Slack/GitHub/CI'],
+    ['开源', '否（商用）', '是（CLI 开源）', '是（Apache-2.0）', '是', '是', '是', '否（商用）', '否（商用）'],
   ],
 };
 
@@ -150,4 +180,8 @@ export const SOURCES = [
   { label: 'Cline · Plan/Act 与审批（指南）', url: 'https://www.deployhq.com/guides/cline' },
   { label: 'Continue · Agent mode how-it-works（官方文档）', url: 'https://docs.continue.dev/agent/how-to-use-it' },
   { label: 'Continue · CLI（cn）（官方文档）', url: 'https://docs.continue.dev/guides/cli' },
+  { label: 'Cursor · AI code editor（官网）', url: 'https://cursor.com/' },
+  { label: 'Cursor · Composer / Agent / Background（指南）', url: 'https://www.deployhq.com/guides/cursor' },
+  { label: 'Devin · Cognition（官网）', url: 'https://devin.ai/' },
+  { label: 'Devin · 自治编码完整指南', url: 'https://www.digitalapplied.com/blog/devin-ai-autonomous-coding-complete-guide' },
 ];
