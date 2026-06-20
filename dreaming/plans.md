@@ -117,3 +117,14 @@
   3. 新增 AntiPatterns 视图 + 「反模式」标签页，解药 chip 点击跳范式库对应条目
   4. SSR 验证 + 重打包
 - 验收: 反模式页列出效能杀手，每个给症状/危害与可点击的解药范式；所有解药 id 合法；node --test 全绿
+
+## P-10 · agent-cli 导出/分享一次控制台会话（Markdown transcript）
+- 状态: proposed
+- 作者: claude
+- 来源脑爆: D-4
+- 可行性: 纯前端可做：history 已是结构化事件（user/assistant/tool/diff/approval），序列化成 Markdown 即可；与已有的矩阵/报告导出一致，离线可用、可单测
+- 步骤:
+  1. engine 加 transcriptToMarkdown(history)（纯函数+单测）：用户/回答/工具卡(●⎿)/diff(±)/审批轨迹按序渲染
+  2. Console 顶部或状态栏加「导出会话」按钮，clipboard 失败回退 prompt
+  3. 补单测并 node build.mjs 重新生成 app.js
+- 验收: 跑一遍 /demo 后点导出，得到可读 Markdown：含每步工具与 diff、审批结果；node --test 全绿
