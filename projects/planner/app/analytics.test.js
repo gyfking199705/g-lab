@@ -2,8 +2,33 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ledgerMonthly, ledgerProjMonthEnd, habitsCompletionSeries, papersDailyDone,
-  buildAnalytics, hasBoard, todayDigest,
+  buildAnalytics, hasBoard, todayDigest, weeklyReview,
 } from './analytics.js';
+
+test('weeklyReview 最近7天跨模块快照', () => {
+  const T = '2026-06-20';
+  const data = {
+    'habits-planner': { habits: [{ id: 'h1', type: 'check' }], checkins: { h1: { '2026-06-20': 1, '2026-06-19': 1, '2026-06-10': 1 } } }, // 周内 2
+    'fitness-planner': { workouts: [{ date: '2026-06-18', entries: [{ sets: [{ reps: 10, weight: 100 }] }] }] }, // 1 次, 容量 1000
+    'learning-planner': { sessions: [{ date: '2026-06-20', minutes: 30 }, { date: '2026-06-01', minutes: 99 }] }, // 周内 30
+    'schedule-planner': { items: [{ done: true, doneAt: '2026-06-19T08:00' }, { done: true, doneAt: '2026-05-01T08:00' }] }, // 周内 1
+    'ledger-planner': { entries: [{ date: '2026-06-18', type: 'income', amount: 1000 }, { date: '2026-06-18', type: 'expense', amount: 300 }, { date: '2026-01-01', type: 'income', amount: 9999 }] }, // 净 700
+  };
+  const get = (k) => (k in data ? data[k] : null);
+  const r = weeklyReview(get, T);
+  assert.equal(r.from, '2026-06-14');
+  assert.equal(r.to, '2026-06-20');
+  assert.equal(r.rows.find((x) => x.id === 'habits').value, 2);
+  assert.equal(r.rows.find((x) => x.id === 'fitness').value, 1);
+  assert.equal(r.rows.find((x) => x.id === 'learning').value, '30 分钟');
+  assert.equal(r.rows.find((x) => x.id === 'schedule').value, 1);
+  assert.ok(String(r.rows.find((x) => x.id === 'ledger').value).includes('700'));
+});
+
+test('weeklyReview 空数据 → 无行', () => {
+  const r = weeklyReview(() => null, '2026-06-20');
+  assert.equal(r.rows.length, 0);
+});
 
 test('todayDigest 跨模块今日聚合', () => {
   const T = '2026-06-20';
