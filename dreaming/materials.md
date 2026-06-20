@@ -181,3 +181,10 @@
 - 重点: 新增第四个标签页 Roadmap：①处方建议——读 DORA 自评，针对 Medium/Low 薄弱指标按 signals 映射出能提升它且未落地的范式（按性价比，点击跳范式库）；②建议落地顺序——给范式加 requires 前置边，Kahn 拓扑分批、波内按性价比、环检测兜底。纯逻辑 prescribe/topoOrder，单测 15→17 全过
 - 解决的问题: 范式库+自评只能诊断'现状'，回答不了'下一步先做什么、什么顺序做'——把诊断变成有先后的行动计划
 - 遗留/副作用: 并发协作下记得把 dreaming/plans.md 一并提交，否则未提交改动会卡住后续 rebase（这次踩到）
+
+## M-23 · 2026-06-20 · 新增 Mock 研究室子项目（知识库 + 可植入配置工坊）
+- 作者: claude
+- 提交: 5f26c38
+- 子项目: mock-lab
+- 重点: 建 projects/mock-lab：28 条 mock 系统/提效方式知识库（卡片+四象限），配置工坊把路由定义一键生成 g-mock/responses/respx/WireMock/OpenAPI，含零依赖适配器 adapters/g_mock.py 支持本地/远端配置；filter/codegen 纯函数 26 单测全绿
+- 解决的问题: mock 工具与玩法碎片、上手成本高；缺一个可快速接入、可植入（尤其 Python）、本地或远端灵活切换的统一出口
