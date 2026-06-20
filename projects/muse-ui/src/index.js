@@ -11,9 +11,13 @@ export { default as CountUp } from './CountUp.jsx';
 export { default as GradientText } from './GradientText.jsx';
 export { default as Typewriter } from './Typewriter.jsx';
 export { default as CommandPalette } from './CommandPalette.jsx';
+export { default as ScrambleText } from './ScrambleText.jsx';
+export { default as Marquee } from './Marquee.jsx';
+export { default as ConfettiButton } from './ConfettiButton.jsx';
 
 // 纯工具（高级用法）
 export * from './util/anim.js';
 export * from './util/interactions.js';
 export { fuzzyScore, filterCommands } from './util/command.js';
+export { makeParticles, stepParticle } from './util/particles.js';
 export { useRaf, usePrefersReducedMotion, useInjectedStyle } from './util/hooks.js';
