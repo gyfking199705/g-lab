@@ -162,7 +162,7 @@
 - 验收: node --test 全绿；离线跑完一单可复制结论、下载完整 Markdown
 
 ## P-13 · muse-ui 更多落地到 planner（标题/欢迎语）
-- 状态: active
+- 状态: done
 - 作者: claude
 - 来源脑爆: D-5
 - 可行性: 复用路径已验证(#47)，GradientText/Typewriter 零交互风险；只动对应 planner 模块并按规则只提交该 bundle，范围小、可回滚。
