@@ -4,7 +4,7 @@
 **复制即用、自带样式（无需引 CSS）、尊重 `prefers-reduced-motion`**。是 g-lab 里的一个可独立发 npm 的子项目。
 
 ```
-ui/
+popcorn-ui/
 ├── src/
 │   ├── index.js            # 入口：导出全部组件 + 纯工具/hooks
 │   ├── TiltCard.jsx        # 3D 倾斜卡片（+高光）
@@ -19,9 +19,12 @@ ui/
 │       ├── hooks.js        # useInjectedStyle / usePrefersReducedMotion / useRaf
 │       ├── anim.test.js
 │       └── interactions.test.js
-├── demo/                   # 画廊演示页（/ui/，不打进库）
-├── build.mjs               # 库打包（ESM + CJS，react 外置）
-└── package.json
+├── demo/                   # 画廊演示页源码（Gallery.jsx + bootstrap.jsx）
+├── demo.js                 # 画廊打包产物（含 React，入库自托管，GitHub Pages 用）
+├── index.html              # 画廊页（加载 ./demo.js）
+├── build.mjs               # 打包：库 dist/(ESM+CJS, 不入库) + 演示 demo.js(入库)
+├── package.json
+└── dist/                   # 库发布产物（.gitignore；发 npm 前用 build.mjs 生成）
 ```
 
 ## 设计原则
@@ -55,8 +58,9 @@ import { TiltCard, MagneticButton, CountUp } from 'popcorn-ui';
 
 ## 开发
 ```bash
-cd ui && node --test          # 跑纯函数单测
-node scripts/build.mjs        # 在仓库根：生成画廊页 dist/ui.js（/ui/ 可预览）
-cd ui && node build.mjs        # 生成可发布的库产物 dist/index.js(ESM)+index.cjs(CJS)
+cd projects/popcorn-ui
+node --test                                          # 跑纯函数单测（11 例）
+npm i --no-save esbuild react@18.3.1 react-dom@18.3.1
+node build.mjs   # 库 dist/index.js(ESM)+index.cjs(CJS) + 画廊 demo.js（并给 index.html 打 ?v= 戳）
 ```
-画廊在线预览：部署后访问 `/ui/`。
+画廊在线预览：部署后访问 `/projects/popcorn-ui/`（本地 `python3 -m http.server 8000` 后开 `http://localhost:8000/projects/popcorn-ui/`）。
