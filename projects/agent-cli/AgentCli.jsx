@@ -13,7 +13,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   SLASH_COMMANDS, DEMO_PROMPT, parseInput, matchSlash, estimateTokens,
   seedFiles, diffStat, planAgentRun, agentSystemPrompt, agentToolSystemPrompt,
-  APPROVAL_MODES, needsApproval, matrixToMarkdown,
+  APPROVAL_MODES, needsApproval, matrixToMarkdown, researchReportMarkdown,
 } from './engine.js';
 import {
   PROVIDERS, callChat, runRealAgent, loadAIConfig, saveAIConfig, isConfigured, resolveModel,
@@ -599,21 +599,31 @@ function CompareTwo() {
 }
 
 /* ============================ 调研对比面板 ============================ */
+async function copyText(md) {
+  try {
+    await navigator.clipboard.writeText(md);
+    return true;
+  } catch (e) {
+    window.prompt('复制下面的 Markdown：', md);
+    return false;
+  }
+}
+
 function ResearchPanel() {
   const [copied, setCopied] = useState(false);
+  const [reported, setReported] = useState(false);
   const copyMatrix = async () => {
-    const md = matrixToMarkdown(MATRIX);
-    try {
-      await navigator.clipboard.writeText(md);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch (e) {
-      // 退化：选中提示
-      window.prompt('复制下面的 Markdown：', md);
-    }
+    if (await copyText(matrixToMarkdown(MATRIX))) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
+  };
+  const exportReport = async () => {
+    if (await copyText(researchReportMarkdown(CLIS, MATRIX, PATTERNS, SOURCES))) { setReported(true); setTimeout(() => setReported(false), 1800); }
   };
   return (
     <>
+      <div className="ac-toolbar">
+        <button className="ac-reportbtn" onClick={exportReport}>{reported ? '✓ 已复制整份报告' : '⬇ 导出整份调研报告 (Markdown)'}</button>
+        <span className="ac-toolhint">把八家要点 + 速查矩阵 + 共性模式 + 来源整篇带走</span>
+      </div>
       <div className="ac-clis">
         {CLIS.map((c) => (
           <div className="ac-card" key={c.id}>
@@ -694,6 +704,10 @@ const PAGE_CSS = `
 .ac-sub code,.ac-sechead code{background:var(--surface-3);border-radius:5px;padding:0 5px;color:var(--accent-2);font-size:12px;}
 
 /* CLI 对比卡 */
+.ac-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.ac-reportbtn{font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:9px;padding:8px 15px;box-shadow:0 1px 2px rgba(204,120,92,.25);transition:.15s;flex:none;}
+.ac-reportbtn:hover{background:var(--accent-2);border-color:var(--accent-2);}
+.ac-toolhint{font-size:12px;color:var(--t3);}
 .ac-clis{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
 .ac-card{background:var(--surface);border:1px solid var(--bd);border-radius:16px;padding:20px;}
 .ac-cardhead{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
