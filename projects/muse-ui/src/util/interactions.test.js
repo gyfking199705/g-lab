@@ -11,8 +11,28 @@ import {
   typedSlice,
   typeDone,
   linearGradient,
+  marqueeOffset,
+  revealCount,
+  scrambleText,
 } from './interactions.js';
 import { easings } from './anim.js';
+
+test('marqueeOffset：在 [-width,0] 间循环', () => {
+  assert.equal(marqueeOffset(1, 50, 200), -50);
+  assert.equal(marqueeOffset(5, 50, 200), -50); // 250 % 200 = 50
+  assert.equal(marqueeOffset(0, 50, 200), -0);
+  assert.equal(marqueeOffset(1, 50, 0), 0); // 无宽度兜底
+});
+
+test('revealCount / scrambleText：解码动画', () => {
+  assert.equal(revealCount(10, 0), 0);
+  assert.equal(revealCount(10, 0.5), 5);
+  assert.equal(revealCount(10, 2), 10); // 越界夹紧
+  // rand 注入 → 确定性：未揭示部分全取 charset[0]，空格保持
+  assert.equal(scrambleText('he llo', 2, 'X', () => 0), 'he XXX');
+  assert.equal(scrambleText('abc', 3, 'X', () => 0), 'abc'); // 全揭示
+  assert.equal(scrambleText('abc', 0, 'X', () => 0), 'XXX');
+});
 
 test('typedSlice / typeDone：按时间推进切片', () => {
   assert.equal(typedSlice('hello', 0, 22), '');

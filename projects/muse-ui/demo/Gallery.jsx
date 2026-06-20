@@ -3,7 +3,7 @@
  * 仅用于演示，不打进库；库入口是 ../src/index.js。
  */
 import React, { useState, useEffect } from 'react';
-import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp, GradientText, Typewriter, CommandPalette } from '../src/index.js';
+import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp, GradientText, Typewriter, CommandPalette, ScrambleText, Marquee, ConfettiButton } from '../src/index.js';
 
 const CSS = `
 .gx{--accent:#CC785C;--ink:#33312C;--t2:#6B675E;--t3:#9B978C;--bd:#E5E1D8;--surface:#FBFAF6;
@@ -82,7 +82,7 @@ export default function Gallery() {
         <p>UI 组件脑爆 + research 实验室 · 零依赖、复制即用、自带样式、支持「减少动效」</p>
         <div className="gx-stats">
           <div className="gx-stat">
-            <b><CountUp value={9} duration={1.2} /></b>
+            <b><CountUp value={12} duration={1.2} /></b>
             <span>组件</span>
           </div>
           <div className="gx-stat">
@@ -90,7 +90,7 @@ export default function Gallery() {
             <span>运行时依赖</span>
           </div>
           <div className="gx-stat">
-            <b><CountUp value={17} duration={1.6} />+</b>
+            <b><CountUp value={22} duration={1.6} />+</b>
             <span>纯函数单测</span>
           </div>
         </div>
@@ -174,9 +174,31 @@ export default function Gallery() {
         <CommandPalette open={cmdOpen} hotkey={false} onClose={() => setCmdOpen(false)} commands={DEMO_COMMANDS(setLastCmd)} />
       </Section>
 
+      <Section title="解码文字" tag="<ScrambleText>" desc="随机字符逐渐还原为目标文本，科技/揭晓感。刷新或重进可重看。">
+        <div className="gx-card" style={{ fontSize: 22, fontWeight: 700, letterSpacing: 1 }}>
+          <ScrambleText text="DECRYPTING · 解码中…" duration={1.6} />
+        </div>
+      </Section>
+
+      <Section title="跑马灯" tag="<Marquee>" desc="内容无缝循环滚动（复制两份 + 平移取模）。">
+        <Marquee speed={70} className="gx-card" style={{ fontSize: 15, color: 'var(--t2)' }}>
+          <span>✨ TiltCard</span>
+          <span>🎯 CommandPalette</span>
+          <span>⌨️ Typewriter</span>
+          <span>🎉 ConfettiButton</span>
+          <span>🌈 GradientText</span>
+          <span>🔢 CountUp</span>
+        </Marquee>
+      </Section>
+
+      <Section title="礼花按钮" tag="<ConfettiButton>" desc="点击迸发礼花（纯函数粒子 + 重力积分）。点几下试试 🎉">
+        <ConfettiButton>🎉 庆祝一下</ConfettiButton>
+        <ConfettiButton count={40} style={{ background: '#5C8A6B' }}>更多彩屑</ConfettiButton>
+      </Section>
+
       <div className="gx-foot">
         <code>npm i muse-ui</code> · <code>import {'{ TiltCard }'} from 'muse-ui'</code>
-        <br />零运行时依赖 · 自带样式无需引 CSS · 尊重 prefers-reduced-motion
+        <br />12 个组件 · 零运行时依赖 · 自带样式无需引 CSS · 尊重 prefers-reduced-motion
       </div>
     </div>
   );

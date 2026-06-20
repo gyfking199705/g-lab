@@ -106,3 +106,30 @@ export function linearGradient(colors, angle = 90) {
   const list = colors && colors.length ? colors : ['#CC785C', '#6E83C4'];
   return `linear-gradient(${angle}deg, ${list.join(', ')})`;
 }
+
+/** 跑马灯：按经过秒数与速度(px/s)，在 [-width,0] 间循环的位移（无缝滚动用）。 */
+export function marqueeOffset(elapsedSec, speed, width) {
+  if (!width || width <= 0) return 0;
+  const d = ((elapsedSec || 0) * speed) % width;
+  return -(d < 0 ? d + width : d);
+}
+
+/** 文字解码动画：按进度返回应"已揭示"的字符数。 */
+export function revealCount(total, progress) {
+  const p = progress < 0 ? 0 : progress > 1 ? 1 : progress;
+  return Math.max(0, Math.min(total, Math.floor(p * total)));
+}
+
+/**
+ * 文字解码：前 revealed 个字符为真值，其余用随机字符（空格保持），rand 可注入以便测试。
+ */
+export function scrambleText(target, revealed, charset = '!<>-_\\/[]{}=+*^?#', rand = Math.random) {
+  const s = String(target == null ? '' : target);
+  const r = Math.max(0, Math.min(s.length, Math.floor(revealed)));
+  let out = s.slice(0, r);
+  for (let i = r; i < s.length; i++) {
+    if (s[i] === ' ') out += ' ';
+    else out += charset[Math.floor(rand() * charset.length)] || charset[0];
+  }
+  return out;
+}
