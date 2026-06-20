@@ -82,6 +82,9 @@ export const STYLE = `
 .acl-cat[data-cat=tooling]{color:var(--tool);}
 .acl-cat[data-cat=guardrail]{color:var(--danger);}
 .acl-mat{font-size:11px;color:var(--t3);border:1px solid var(--bd);border-radius:6px;padding:1px 7px;}
+.acl-card-badges{display:inline-flex;align-items:center;gap:6px;}
+.acl-tplbadge{font-size:10.5px;color:var(--accent-2);background:var(--accent-soft);
+  border:1px solid #EBD8CC;border-radius:6px;padding:1px 7px;white-space:nowrap;}
 .acl-card-title{font-family:var(--serif);font-size:17px;font-weight:600;line-height:1.35;}
 .acl-card-sum{font-size:13px;color:var(--t2);line-height:1.55;flex:1;}
 .acl-card-foot{display:flex;gap:16px;}

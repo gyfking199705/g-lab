@@ -4,6 +4,13 @@
 > 它说明：这是什么、目录怎么分、数据结构长什么样、如何新增/修改一条实践、提交前必须过哪些关。
 > 上层约定见仓库根 [`/AGENTS.md`](../../AGENTS.md)，视觉规范见 [`/DESIGN.md`](../../DESIGN.md)，更详细的人类向说明见同目录 [`README.md`](README.md)。
 
+## 只想「吸收」而非扩展？
+
+如果你（agent 或人）只是想**读懂并吸收这里沉淀的 AI 编程精华**，不必跑应用、也不必读源码——
+直接读全量纯文本摘要 **[`KNOWLEDGE.md`](KNOWLEDGE.md)**（由 `build.mjs` 从 `data/practices.js` 自动生成，
+含每条的「为什么/怎么做/何时用/常见坑/评级/出处」，以及哪些条目带可复制模板）。
+应用里也可「⬇ 导出 Markdown」把当前筛选结果带走。要扩展/修改再继续读下文。
+
 ## 这是什么
 
 `ai-coding-lab` 是一个**收集、提炼并展示「业界正在用的 AI 编程范式与提效方式」**的纯前端知识库站点。
@@ -16,19 +23,23 @@
 ai-coding-lab/
 ├── AGENTS.md            # 你正在读的这份（agent 工作约定）
 ├── README.md            # 人类向说明（更详细的背景与命令）
+├── KNOWLEDGE.md         # ★ 全量知识库纯文本摘要（build.mjs 自动生成，供直接吸收；勿手改）★
 ├── index.html           # 独立演示页，加载 ./dist/app.js?v=<hash>
 ├── favicon.svg
-├── build.mjs            # esbuild 打包脚本：src + data → dist/app.js，并写入 index.html 的 ?v= 缓存号
+├── build.mjs            # 打包脚本：src+data → dist/app.js + 写 index.html 的 ?v= + 生成 KNOWLEDGE.md
 ├── package.json         # { "type": "module" }
 ├── data/
-│   └── practices.js     # ★ 知识库数据（纯数据，无依赖，可被 Node 直接 import / 单测）★
+│   └── practices.js     # ★ 知识库数据：导出 CATEGORIES / MATURITY / LEVEL / ITEMS / TEMPLATES（纯数据，可单测）★
 ├── src/
 │   ├── bootstrap.jsx    # 打包入口（挂载 React）
-│   ├── App.jsx          # 主界面（卡片网格 / 详情抽屉 / 筛选 / 搜索 / 排序 / 视图切换）
+│   ├── App.jsx          # 主界面（卡片网格 / 详情抽屉 / 筛选 / 搜索 / 排序 / 视图切换 / 导出）
 │   ├── MatrixChart.jsx  # 「影响力 × 落地成本」四象限散点图（手写 SVG）
+│   ├── OverviewChart.jsx# 「类别 × 成熟度」堆叠条总览（手写 SVG）
 │   ├── style.js         # 内联样式（遵循 /DESIGN.md 的设计令牌）
-│   ├── filter.js        # ★ 纯逻辑：搜索 / 筛选 / 排序 / 统计（无 React/DOM 依赖）★
-│   └── filter.test.js   # node --test 单测（含「数据集健全性检查」）
+│   ├── filter.js        # ★ 纯逻辑：搜索 / 筛选 / 排序 / 统计 / maturityMatrix（无 React/DOM 依赖）★
+│   ├── filter.test.js   # node --test 单测（含「数据集健全性检查」）
+│   ├── exportMd.js      # 纯逻辑：把条目导出为 Markdown（供应用导出 & build.mjs 生成 KNOWLEDGE.md）
+│   └── exportMd.test.js # node --test 单测
 └── dist/
     └── app.js           # 打包产物（入库，GitHub Pages 自托管；改完必须重建并提交）
 ```
@@ -78,12 +89,14 @@ ai-coding-lab/
    ```bash
    cd projects/ai-coding-lab && node --test
    ```
-5. 重建产物并校验缓存号：
+5. 重建产物（同时会刷新 `KNOWLEDGE.md`）并校验缓存号：
    ```bash
    npm i --no-save esbuild react@18.3.1 react-dom@18.3.1   # 若 node_modules 不在
    node build.mjs
    ```
-6. 提交 `data/practices.js` + `dist/app.js` + `index.html`（三者一起，缺一不可）。
+6. 提交 `data/practices.js` + `dist/app.js` + `index.html` + `KNOWLEDGE.md`（四者一起，缺一不可）。
+   - 想给某条加「可复制模板」：在 `data/practices.js` 末尾的 `TEMPLATES` 对象里按 `id` 加一项
+     `{ label, lang, code }`；详情页会展示并支持一键复制，卡片会自动显示「📋 模板」徽章。
 
 ### 复制即用模板
 ```js
@@ -111,7 +124,7 @@ ai-coding-lab/
 
 ## 必须遵守（提交前自检）
 1. **`node --test` 全绿**：`filter.test.js` 里的「数据集健全性检查」会拦截缺字段、非法枚举、重复 id、非 `http(s)` 的 refs。
-2. **改完必重建并提交 `dist/app.js`**：`node build.mjs` 会同时把内容哈希写进 `index.html` 的 `?v=`；确认两者一致（`?v=<hash>` == bundle 的 sha1 前 10 位）。
+2. **改完必重建并提交 `dist/app.js` + `KNOWLEDGE.md`**：`node build.mjs` 会把内容哈希写进 `index.html` 的 `?v=`，并据 `data/practices.js` 重新生成 `KNOWLEDGE.md`；确认 `?v=<hash>` == bundle 的 sha1 前 10 位。
 3. **跟随 [`/DESIGN.md`](../../DESIGN.md)**：暖纸色 `#F6F5F0` + 陶土橙 `#CC785C`、衬线标题、发丝级边框、几乎无阴影、克制留白；**图表手写 SVG，不引图表库**。
 4. **无外部 CDN / 无运行时转译**：React 18 + esbuild 预打包成自托管单文件；样式走 `style.js` 的设计令牌，类名前缀统一 `acl-`。
 5. **无后端、不入库密钥**：本页纯静态、不收集数据；任何示例都不要写入真实密钥或私密数据。

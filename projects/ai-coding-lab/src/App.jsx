@@ -39,13 +39,16 @@ function Meter({ kind, value }) {
   );
 }
 
-function Card({ item, onOpen }) {
+function Card({ item, onOpen, hasTpl }) {
   const cat = CAT_BY_ID[item.category];
   return (
     <button type="button" className="acl-card" onClick={() => onOpen(item)}>
       <div className="acl-card-top">
         <span className="acl-cat" data-cat={item.category}>{cat.icon} {cat.label}</span>
-        <span className="acl-mat">{MATURITY[item.maturity].label}</span>
+        <span className="acl-card-badges">
+          {hasTpl && <span className="acl-tplbadge" title="含可复制模板">📋 模板</span>}
+          <span className="acl-mat">{MATURITY[item.maturity].label}</span>
+        </span>
       </div>
       <div className="acl-card-title">{item.title}</div>
       <div className="acl-card-sum">{item.summary}</div>
@@ -161,21 +164,24 @@ export default function App() {
   const [mats, setMats] = useState([]);
   const [tags, setTags] = useState([]);
   const [sort, setSort] = useState('roi');
-  const [view, setView] = useState('cards'); // cards | matrix
+  const [view, setView] = useState('cards'); // cards | matrix | overview
+  const [onlyTpl, setOnlyTpl] = useState(false);
   const [active, setActive] = useState(null);
 
   const stats = useMemo(() => summarize(ITEMS), []);
   const allTags = useMemo(() => collectTags(ITEMS).slice(0, 16), []);
+  const tplCount = useMemo(() => Object.keys(TEMPLATES).length, []);
 
   const result = useMemo(() => {
-    const f = filterItems(ITEMS, { query, categories: cats, maturities: mats, tags });
+    let f = filterItems(ITEMS, { query, categories: cats, maturities: mats, tags });
+    if (onlyTpl) f = f.filter((it) => TEMPLATES[it.id]);
     return sortItems(f, sort);
-  }, [query, cats, mats, tags, sort]);
+  }, [query, cats, mats, tags, sort, onlyTpl]);
 
   const toggle = (list, set, v) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const clearAll = () => { setQuery(''); setCats([]); setMats([]); setTags([]); };
-  const anyFilter = query || cats.length || mats.length || tags.length;
+  const clearAll = () => { setQuery(''); setCats([]); setMats([]); setTags([]); setOnlyTpl(false); };
+  const anyFilter = query || cats.length || mats.length || tags.length || onlyTpl;
 
   const exportMd = () => {
     const md = toMarkdown(result, {
@@ -235,6 +241,8 @@ export default function App() {
             <Pill key={k} active={mats.includes(k)} onClick={() => toggle(mats, setMats, k)}>{v.label}</Pill>
           ))}
           <span className="acl-sep" />
+          <Pill active={onlyTpl} onClick={() => setOnlyTpl((v) => !v)} title={`${tplCount} 条含模板`}>📋 含模板</Pill>
+          <span className="acl-sep" />
           <span className="acl-lbl">排序</span>
           <select value={sort} onChange={(e) => setSort(e.target.value)} className="acl-select">
             {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -273,7 +281,7 @@ export default function App() {
           : <Empty onReset={clearAll} />
       ) : result.length ? (
         <div className="acl-grid">
-          {result.map((it) => <Card key={it.id} item={it} onOpen={setActive} />)}
+          {result.map((it) => <Card key={it.id} item={it} onOpen={setActive} hasTpl={!!TEMPLATES[it.id]} />)}
         </div>
       ) : <Empty onReset={clearAll} />}
 

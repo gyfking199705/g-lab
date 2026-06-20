@@ -5,7 +5,8 @@
 
 在线路径：`…/g-lab/projects/ai-coding-lab/`
 
-> 🤖 **AI agent 请先读 [`AGENTS.md`](AGENTS.md)**：那里有数据结构、字段口径、新增条目的步骤模板与提交前自检清单。
+> 🤖 **AI agent**：想**直接吸收知识**就读 [`KNOWLEDGE.md`](KNOWLEDGE.md)（全量纯文本摘要，自动生成）；
+> 想**扩展/修改**就先读 [`AGENTS.md`](AGENTS.md)（数据结构、字段口径、步骤模板与提交前自检清单）。
 
 ## 它解决什么
 
