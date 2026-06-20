@@ -308,3 +308,10 @@
 - 子项目: devx-lab
 - 重点: filterPractices 支持 frameworks 数组(OR)与 quickWin(roi>=2)；UI 框架筛选由单选下拉改多选 chip 行、新增⚡高性价比 toggle、点框架徽章聚焦该框架；单测 23→24 全过
 - 解决的问题: 原框架筛选只能单选、也无法快速挑出高性价比范式；筛选粒度不够
+
+## M-40 · 2026-06-20 · agent-cli 运行统计：工具数·步数·用时·token（推进 D-4）
+- 作者: claude
+- 提交: 29f178b
+- 子项目: agent-cli
+- 重点: engine 加 formatRunStats（纯函数+单测）；ai.js runRealAgent 返回 steps；Console 每次任务结束追加一行小结（离线=工具/用时/tok，真实另含步数）
+- 解决的问题: 跑完没有量化反馈——现在每次运行可见工具数/步数/用时/token
