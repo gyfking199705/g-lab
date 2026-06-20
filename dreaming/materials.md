@@ -287,3 +287,10 @@
 - 子项目: devx-lab
 - 重点: 纯逻辑 prerequisitesOf/unlocksOf/curesOf；Practices 卡片详情加『关系』块：前置(requires)与解锁(被依赖)范式 chip 点击就地搜索、对治反模式 chip 跳反模式页；DevxLab 传 onGotoAntipatterns；单测 22→23 全过
 - 解决的问题: 范式卡片彼此孤立——依赖图与反模式数据已有却没在卡片层暴露，连成关系网才能顺着'前置→解锁→对治'探索
+
+## M-37 · 2026-06-20 · muse-ui v0.6：Sketchy + Sparkles
+- 作者: claude
+- 提交: 3a729d2
+- 子项目: muse-ui
+- 重点: 手绘风边框 Sketchy（mulberry32+roughRectPath，免测量）；星点 Sparkles（makeSparkles）。
+- 解决的问题: 补生成式装饰两件套，确定性种子随机纯函数化、可测、不闪烁。
