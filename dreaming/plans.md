@@ -94,3 +94,14 @@
   3. App 工作区头显示拓扑名（单线程深链/广度并行/决策框架…）
   4. 重打包，确认估算波次随拓扑变化、返工闭环仍生效
 - 验收: node --test 全绿；调研类出现多路并行波次、编码类为单线程链；UI 显示对应拓扑名
+## P-6 · 团队效能雷达图 + 一键提效报告（团队画像页）
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 采纳/自评/覆盖度数据都已就绪，聚合成画像与报告是纯前端纯函数；雷达图手写 SVG 符合 DESIGN，报告复用已有 doraMarkdown 思路
+- 步骤:
+  1. calc 加 categoryRadar(按类别落地率) 与 teamReportMarkdown(聚合 DORA+采纳+画像+覆盖+处方)
+  2. 新增 Profile 视图：手写 SVG 雷达（已落地% 实心 + 含进行中% 浅色两序列）+ 复制/下载报告
+  3. DevxLab 加「团队画像」标签页，传 bands/statuses
+  4. 补 categoryRadar/teamReportMarkdown 单测并重打包、SSR 验证
+- 验收: 雷达按 8 类别画出团队画像；一键可复制/下载含五节的 Markdown 报告；node --test 全绿
