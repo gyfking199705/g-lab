@@ -151,3 +151,10 @@
 - 子项目: swarm
 - 重点: ai.js 加 callChatStream/extractDelta/streamSSE（SSE，Anthropic+OpenAI，纯函数可测）；engine 流式把分片实时写进 task.output 并 onUpdate；TaskCard running 态逐字显示+光标；30 单测全绿，含 mock fetch 全链路验证流式中间态
 - 解决的问题: 原产出一次性返回、体验差且 BYOK 未验证——补上流式 + 端到端验证（mock fetch）
+
+## M-19 · 2026-06-20 · 习惯关联目标(scoped)
+- 作者: claude
+- 提交: 60aaf10
+- 子项目: planner
+- 重点: habits 表单加关联目标选择；links 加 goal.habitsChecks 只统计本目标关联习惯累计打卡
+- 解决的问题: ①习惯与目标未打通，习惯坚持无法驱动目标进度
