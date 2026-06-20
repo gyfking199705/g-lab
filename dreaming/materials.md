@@ -137,3 +137,10 @@
 - 子项目: devx-lab
 - 重点: 新增 AI 智能体工作流/IaC/数据库变更管理/TDD/契约测试/混沌工程/SLO 与错误预算/无指责复盘/策略即代码/依赖自动升级/文档即代码，覆盖各能力线、均附权威出处
 - 解决的问题: 范式库覆盖面不足，缺少 IaC、TDD、SLO、契约测试、混沌工程、生成式文化等业界主流能力
+
+## M-17 · 2026-06-20 · agent-cli 落地 P-2 审批模式三档 + 真实工具循环 + 扩到六家
+- 作者: claude
+- 提交: 75cb88c
+- 子项目: agent-cli
+- 重点: 审批门 needsApproval/toolKind（纯函数+单测）离线与真实统一；状态栏可切 suggest/auto-edit/full-auto + /approval；ai.js runRealAgent（Anthropic/OpenAI function calling 循环，内存FS executeTool 执行→回填→续跑）真实模式出工具卡+diff；notes 扩到 Cline/Continue（卡片+矩阵列+来源）
+- 解决的问题: 让分级放权可亲手体验、真实 AI 真正 agentic、调研覆盖更全
