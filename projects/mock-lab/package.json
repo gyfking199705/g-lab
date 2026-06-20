@@ -1,0 +1,23 @@
+{
+  "name": "mock-lab",
+  "version": "0.1.0",
+  "description": "🧪 Mock 研究室：收集并展示业界优秀 mock 系统与提效方式，配一个生成可植入配置/代码（Python 优先）的配置工坊。",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "mock",
+    "service-virtualization",
+    "api-mocking",
+    "contract-testing",
+    "python",
+    "responses",
+    "wiremock",
+    "openapi",
+    "react"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.mjs"
+  }
+}

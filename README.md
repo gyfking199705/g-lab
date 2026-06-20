@@ -24,7 +24,8 @@ g-lab/
     ├── agent-cli/          # 🖥️ Agent CLI 交互研究（复刻 + 对比业界命令行 agent）
     ├── ai-coding-lab/      # 🤖 AI Coding 研究室：收集与展示 AI 编程范式与提效方式
     ├── skill-lab/          # 🧩 Skill 研究室：收录与展示标准化 Agent Skills
-    └── devx-lab/           # 🔬 研发提效研究室（提效范式库 + 业界框架 + DORA 自评）
+    ├── devx-lab/           # 🔬 研发提效研究室（提效范式库 + 业界框架 + DORA 自评）
+    └── mock-lab/           # 🧪 Mock 研究室（mock 系统/提效方式知识库 + 可植入配置工坊）
 ```
 
 ## 📦 子项目
@@ -39,6 +40,7 @@ g-lab/
 | **ai-coding-lab** | AI Coding 研究室：收集并展示 AI 编程范式与提效方式（范式/工作流/技巧/工具/护栏） | `…/g-lab/projects/ai-coding-lab/` | `cd projects/ai-coding-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 | **skill-lab** | Skill 研究室：收录、检索与展示符合 `SKILL.md` 业界标准的高质量 Agent Skills | `…/g-lab/projects/skill-lab/` | `cd projects/skill-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 | **devx-lab** | 研发提效研究室：提效范式库（对齐 DORA/SPACE/DevEx）+ 业界框架 + DORA 自评 | `…/g-lab/projects/devx-lab/` | `cd projects/devx-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
+| **mock-lab** | Mock 研究室：收集并展示业界优秀 mock 系统与提效方式 + 配置工坊（定义一次，生成可植入的 responses / respx / WireMock / OpenAPI / g-mock 配置，本地或远端灵活切换，Python 优先） | `…/g-lab/projects/mock-lab/` | `cd projects/mock-lab && npm i --no-save esbuild react@18.3.1 react-dom@18.3.1 && node build.mjs` |
 
 ## 🚀 本地预览
 
@@ -55,6 +57,7 @@ python3 -m http.server 8000
 # ai-coding-lab：http://localhost:8000/projects/ai-coding-lab/
 # skill-lab：http://localhost:8000/projects/skill-lab/
 # devx-lab：http://localhost:8000/projects/devx-lab/
+# mock-lab：http://localhost:8000/projects/mock-lab/
 ```
 
 ## ➕ 新增一个子项目
