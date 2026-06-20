@@ -177,6 +177,12 @@ export const CSS = `
 .pl-ck-label{font-size:13px;color:var(--t1);}
 .pl-ck-off .pl-ck-label{color:var(--t2);}
 .pl-ck-tip{font-size:12px;color:var(--t3);line-height:1.5;}
+.pl-ck-fix{cursor:pointer;border-radius:7px;margin:0 -6px;padding:3px 6px;transition:background .15s;}
+.pl-ck-fix:hover{background:var(--fill);}
+.pl-ck-fix:hover .pl-ck-label{color:var(--accent-2);}
+.pl-field-flash{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px;
+  animation:pl-flash 1.6s ease;}
+@keyframes pl-flash{0%{outline-color:var(--accent);}70%{outline-color:var(--accent);}100%{outline-color:transparent;}}
 .pl-lint-mini{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--t2);
   border:1px solid var(--bd);border-radius:8px;padding:7px 11px;background:var(--surface-2);}
 .pl-lint-mini b{font-family:var(--serif);font-size:15px;}

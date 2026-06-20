@@ -2,7 +2,15 @@
  * devx-lab 纯逻辑层：范式筛选/排序/统计 + DORA 自评分级。
  * 全部为纯函数，可 `node --test` 单测，与 UI 解耦。
  */
-import { PRACTICES, CATEGORIES, FRAMEWORKS, DORA_METRICS, DORA_LEVELS, ADOPTION_STATUS } from './data.js';
+import {
+  PRACTICES,
+  CATEGORIES,
+  FRAMEWORKS,
+  DORA_METRICS,
+  DORA_LEVELS,
+  ADOPTION_STATUS,
+  ANTIPATTERNS,
+} from './data.js';
 
 const STATUS_IDS = ADOPTION_STATUS.map((s) => s.id);
 
@@ -185,12 +193,42 @@ export function teamReportMarkdown({ bands = {}, statuses = {}, practices = PRAC
   return L.join('\n');
 }
 
+// ── 进度趋势快照（本地存档，看持续改进） ───────────────────────────
+
+/**
+ * 生成一份进度快照：当下的采纳落地率与 DORA 评分。
+ * @param {Date} now 注入时钟，便于测试。
+ */
+export function buildSnapshot(practices = PRACTICES, statuses = {}, bands = {}, now = new Date()) {
+  const a = adoptionStats(practices, statuses);
+  const d = classifyDora(bands);
+  return {
+    t: now.toISOString(),
+    date: now.toISOString().slice(0, 10),
+    percent: a.percent,
+    done: a.done,
+    doing: a.doing,
+    total: a.total,
+    score: d.score,
+    level: d.level.name,
+  };
+}
+
+/**
+ * 把新快照并入历史：同一天的覆盖（只留当天最新），按时间升序，限长 cap。
+ */
+export function upsertSnapshot(list, snap, cap = 60) {
+  const rest = (list || []).filter((s) => s.date !== snap.date);
+  const next = [...rest, snap].sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
+  return next.slice(-cap);
+}
+
 // ── 数据导出 / 导入（团队备份与共享，仅本地） ────────────────────────
 
 export const EXPORT_VERSION = 1;
 
-/** 组装可导出的快照对象（收藏 + 采纳状态 + DORA 自评）。 */
-export function buildExport({ favs = [], statuses = {}, bands = {} } = {}) {
+/** 组装可导出的快照对象（收藏 + 采纳状态 + DORA 自评 + 进度趋势）。 */
+export function buildExport({ favs = [], statuses = {}, bands = {}, snaps = [] } = {}) {
   return {
     app: 'devx-lab',
     version: EXPORT_VERSION,
@@ -198,6 +236,7 @@ export function buildExport({ favs = [], statuses = {}, bands = {} } = {}) {
     favs,
     statuses,
     bands,
+    snaps,
   };
 }
 
@@ -220,7 +259,27 @@ export function parseImport(text) {
     favs: Array.isArray(o.favs) ? o.favs.filter((x) => typeof x === 'string') : [],
     statuses: isObj(o.statuses) ? o.statuses : {},
     bands: isObj(o.bands) ? o.bands : {},
+    snaps: Array.isArray(o.snaps) ? o.snaps.filter((s) => s && typeof s === 'object') : [],
   };
+}
+
+// ── 范式关系网（前置 / 解锁 / 可对治反模式） ────────────────────────
+
+/** 该范式的前置依赖（它 requires 的范式）。 */
+export function prerequisitesOf(p, practices = PRACTICES) {
+  const map = new Map((practices || []).map((x) => [x.id, x]));
+  return ((p && p.requires) || []).map((id) => map.get(id)).filter(Boolean);
+}
+
+/** 该范式解锁的后续范式（哪些范式 requires 它）。 */
+export function unlocksOf(p, practices = PRACTICES) {
+  const id = p && p.id;
+  return (practices || []).filter((x) => (x.requires || []).includes(id));
+}
+
+/** 该范式能对治的反模式（哪些反模式把它列为解药）。 */
+export function curesOf(practiceId, antipatterns = ANTIPATTERNS) {
+  return (antipatterns || []).filter((a) => (a.antidotes || []).includes(practiceId));
 }
 
 // ── 落地路线：处方式推荐 + 拓扑排序 ─────────────────────────────────

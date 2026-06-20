@@ -39,6 +39,7 @@ export default function App() {
   const [view, setView] = useState('grid');
   const [openId, setOpenId] = useState(null);
   const [editing, setEditing] = useState(null); // null=closed, {}=new, {id}=edit
+  const [editFocus, setEditFocus] = useState(null); // 从质量体检跳转时聚焦的字段
   const [toast, setToast] = useState('');
   const [exportMenu, setExportMenu] = useState(false);
   const fileRef = useRef(null);
@@ -122,6 +123,13 @@ export default function App() {
     setPrompts((ps) => [copy, ...ps]);
     setOpenId(copy.id);
     showToast('已克隆为副本');
+  };
+
+  // 质量体检「点击修复」：打开编辑器并聚焦到对应字段
+  const fix = (p, field) => {
+    setOpenId(null);
+    setEditFocus(field);
+    setEditing(p);
   };
 
   // 导入 / 导出 ----------------------------------------------------------
@@ -276,18 +284,28 @@ export default function App() {
           onClose={() => setOpenId(null)}
           onEdit={(p) => {
             setOpenId(null);
+            setEditFocus(null);
             setEditing(p);
           }}
           onDelete={remove}
           onClone={clone}
           onToggleFav={toggleFav}
           onRestore={restore}
+          onFix={fix}
           onToast={showToast}
         />
       ) : null}
 
       {editing !== null ? (
-        <PromptEditor initial={editing.id ? editing : null} onSave={save} onClose={() => setEditing(null)} />
+        <PromptEditor
+          initial={editing.id ? editing : null}
+          focusField={editFocus}
+          onSave={save}
+          onClose={() => {
+            setEditing(null);
+            setEditFocus(null);
+          }}
+        />
       ) : null}
 
       {toast ? (

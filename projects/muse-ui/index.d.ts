@@ -78,9 +78,18 @@ export interface GradientTextProps extends React.HTMLAttributes<HTMLElement> {
 export const GradientText: React.FC<GradientTextProps>;
 
 export interface TypewriterProps extends React.HTMLAttributes<HTMLSpanElement> {
-  text: string;
-  /** 每秒字符数，默认 22 */
+  /** 单句字符串，或多句数组（循环打字/退格） */
+  text: string | string[];
+  /** 每秒打字字符数，默认 22 */
   cps?: number;
+  /** 每秒退格字符数，默认 40 */
+  delCps?: number;
+  /** 打完停留秒数，默认 1.2 */
+  hold?: number;
+  /** 句间间隔秒数，默认 0.4 */
+  gap?: number;
+  /** 是否循环（多句默认 true、单句默认 false） */
+  loop?: boolean;
   /** 是否显示光标，默认 true */
   caret?: boolean;
 }
@@ -166,6 +175,11 @@ export function revealCount(total: number, progress: number): number;
 export function scrambleText(target: string, revealed: number, charset?: string, rand?: () => number): string;
 export function fuzzyScore(query: string, text: string): number;
 export function filterCommands<T extends { label?: string; hint?: string; keywords?: string }>(commands: T[], query: string): T[];
+export function fuzzyMatchIndices(query: string, text: string): number[] | null;
+export function groupCommands<T extends { group?: string }>(items: T[], fallback?: string): { group: string; items: T[] }[];
+export function pickByIds<T extends { id?: string }>(items: T[], ids: string[]): T[];
+export type TypewriterPhase = 'typing' | 'hold' | 'deleting' | 'gap' | 'done';
+export function typewriterState(texts: string | string[], t: number, opts?: { cps?: number; delCps?: number; hold?: number; gap?: number; loop?: boolean }): { text: string; index: number; phase: TypewriterPhase };
 export interface Particle { x: number; y: number; vx: number; vy: number; rot: number; vr: number; color: string; size: number }
 export function makeParticles(n?: number, opts?: { rand?: () => number; colors?: string[]; speed?: number; spread?: number; angle?: number }): Particle[];
 export function stepParticle(p: Particle, dt: number, gravity?: number): Particle;

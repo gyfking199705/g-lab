@@ -16,6 +16,7 @@ g-lab 的一个子项目：把 **Claude Code / OpenAI Codex CLI / Google Gemini 
 - **可中断**：任务运行时 `Esc` 立即打断（模拟播放与真实请求都支持）
 - **流式呈现**：思考行 `✻`、工具调用卡（`● Tool(arg) ⎿ 结果`）、行级 **diff**（绿增红删）、打字机式回答
 - **分级放权（审批模式）**：底部可切 `suggest`（每步批准）/ `auto-edit`（改文件自动·命令批准）/ `full-auto`（全自动），或 `/approval` 循环——亲手体验业界的「分级放权」
+- **导出会话**：标题栏「⤓ 导出会话」把本次对话（含工具卡/diff/审批轨迹）一键复制为 Markdown transcript（`transcriptToMarkdown`）
 - **两种模式**：
   - **离线模拟**（默认）：内置 agent 按意图操作一个虚拟 Node 项目（纯内存）
   - **真实 AI**（`/login` 后）：走 **function-calling 工具循环**——模型自行 `read_file / edit_file / write_file / grep / run_bash`，在内存 FS 上执行并回填，真实模式也出工具卡 + diff（BYOK，Key 仅存本地）
@@ -26,6 +27,7 @@ g-lab 的一个子项目：把 **Claude Code / OpenAI Codex CLI / Google Gemini 
 - **八家对比卡**：CLI 系 Claude Code / Codex / Gemini / Aider ＋ IDE/云端系 Cline / Continue / Cursor / Devin 的交互模型、放权·审批·沙箱、斜杠命令、项目记忆、可扩展性。
 - **任选两家并排对比**：下拉选两家，逐维度对照，`≠` 标出差异维度。
 - **速查矩阵**：维度 ×（八家）一屏横扫——放权/审批、沙箱、上下文/记忆、计划模式、Git 集成、扩展、开源；可**一键复制为 Markdown**。
+- **一键导出整份调研报告**：把八家要点 + 速查矩阵 + 共性模式 + 来源整篇导成 Markdown（`researchReportMarkdown`），方便外带分享。
 - **ReAct 循环手写 SVG 示意**：推理 → 调工具 → 观察 → 再推理，标注审批/沙箱门；可**▶ 自动演示**逐步走一遍（带计时讲解）。
 - **共性设计模式**：REPL 工具循环、流式呈现、工具调用卡、斜杠命令、分级放权、计划模式、项目记忆、仓库地图/检索、可回滚、MCP 扩展。
 - 每条结论附**来源链接**（官方文档为主），写于 2026-06。

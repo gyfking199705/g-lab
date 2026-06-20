@@ -86,6 +86,17 @@ export const CSS = `
 .dx-detail li{font-size:13px;color:var(--t2);margin-bottom:3px;}
 .dx-src{font-size:12px;}
 
+/* relations in card detail */
+.dx-rel{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
+.dx-rel-row{display:flex;gap:8px;align-items:flex-start;}
+.dx-rel-row .rl{font-size:11px;color:var(--t3);min-width:30px;padding-top:4px;flex-shrink:0;}
+.dx-rel-row .rc{display:flex;flex-wrap:wrap;gap:5px;}
+.dx-rel-chip{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--accent-2);
+  background:var(--surface-2);border:1px solid var(--bd);border-radius:7px;padding:3px 8px;transition:all .15s;}
+.dx-rel-chip:hover{border-color:var(--accent);background:var(--accent-soft);}
+.dx-rel-chip.cure{color:var(--danger);}
+.dx-rel-chip.cure:hover{border-color:var(--danger);background:#FBEEEC;}
+
 .dx-empty{text-align:center;color:var(--t3);padding:50px 0;font-size:14px;}
 
 /* frameworks */
@@ -156,6 +167,23 @@ export const CSS = `
   color:var(--accent-2);background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:7px 13px;transition:all .15s;}
 .dx-copy:hover{border-color:var(--accent);background:var(--accent-soft);}
 
+/* anti-patterns */
+.dx-ap-intro{font-size:13.5px;color:var(--t2);max-width:680px;margin-bottom:18px;}
+.dx-ap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;}
+.dx-ap-card{background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:18px;
+  border-left:3px solid var(--danger);}
+.dx-ap-name{font-family:var(--serif);font-weight:600;font-size:16.5px;margin:0 0 10px;}
+.dx-ap-block{margin-bottom:9px;}
+.dx-ap-block .lab,.dx-ap-anti .lab{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);
+  font-weight:600;display:block;margin-bottom:3px;}
+.dx-ap-block p{font-size:13px;color:var(--t2);margin:0;}
+.dx-ap-anti{margin-top:12px;border-top:1px solid var(--bd-2);padding-top:10px;}
+.dx-ap-anti .chips{display:flex;flex-wrap:wrap;gap:6px;}
+.dx-ap-chip{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--ok);
+  background:var(--surface-2);border:1px solid var(--bd);border-radius:7px;padding:4px 9px;transition:all .15s;}
+.dx-ap-chip:hover{border-color:var(--ok);background:#EEF3EF;}
+.dx-ap-src{margin-top:11px;font-size:12px;}
+
 /* profile (team radar + report) */
 .dx-pf-card{display:flex;gap:24px;flex-wrap:wrap;align-items:center;background:var(--surface);
   border:1px solid var(--bd);border-radius:14px;padding:22px;}
@@ -177,6 +205,12 @@ export const CSS = `
 .dx-pf-report{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;
   margin-top:16px;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:20px 22px;}
 .dx-pf-actions{display:flex;gap:10px;flex-shrink:0;}
+.dx-pf-trend{margin-top:16px;background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:20px 22px;}
+.dx-pf-trend-h{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:12px;}
+.dx-pf-trend-legend{display:flex;gap:16px;align-items:center;font-size:12px;color:var(--t2);margin-bottom:6px;flex-wrap:wrap;}
+.dx-pf-trend-legend span{display:flex;align-items:center;gap:6px;}
+.dx-pf-trend-legend .sw{width:16px;height:8px;border-radius:3px;display:inline-block;}
+.dx-pf-trend-legend .delta{font-weight:600;}
 
 /* roadmap */
 .dx-rm-sec{margin-bottom:30px;}

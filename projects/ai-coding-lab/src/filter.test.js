@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ITEMS } from '../data/practices.js';
 import {
-  collectTags, matchesQuery, filterItems, sortItems, summarize, roi,
+  collectTags, matchesQuery, filterItems, sortItems, summarize, roi, maturityMatrix,
 } from './filter.js';
 
 const sample = [
@@ -104,6 +104,39 @@ test('dataset: every item has required fields and valid enums', () => {
     assert.ok(Array.isArray(it.how) && it.how.length >= 2, `how steps: ${it.id}`);
     assert.ok(Array.isArray(it.refs) && it.refs.length >= 1, `refs: ${it.id}`);
     for (const r of it.refs) assert.ok(/^https?:\/\//.test(r.url), `ref url: ${it.id}`);
+  }
+});
+
+test('maturityMatrix: counts per category x maturity', () => {
+  const m = maturityMatrix(sample, ['paradigm', 'workflow', 'technique'], ['emerging', 'growing', 'established']);
+  assert.equal(m.rows.length, 3);
+  const paradigm = m.rows.find((r) => r.category === 'paradigm');
+  assert.equal(paradigm.total, 1);
+  assert.equal(paradigm.cells.find((c) => c.maturity === 'growing').count, 1);
+  assert.equal(paradigm.cells.find((c) => c.maturity === 'emerging').count, 0);
+  assert.equal(m.maxRowTotal, 1);
+});
+
+test('maturityMatrix: defaults derive categories and maturities', () => {
+  const m = maturityMatrix(sample);
+  const totals = m.rows.reduce((a, r) => a + r.total, 0);
+  assert.equal(totals, sample.length);
+});
+
+test('maturityMatrix: row totals equal sum of cells', () => {
+  const m = maturityMatrix(ITEMS);
+  for (const r of m.rows) {
+    assert.equal(r.cells.reduce((a, c) => a + c.count, 0), r.total);
+  }
+});
+
+test('dataset: TEMPLATES reference real ids and have code', async () => {
+  const { TEMPLATES } = await import('../data/practices.js');
+  const ids = new Set(ITEMS.map((i) => i.id));
+  for (const [id, tpl] of Object.entries(TEMPLATES)) {
+    assert.ok(ids.has(id), `template id exists: ${id}`);
+    assert.ok(tpl.code && tpl.code.length > 10, `template has code: ${id}`);
+    assert.ok(tpl.label && tpl.lang, `template has label+lang: ${id}`);
   }
 });
 

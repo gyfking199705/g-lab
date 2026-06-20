@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '../icons.jsx';
 import { CATEGORIES, TECHNIQUES, MODELS, extractVariables, normalizePrompt } from '../schema.js';
 import { lintPrompt } from '../lint.js';
@@ -23,10 +23,24 @@ const empty = {
 };
 
 /** 新增 / 编辑表单（模态）。字段对齐业界 prompt 元数据约定。 */
-export default function PromptEditor({ initial, onSave, onClose }) {
+export default function PromptEditor({ initial, focusField, onSave, onClose }) {
   const [f, setF] = useState({ ...empty, ...(initial || {}), tags: (initial?.tags || []).join(', ') });
   const isEdit = !!(initial && initial.id);
   const upd = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }));
+  const bodyRef = useRef(null);
+
+  // 从「质量体检」点击修复跳转：滚动到对应字段、聚焦并短暂高亮
+  useEffect(() => {
+    if (!focusField || !bodyRef.current) return;
+    const el = bodyRef.current.querySelector(`[data-field="${focusField}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const input = el.querySelector('input, textarea, select');
+    if (input) setTimeout(() => input.focus(), 200);
+    el.classList.add('pl-field-flash');
+    const t = setTimeout(() => el.classList.remove('pl-field-flash'), 1600);
+    return () => clearTimeout(t);
+  }, [focusField]);
 
   const toggle = (k, v) =>
     setF((s) => {
@@ -61,13 +75,13 @@ export default function PromptEditor({ initial, onSave, onClose }) {
           <button className="pl-btn pl-ghost" onClick={onClose}><Icon.close /></button>
         </div>
 
-        <div className="pl-db">
+        <div className="pl-db" ref={bodyRef}>
           <div className="pl-field">
             <label>标题 *</label>
             <input className="pl-input" value={f.title} onChange={upd('title')} placeholder="例如：资深代码评审员" />
           </div>
 
-          <div className="pl-field">
+          <div className="pl-field" data-field="summary">
             <label>一句话简介</label>
             <input className="pl-input" value={f.summary} onChange={upd('summary')} placeholder="这条 prompt 做什么、何时用" />
           </div>
@@ -124,12 +138,12 @@ export default function PromptEditor({ initial, onSave, onClose }) {
             <input className="pl-input" value={f.tags} onChange={upd('tags')} placeholder="code-review, quality" />
           </div>
 
-          <div className="pl-field">
+          <div className="pl-field" data-field="system">
             <label>System / 角色 <span className="pl-hint">可选</span></label>
             <textarea className="pl-textarea" value={f.system} onChange={upd('system')} placeholder="你是一名…" />
           </div>
 
-          <div className="pl-field">
+          <div className="pl-field" data-field="content">
             <label>
               Prompt 正文 * <span className="pl-hint">用 {'{{变量}}'} 表示占位符</span>
             </label>
@@ -146,7 +160,7 @@ export default function PromptEditor({ initial, onSave, onClose }) {
           </div>
 
           <div className="pl-row2">
-            <div className="pl-field">
+            <div className="pl-field" data-field="exampleInput">
               <label>示例输入 <span className="pl-hint">可选</span></label>
               <textarea className="pl-textarea" value={f.exampleInput} onChange={upd('exampleInput')} />
             </div>

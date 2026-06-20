@@ -346,6 +346,65 @@ export function matrixToMarkdown(matrix) {
   return [head, sep, ...rows].join('\n');
 }
 
+/** 把整份调研（各家要点 + 速查矩阵 + 共性模式 + 来源）渲染成一篇 Markdown 报告，便于外带分享。 */
+export function researchReportMarkdown(clis, matrix, patterns, sources) {
+  const L = [];
+  L.push('# Agent CLI 交互研究');
+  L.push('');
+  L.push('> 复刻并对比业界 coding-agent CLI 的交互方式。导出自 g-lab · projects/agent-cli。');
+  L.push('');
+  L.push('## 速查矩阵');
+  L.push('');
+  L.push(matrixToMarkdown(matrix));
+  L.push('');
+  L.push('## 各家要点');
+  L.push('');
+  for (const c of clis || []) {
+    L.push(`### ${c.name}（${c.vendor}）`);
+    L.push(`- **定位**：${c.tagline}`);
+    L.push(`- **循环**：${c.loop}`);
+    for (const [k, v] of c.rows || []) L.push(`- ${k}：${v}`);
+    if (c.sources && c.sources.length) {
+      L.push(`- 来源：${c.sources.map((s) => (sources[s] ? `[${s + 1}]` : '')).filter(Boolean).join(' ')}`);
+    }
+    L.push('');
+  }
+  L.push('## 共性设计模式');
+  L.push('');
+  for (const [t, d] of patterns || []) L.push(`- **${t}**：${d}`);
+  L.push('');
+  L.push('## 来源');
+  L.push('');
+  (sources || []).forEach((s, i) => L.push(`${i + 1}. ${s.label} — ${s.url}`));
+  L.push('');
+  return L.join('\n');
+}
+
+/** 把一次控制台会话（history 事件流）序列化成 Markdown 记录（便于复盘/分享）。 */
+export function transcriptToMarkdown(history) {
+  const L = ['# Agent CLI 会话记录', ''];
+  for (const it of history || []) {
+    switch (it.type) {
+      case 'user': L.push(`### › ${it.text}`, ''); break;
+      case 'cmd': L.push('`' + it.text + '`', ''); break;
+      case 'thinking': L.push(`_✻ ${it.text}_`, ''); break;
+      case 'assistant': if ((it.text || '').trim()) L.push(it.text, ''); break;
+      case 'tool': L.push(`- ● **${it.tool}**(${it.arg})${it.detail ? ' — ' + it.detail : ''}`); break;
+      case 'diff':
+        L.push('', '```diff');
+        for (const d of it.diff || []) L.push((d.type === 'add' ? '+' : d.type === 'del' ? '-' : ' ') + (d.text || ''));
+        L.push('```', '');
+        break;
+      case 'file': L.push('', '`' + it.file + '`', '```', it.text, '```', ''); break;
+      case 'approval': L.push(`- ⏸ 需批准 ${it.tool}(${it.arg}) → ${it.status === 'approve' ? '已批准' : it.status === 'reject' ? '已拒绝' : '待决'}`); break;
+      case 'system': L.push(`> ${String(it.text).replace(/\n/g, '\n> ')}`, ''); break;
+      case 'error': L.push(`> ⚠ ${it.text}`, ''); break;
+      default: break; // banner / help / about 等 UI 装饰跳过
+    }
+  }
+  return L.join('\n');
+}
+
 /* ----------------------------- 审批模式（分级放权） ----------------------------- */
 /** 三档审批模式，对应业界 Codex/Cline 等的「分级放权」。 */
 export const APPROVAL_MODES = [

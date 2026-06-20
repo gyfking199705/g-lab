@@ -4,9 +4,11 @@
  * 视觉遵循仓库共享设计规范（暖纸色 + 陶土橙、衬线标题、手写 SVG、克制留白）。
  */
 import React, { useMemo, useState, useEffect } from 'react';
-import { ITEMS, CATEGORIES, MATURITY, LEVEL } from '../data/practices.js';
+import { ITEMS, CATEGORIES, MATURITY, LEVEL, TEMPLATES } from '../data/practices.js';
 import { filterItems, sortItems, collectTags, summarize } from './filter.js';
+import { toMarkdown } from './exportMd.js';
 import MatrixChart from './MatrixChart.jsx';
+import OverviewChart from './OverviewChart.jsx';
 import { STYLE } from './style.js';
 
 const CAT_BY_ID = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
@@ -58,6 +60,41 @@ function Card({ item, onOpen }) {
   );
 }
 
+function CopyButton({ text, label = '复制', className = 'acl-copy' }) {
+  const [done, setDone] = useState(false);
+  const copy = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      setDone(true);
+      setTimeout(() => setDone(false), 1600);
+    } catch (e) { /* 忽略：剪贴板不可用时静默 */ }
+  };
+  return (
+    <button type="button" className={className} onClick={copy}>
+      {done ? '已复制 ✓' : label}
+    </button>
+  );
+}
+
+function TemplateBlock({ tpl }) {
+  return (
+    <div className="acl-sec">
+      <h3 className="acl-tpl-h">
+        可复制模板 / 示例
+        <CopyButton text={tpl.code} />
+      </h3>
+      <div className="acl-tpl-label">{tpl.label}<span className="acl-tpl-lang">{tpl.lang}</span></div>
+      <pre className="acl-tpl"><code>{tpl.code}</code></pre>
+    </div>
+  );
+}
+
 function Drawer({ item, onClose }) {
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose(); }
@@ -66,6 +103,7 @@ function Drawer({ item, onClose }) {
   }, [onClose]);
   if (!item) return null;
   const cat = CAT_BY_ID[item.category];
+  const tpl = TEMPLATES[item.id];
   return (
     <div className="acl-scrim" onClick={onClose}>
       <aside className="acl-drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={item.title}>
@@ -90,6 +128,7 @@ function Drawer({ item, onClose }) {
             <ul className="acl-pit">{item.pitfalls.map((s, i) => <li key={i}>{s}</li>)}</ul>
           </Section>
         )}
+        {tpl && <TemplateBlock tpl={tpl} />}
         <Section title="标签">
           <div className="acl-tags">{(item.tags || []).map((t) => <span key={t} className="acl-tag">#{t}</span>)}</div>
         </Section>
@@ -137,6 +176,19 @@ export default function App() {
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const clearAll = () => { setQuery(''); setCats([]); setMats([]); setTags([]); };
   const anyFilter = query || cats.length || mats.length || tags.length;
+
+  const exportMd = () => {
+    const md = toMarkdown(result, {
+      note: `${anyFilter ? '已筛选 · ' : ''}导出于 ${new Date().toISOString().slice(0, 10)}`,
+    });
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-coding-lab-速查表-${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
 
   return (
     <div className="acl-root">
@@ -191,6 +243,7 @@ export default function App() {
           <div className="acl-viewtog">
             <button type="button" className={view === 'cards' ? 'on' : ''} onClick={() => setView('cards')}>卡片</button>
             <button type="button" className={view === 'matrix' ? 'on' : ''} onClick={() => setView('matrix')}>矩阵图</button>
+            <button type="button" className={view === 'overview' ? 'on' : ''} onClick={() => setView('overview')}>总览</button>
           </div>
         </div>
       </div>
@@ -204,10 +257,17 @@ export default function App() {
       </div>
 
       <div className="acl-count">
-        共 <b>{result.length}</b> 条{anyFilter ? '（已筛选）' : ''}
+        <span>共 <b>{result.length}</b> 条{anyFilter ? '（已筛选）' : ''}</span>
+        <button type="button" className="acl-export" onClick={exportMd}
+          disabled={!result.length} title="把当前结果导出为 Markdown 速查表">⬇ 导出 Markdown</button>
       </div>
 
-      {view === 'matrix' ? (
+      {view === 'overview' ? (
+        result.length
+          ? <OverviewChart items={result} activeCats={cats}
+              onPickCategory={(c) => toggle(cats, setCats, c)} />
+          : <Empty onReset={clearAll} />
+      ) : view === 'matrix' ? (
         result.length
           ? <MatrixChart items={result} onPick={setActive} activeId={active && active.id} />
           : <Empty onReset={clearAll} />

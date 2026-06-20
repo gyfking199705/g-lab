@@ -15,7 +15,7 @@ import { monthTotals, byCategory, dailyExpense, balance } from '../ledger/calc.j
 import { todayBoard, currentStreak, bestStreak, isDoneOn, fitnessWorkoutDates } from '../habits/calc.js';
 import { summary as papersSummary } from '../papers/calc.js';
 import { overallStats as goalsOverall, sortGoalsForBoard, goalPercent, daysLeft, isAchieved } from '../goals/calc.js';
-import { overallStats as learningStats, computeStreak as learnStreak, studyMinutes, activitySeries as learnActivity } from '../learning/calc.js';
+import { overallStats as learningStats, computeStreak as learnStreak, studyMinutes, activitySeries as learnActivity, dueReviews } from '../learning/calc.js';
 import { overallCounts as aimapCounts, donePct as aimapDonePct, fogItems as aimapFog, trackStats as aimapTrackStats } from '../aimap/calc.js';
 import { workoutsThisWeek, weekStreak, totalVolume, activitySeries as fitActivity, formatVolume } from '../fitness/calc.js';
 import { taskStats, totalFocusMinutes, focusStreak, lastNDays as projLastDays } from '../project/calc.js';
@@ -100,6 +100,48 @@ export function goalsCumulativeDone(goals = [], n = 30, today = todayStr()) {
 /* ----------------------------- 通用小工具 ----------------------------- */
 const kpi = (label, value, sub, tone) => ({ label, value, sub, tone });
 const num = (v) => (v == null || !isFinite(v) ? '—' : v);
+
+/* ----------------------------- 跨模块「今日聚合」 ----------------------------- */
+/**
+ * 跨模块今日待办聚合（纯函数）：把今天该做的事从各模块汇到一处。
+ * get(key) 注入读取。返回 { rows[], due, done, remaining, pct }。
+ *   rows: [{ id, icon, label, done, total, overdue? }]
+ */
+export function todayDigest(get, today = todayStr()) {
+  const rows = [];
+  let due = 0;
+  let done = 0;
+  const list = (v) => (Array.isArray(v) ? v : []);
+
+  // 习惯：今日已打卡 / 应打卡
+  const h = get('habits-planner') || {};
+  if (list(h.habits).filter((x) => x && !x.archived).length) {
+    const ext = fitnessWorkoutDates(get('fitness-planner'));
+    const b = todayBoard(h.habits, h.checkins || {}, today, ext);
+    rows.push({ id: 'habits', icon: '🔥', label: '习惯', done: b.doneCount, total: b.total });
+    due += b.total; done += b.doneCount;
+  }
+
+  // 日程：今日已完成 / 总数（逾期单列、计入待办）
+  const s = get('schedule-planner') || {};
+  const items = list(s.items);
+  if (items.length) {
+    const v = todayView(items, today);
+    const total = v.pending.length + v.done.length;
+    const od = overdueCount(items, today);
+    rows.push({ id: 'schedule', icon: '📅', label: '日程', done: v.done.length, total, overdue: od });
+    due += total + od; done += v.done.length;
+  }
+
+  // 学习：今日待复习（SM-2 到期）
+  const l = get('learning-planner') || {};
+  if (list(l.plans).length) {
+    const cnt = dueReviews(l.plans, today).length;
+    if (cnt) { rows.push({ id: 'learning', icon: '📚', label: '待复习', done: 0, total: cnt }); due += cnt; }
+  }
+
+  return { rows, due, done, remaining: Math.max(0, due - done), pct: due ? Math.round((done / due) * 100) : 0 };
+}
 
 /* ----------------------------- 各模块大盘 ----------------------------- */
 

@@ -1430,3 +1430,177 @@ export const ITEMS = [
     refs: [{ label: 'SLSA · 供应链完整性框架', url: 'https://slsa.dev/' }],
   },
 ];
+
+/**
+ * 重点条目的「可复制模板 / 示例」。按条目 id 关联，详情页展示并可一键复制。
+ * 只给高价值、可直接拿去用的骨架；保持精炼。每项：{ label, lang, code }。
+ */
+export const TEMPLATES = {
+  'context-engineering': {
+    label: '一份精简 AGENTS.md / CLAUDE.md 骨架',
+    lang: 'markdown',
+    code: `# AGENTS.md — <项目名> 协作约定
+
+## 技术栈
+<语言 / 框架 / 关键库与版本>
+
+## 常用命令
+- 安装：<install>
+- 开发：<dev>
+- 构建：<build>
+- 测试：<test>
+- Lint/类型：<lint>
+
+## 代码风格
+<命名 / 目录结构 / 格式化约定；指向 1-2 个范本文件>
+
+## 边界（不要做）
+- 不改 <生成产物 / 第三方目录>
+- 密钥只在本地，绝不入库
+- 大改动先出计划再动手
+
+## 提交前自检
+- [ ] 测试全绿  - [ ] lint 通过  - [ ] 只提交相关改动`,
+  },
+  'spec-driven-development': {
+    label: '规格 / PRD 模板',
+    lang: 'markdown',
+    code: `# 规格：<功能名>
+
+## 背景 / 问题
+<为什么要做，解决谁的什么痛点>
+
+## 目标 / 非目标
+- 目标：<可衡量的成功标准>
+- 非目标：<明确不做的范围>
+
+## 用例
+1. 作为<角色>，我想<动作>，以便<价值>
+
+## 约束
+<技术栈 / 性能 / 兼容 / 安全 限制>
+
+## 验收标准（Definition of Done）
+- [ ] <可验证条件 1>
+- [ ] <可验证条件 2>
+- [ ] 测试覆盖关键路径`,
+  },
+  'plan-then-execute': {
+    label: '执行前的计划模板',
+    lang: 'markdown',
+    code: `## 计划：<任务>
+
+**目标**：<一句话>
+**涉及文件**：<file A, file B>
+**步骤**：
+1. <步骤，含验证方式>
+2. <步骤>
+**风险 / 未知**：<可能出错处 + 假设>
+**验证**：<跑哪些测试 / 命令确认完成>
+**回滚**：<出错如何退回>
+
+> 等人确认计划后再动手；执行中如需偏离，先回到此计划。`,
+  },
+  'tdd-with-ai': {
+    label: 'TDD 闭环提示词',
+    lang: 'text',
+    code: `请用测试驱动方式实现 <功能>：
+1. 先写覆盖正常+边界+异常的失败测试，并运行确认它们确实失败；
+2. 再实现到测试全绿——期间不得修改/弱化测试来迁就实现；
+3. 全绿后做重构，保持测试常绿；
+4. 最后跑一次完整测试并贴出结果。
+约束：<技术栈 / 不要动的部分>。`,
+  },
+  'ai-code-review': {
+    label: 'AI 代码评审提示词',
+    lang: 'text',
+    code: `作为资深评审者审阅以下 diff，按严重度分级给出可执行建议：
+- 🔴 必须改：正确性 bug、安全隐患、数据丢失风险、未处理错误/边界
+- 🟡 建议改：可读性、命名、重复、性能、测试缺口
+- 🟢 可选：风格与小优化
+只针对本次改动；每条指出文件:行号与具体修法；不确定就说明假设。
+不要泛泛夸奖，聚焦问题。`,
+  },
+  'structured-prompting': {
+    label: '结构化请求模板',
+    lang: 'text',
+    code: `# 目标
+<要达成什么，含验收标准>
+
+# 上下文
+<相关文件 / 现状 / 约定；可指向范本文件>
+
+# 约束
+<技术栈 / 不要改动的部分 / 性能或兼容要求>
+
+# 期望输出
+<diff / 完整文件 / 函数签名 / 步骤清单 —— 指定格式>`,
+  },
+  'eval-driven-development': {
+    label: '评测用例骨架（JSON）',
+    lang: 'json',
+    code: `{
+  "name": "<能力名> eval",
+  "cases": [
+    {
+      "id": "happy-path-1",
+      "input": "<代表性输入>",
+      "expected": "<期望/参考答案>",
+      "grader": "exact | regex | model | rule"
+    },
+    {
+      "id": "edge-empty",
+      "input": "<边界/异常输入>",
+      "expected": "<安全兜底行为>",
+      "grader": "rule"
+    }
+  ],
+  "threshold": 0.9
+}`,
+  },
+  'structured-outputs': {
+    label: 'JSON Schema 约束 + 校验',
+    lang: 'json',
+    code: `// 让模型按此 Schema 输出（工具调用 / structured output）
+{
+  "type": "object",
+  "properties": {
+    "title":    { "type": "string", "maxLength": 80 },
+    "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+    "tags":     { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["title", "priority"],
+  "additionalProperties": false
+}
+// 代码侧务必再校验：形状 + 业务规则；失败则重试/兜底，勿直塞下游。`,
+  },
+  'task-decomposition': {
+    label: 'TODO 拆解清单模板',
+    lang: 'markdown',
+    code: `## <任务> 拆解
+
+- [ ] 1. <小步，可独立验证的产出>
+- [ ] 2. <小步>（依赖 1）
+- [ ] 3. <小步>
+- [ ] 4. 跑测试 + 自检，整理为聚焦小 PR
+
+> 每步完成即审阅+测试，确认无误再继续；保持步间可回滚。`,
+  },
+  'agents-md': {
+    label: '最小可用 AGENTS.md',
+    lang: 'markdown',
+    code: `# AGENTS.md
+
+## 命令
+- 构建：<build>   - 测试：<test>   - Lint：<lint>
+
+## 约定
+- 风格参照 <范本文件>
+- 改完跑测试，保持全绿
+- 不入库密钥；大改先出计划
+
+## 边界
+- 勿改 <自动生成 / vendor 目录>`,
+  },
+};
+

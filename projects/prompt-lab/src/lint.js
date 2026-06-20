@@ -5,9 +5,9 @@
  * 不追求「正确/错误」，而是给出可执行的改进建议，帮助对齐业界标准。
  */
 
-/** 单项检查工厂。 */
-function mk(id, label, pass, tip) {
-  return { id, label, pass: !!pass, tip };
+/** 单项检查工厂。field 指向编辑器中最相关的字段，便于「点击修复」定位。 */
+function mk(id, label, pass, tip, field) {
+  return { id, label, pass: !!pass, tip, field };
 }
 
 /**
@@ -42,13 +42,13 @@ export function lintPrompt(p = {}) {
     (p.category && p.category !== 'other' ? true : (Array.isArray(p.tags) && p.tags.length > 0));
 
   const checks = [
-    mk('role', '明确角色 / System', hasRole, '用 System 或开头一句设定角色与目标（“你是一名…”），输出更稳定一致。'),
-    mk('task', '任务指令清晰具体', clearTask, '正文偏短：明确说明要做什么、约束条件与目标，避免含糊。'),
-    mk('format', '指定输出格式', hasFormat, '说明期望的输出结构（JSON / 列表 / 小节 / 标签等），便于消费与复现。'),
-    mk('guardrails', '抗幻觉 / 边界约束', hasGuardrails, '加入边界，如“仅依据给定资料、不要编造、信息不足就说明”，降低幻觉。'),
-    mk('examples', '提供示例（few-shot）', hasExamples, '给 1~2 个输入/输出示例，能显著稳定格式与风格。'),
-    mk('variables', '参数化变量便于复用', hasVariables, '把可变部分写成 {{变量}}，便于复用、批量与对照。'),
-    mk('discoverable', '可检索（简介 + 分类/标签）', discoverable, '补一句简介并设好分类或标签，方便日后检索与他人理解。'),
+    mk('role', '明确角色 / System', hasRole, '用 System 或开头一句设定角色与目标（“你是一名…”），输出更稳定一致。', 'system'),
+    mk('task', '任务指令清晰具体', clearTask, '正文偏短：明确说明要做什么、约束条件与目标，避免含糊。', 'content'),
+    mk('format', '指定输出格式', hasFormat, '说明期望的输出结构（JSON / 列表 / 小节 / 标签等），便于消费与复现。', 'content'),
+    mk('guardrails', '抗幻觉 / 边界约束', hasGuardrails, '加入边界，如“仅依据给定资料、不要编造、信息不足就说明”，降低幻觉。', 'content'),
+    mk('examples', '提供示例（few-shot）', hasExamples, '给 1~2 个输入/输出示例，能显著稳定格式与风格。', 'exampleInput'),
+    mk('variables', '参数化变量便于复用', hasVariables, '把可变部分写成 {{变量}}，便于复用、批量与对照。', 'content'),
+    mk('discoverable', '可检索（简介 + 分类/标签）', discoverable, '补一句简介并设好分类或标签，方便日后检索与他人理解。', 'summary'),
   ];
 
   const passed = checks.filter((c) => c.pass).length;

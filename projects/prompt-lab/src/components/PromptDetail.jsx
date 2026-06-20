@@ -46,7 +46,7 @@ export async function writeClipboard(text) {
 }
 
 /** prompt 详情抽屉：展示元信息、可填变量预览、一键复制、编辑/删除。 */
-export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onClone, onToggleFav, onRestore, onToast }) {
+export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onClone, onToggleFav, onRestore, onFix, onToast }) {
   const [vals, setVals] = useState({});
   const [batch, setBatch] = useState(false);
   if (!prompt) return null;
@@ -100,7 +100,7 @@ export default function PromptDetail({ prompt, onClose, onEdit, onDelete, onClon
             </div>
           ) : null}
 
-          <LintPanel prompt={prompt} />
+          <LintPanel prompt={prompt} onFix={(field) => onFix(prompt, field)} />
 
           {prompt.system ? (
             <div className="pl-block">

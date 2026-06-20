@@ -106,12 +106,57 @@
   4. 补 categoryRadar/teamReportMarkdown 单测并重打包、SSR 验证
 - 验收: 雷达按 8 类别画出团队画像；一键可复制/下载含五节的 Markdown 报告；node --test 全绿
 
-## P-10 · swarm 结论可导出：复制/下载 Markdown
+## P-9 · 反模式库：效能杀手 + 对应解药（链到范式）
 - 状态: done
 - 作者: claude
-- 可行性: 『最后给用户一个结论』就该能带走；目前结论只能看不能导出，做完即流失
+- 来源脑爆: D-3
+- 可行性: 正反对照更有说服力；反模式是业界公认概念（英雄主义/长期分支/手工发布/会议过载/单指标考核…），解药复用现有范式 id + gotoPractice 跳转，纯前端纯数据可做
+- 步骤:
+  1. data 加 ANTIPATTERNS（症状/危害/解药范式 id/出处），解药 id 引用现有范式
+  2. calc/测试：校验所有 antidote id 在 PRACTICES 内、id 唯一
+  3. 新增 AntiPatterns 视图 + 「反模式」标签页，解药 chip 点击跳范式库对应条目
+  4. SSR 验证 + 重打包
+- 验收: 反模式页列出效能杀手，每个给症状/危害与可点击的解药范式；所有解药 id 合法；node --test 全绿
+
+## P-10 · agent-cli 导出/分享一次控制台会话（Markdown transcript）
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-4
+- 可行性: 纯前端可做：history 已是结构化事件（user/assistant/tool/diff/approval），序列化成 Markdown 即可；与已有的矩阵/报告导出一致，离线可用、可单测
+- 步骤:
+  1. engine 加 transcriptToMarkdown(history)（纯函数+单测）：用户/回答/工具卡(●⎿)/diff(±)/审批轨迹按序渲染
+  2. Console 顶部或状态栏加「导出会话」按钮，clipboard 失败回退 prompt
+  3. 补单测并 node build.mjs 重新生成 app.js
+- 验收: 跑一遍 /demo 后点导出，得到可读 Markdown：含每步工具与 diff、审批结果；node --test 全绿
+## P-10 · 进度趋势快照：定期存档落地率/DORA 评分，画趋势线
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: 采纳率与 DORA 评分已可计算，存一份带日期的快照即可画趋势；纯前端纯函数 + 手写 SVG，自包含不动其它子项目
+- 步骤:
+  1. calc 加 buildSnapshot(落地率/各数/DORA 评分) 与 upsertSnapshot(同日替换、按时间排序、限长)
+  2. store 持久化 snapshots；DevxLab 加保存快照与状态
+  3. Profile 加『进度趋势』区：SVG 双线（落地率 + DORA 评分）+ 保存今日快照按钮 + 与上次的变化
+  4. 补 buildSnapshot/upsertSnapshot 单测并重打包、SSR 验证
+- 验收: 保存多次快照后能看到落地率/评分随时间的趋势线；同日重存覆盖；node --test 全绿
+
+## P-11 · 范式关系网：详情展示前置/解锁/可对治反模式并互链
+- 状态: done
+- 作者: claude
+- 来源脑爆: D-3
+- 可行性: requires 依赖与反模式解药数据已就绪，把它们在卡片详情里互链即可，无需新数据；让范式库从孤立卡片变成连通图，自包含于子项目内
+- 步骤:
+  1. calc 加 prerequisitesOf/unlocksOf/curesOf 三个纯函数并单测
+  2. Practices 卡片详情加『关系』块：前置/解锁 chip 点击就地搜索该范式，可对治反模式 chip 跳反模式页
+  3. DevxLab 传 onGotoAntipatterns；SSR 验证 + 重打包
+- 验收: 展开任一有依赖的范式能看到前置/解锁/对治反模式并可点击跳转；node --test 全绿
+
+## P-12 · swarm 结论可导出：复制/下载 Markdown
+- 状态: done
+- 作者: claude
+- 可行性: 『最后给用户一个结论』就该能带走；结论只能看不能导出，做完即流失
 - 步骤:
   1. core/export.js：jobToMarkdown(job) 纯函数——标题/元信息(路由·拓扑·预估)/结论/逐角色过程/署名
-  2. App 结论区加『复制结论』『导出 Markdown』(剪贴板 + Blob 下载 .md)
-  3. 补 jobToMarkdown 单测（含需求/结论/角色名/状态）；重打包
+  2. App 结论区加『复制结论』『复制 Markdown』『下载 .md』(剪贴板 + Blob 下载)
+  3. 补 jobToMarkdown/exportFilename 单测；重打包
 - 验收: node --test 全绿；离线跑完一单可复制结论、下载完整 Markdown

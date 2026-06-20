@@ -62,6 +62,13 @@ test('averageScore 平均并取整；空数组为 0', () => {
   assert.equal(avg, Math.round((lintPrompt(a).score + lintPrompt(b).score) / 2));
 });
 
+test('每个检查项都带可定位的编辑器字段', () => {
+  const r = lintPrompt(normalizePrompt({ content: '随便' }));
+  const allowed = new Set(['system', 'content', 'exampleInput', 'summary']);
+  for (const c of r.checks) assert.ok(allowed.has(c.field), `${c.id} 缺少有效 field`);
+  assert.equal(r.checks.find((c) => c.id === 'role').field, 'system');
+});
+
 test('gradeOf 分段', () => {
   assert.equal(gradeOf(90).key, 'A');
   assert.equal(gradeOf(72).key, 'B');

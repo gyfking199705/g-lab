@@ -1,6 +1,6 @@
 {
   "name": "muse-ui",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "✨ UI 组件脑爆 + research 实验室：零依赖 React 创意交互组件（3D 倾斜 / 光斑 / 磁吸 / 涟漪 / 网格渐变 / 数字滚动 / 渐变文字 / 打字机 / ⌘K 命令面板 / 解码文字 / 跑马灯 / 礼花），可被 planner 复用、也可发 npm。",
   "type": "module",
   "main": "./dist/index.cjs",

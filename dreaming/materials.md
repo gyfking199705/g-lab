@@ -218,9 +218,79 @@
 - 重点: orchestrator decompose 按 kind 分派不同拓扑：build=单线程深链/research=3路并行/decide=决策框架/write=精简管线/general=默认；新增 topologyLabel；收紧 isSimpleIntent；App 显示拓扑名；41 单测全绿
 - 解决的问题: 原 decompose 各类型只改措辞、结构相同；兑现调研最核心结论『按任务类型选拓扑』
 
-## M-28 · 2026-06-20 · swarm 结论可导出（落地 P-10）
+## M-28 · 2026-06-20 · agent-cli 调研扩到八家 + 两家并排对比
 - 作者: claude
 - 提交: 9c83a72
+- 子项目: agent-cli
+- 重点: 新增 Cursor/Devin 对比卡+矩阵列（分 CLI 系/IDE 云端系）；UI 加任选两家并排对比（≠ 标差异）
+- 解决的问题: 对照覆盖 IDE/云端自治形态并支持任意两家精确对比（D-2 收尾）
+## M-28 · 2026-06-20 · mock-lab 工坊扩到 9 种产物（pytest fixture/requests-mock/VCR 磁带）
+- 作者: claude
+- 提交: 4a6f0a6
+- 子项目: mock-lab
+- 重点: codegen 新增 pytestFixture/pythonRequestsMock/vcrCassette 三个纯函数生成器并注册到工坊，+4 单测共 30 全绿，重建 bundle
+- 解决的问题: 原 6 种产物偏 responses/respx；补齐 pytest 复用 fixture、requests-mock、离线可回放磁带，强化 Python 优先与可植入
+
+## M-29 · 2026-06-20 · muse-ui v0.5：CommandPalette 与 Typewriter 打磨
+- 作者: claude
+- 提交: 496d13e
+- 子项目: muse-ui
+- 重点: CommandPalette 分组/最近/高亮；Typewriter 多句循环+退格（纯函数 typewriterState）。
+- 解决的问题: 把两核心组件打磨到好用，逻辑保持纯函数可测。
+
+## M-30 · 2026-06-20 · devx-lab 新增『反模式』库：效能杀手 + 解药链接（落地 P-9）
+- 作者: claude
+- 提交: 59404c8
+- 子项目: devx-lab
+- 重点: 新增 ANTIPATTERNS（10 个业界公认效能杀手：英雄主义/长期分支/手工发布/会议过载/单指标考核/雪花服务器/巨型PR/不稳定测试/评审瓶颈/重复手工劳动），每个给症状/危害/解药范式 id/出处；AntiPatterns 视图新标签页，解药 chip 点击跳范式库；数据自洽单测校验解药 id 合法，单测 19→20 全过
+- 解决的问题: 范式库只讲'该做什么'，缺'别做什么'的一面；正反对照（反模式→解药）更易识别团队问题、更有说服力
+
+## M-31 · 2026-06-20 · agent-cli 收口：一键导出整份调研报告 Markdown
+- 作者: claude
+- 提交: 4ac3b4e
+- 子项目: agent-cli
+- 重点: engine 加 researchReportMarkdown（八家要点+矩阵+共性+来源→一篇 Markdown，纯函数+单测）；研究面板加导出按钮
+- 解决的问题: 研究做完要能整篇外带分享，不只是矩阵
+
+## M-32 · 2026-06-20 · 提质三件套：重点条目模板 + 类别×成熟度总览图 + Markdown 导出
+- 作者: claude
+- 提交: 2b6d4ee
+- 子项目: ai-coding-lab
+- 重点: TEMPLATES 10 个可复制骨架(详情页一键复制)；手写 SVG 总览图(maturityMatrix 纯函数+单测)与「总览」视图；exportMd 纯函数+测试与「导出 Markdown」按钮；node --test 26 全绿
+- 解决的问题: 知识库只能浏览、不便直接拿去用，也缺结构总览与带走能力——转向提质而非堆量
+
+## M-33 · 2026-06-20 · devx-lab 进度趋势：快照存档 + 趋势折线（落地 P-10）
+- 作者: claude
+- 提交: 476670e
+- 子项目: devx-lab
+- 重点: 纯逻辑 buildSnapshot(落地率/各数/DORA评分/日期) + upsertSnapshot(同日覆盖/按时间升序/限长60)；团队画像页加进度趋势区：手写 SVG 双线（落地率实线+DORA评分虚线）+较上次变化+保存今日快照；快照随 export/import 迁移；单测 20→22 全过
+- 解决的问题: 采纳与评分只能看当下，看不出改进趋势——补上时间维度让'持续改进'可视化
+
+## M-34 · 2026-06-20 · agent-cli 会话导出 Markdown transcript（落地 P-10）
+- 作者: claude
+- 提交: 7d1c25f
+- 子项目: agent-cli
+- 重点: engine 加 transcriptToMarkdown（用户/回答/工具卡/diff/审批轨迹→Markdown，纯函数+单测）；标题栏「⤓ 导出会话」按钮
+- 解决的问题: 一次 agent 会话无法复盘/分享——现在可一键导出整段交互
+
+## M-35 · 2026-06-20 · prompt-lab 质量体检未达标项点击直达编辑器字段
+- 作者: claude
+- 提交: 628a353
+- 子项目: prompt-lab
+- 重点: lint.js 每项检查带 field(system/content/exampleInput/summary)；LintPanel 未通过项可点击→关闭详情、打开编辑器、滚动到该字段、聚焦并短暂高亮(pl-field-flash)；把『诊断→改进』合成一步；新增 field 映射单测，node --test 32 全过，Puppeteer 实测点击角色项跳转聚焦 System 字段无报错
+- 解决的问题: 体检只给分与建议，用户仍要自己找字段改——补上一键定位，让符合业界标准的改进真正可执行
+- 遗留/副作用: 一个检查只映射一个主字段(如 format/guardrails 都落到 content)，非全部相关字段
+
+## M-36 · 2026-06-20 · devx-lab 范式关系网：详情互链前置/解锁/可对治反模式（落地 P-11）
+- 作者: claude
+- 提交: 436d560
+- 子项目: devx-lab
+- 重点: 纯逻辑 prerequisitesOf/unlocksOf/curesOf；Practices 卡片详情加『关系』块：前置(requires)与解锁(被依赖)范式 chip 点击就地搜索、对治反模式 chip 跳反模式页；DevxLab 传 onGotoAntipatterns；单测 22→23 全过
+- 解决的问题: 范式卡片彼此孤立——依赖图与反模式数据已有却没在卡片层暴露，连成关系网才能顺着'前置→解锁→对治'探索
+
+## M-37 · 2026-06-20 · swarm 结论可导出（落地 P-12）
+- 作者: claude
+- 提交: d25840f
 - 子项目: swarm
-- 重点: core/export.js jobToMarkdown(纯函数：标题/元信息/结论/逐角色过程/署名，结论自带标题则不重复外套)+exportFilename；App 结论区加 复制结论/复制Markdown/下载.md（剪贴板+Blob，含降级）；新增 export.test.js，46 单测全绿；重打包
+- 重点: core/export.js jobToMarkdown（纯函数：标题/元信息/结论/逐角色过程/署名，结论自带标题则不重复外套）+exportFilename；App 结论区加 复制结论/复制Markdown/下载.md（剪贴板+Blob，含降级）；新增 export.test.js，46 单测全绿；重打包
 - 解决的问题: 结论只能看不能带走——补上一键复制/下载 Markdown

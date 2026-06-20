@@ -68,7 +68,39 @@ function Radar({ data }) {
   );
 }
 
-export default function Profile({ bands, statuses }) {
+/** 进度趋势折线：落地率（陶土实线）+ DORA 评分（绿色虚线），同 0–100 刻度。 */
+function Trend({ snaps }) {
+  const W = 560, H = 170, padL = 30, padR = 14, padT = 14, padB = 24;
+  const n = snaps.length;
+  const x = (i) => padL + (n <= 1 ? 0 : (i * (W - padL - padR)) / (n - 1));
+  const y = (v) => padT + (1 - v / 100) * (H - padT - padB);
+  const line = (key) => snaps.map((s, i) => `${x(i).toFixed(1)},${y(s[key] || 0).toFixed(1)}`).join(' ');
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="进度趋势" style={{ maxWidth: W }}>
+      {[0, 25, 50, 75, 100].map((g) => (
+        <g key={g}>
+          <line x1={padL} y1={y(g)} x2={W - padR} y2={y(g)} stroke="#ECEAE2" strokeWidth="1" />
+          <text x={padL - 5} y={y(g) + 3} textAnchor="end" fontSize="9" fill="#B0AFA5">{g}</text>
+        </g>
+      ))}
+      <polyline points={line('score')} fill="none" stroke="#6E9079" strokeWidth="1.6" strokeDasharray="4 3" />
+      <polyline points={line('percent')} fill="none" stroke="#CC785C" strokeWidth="2" />
+      {snaps.map((s, i) => (
+        <circle key={i} cx={x(i).toFixed(1)} cy={y(s.percent).toFixed(1)} r="2.6" fill="#CC785C" />
+      ))}
+      {n > 0 && (
+        <>
+          <text x={x(0).toFixed(1)} y={H - 8} textAnchor="start" fontSize="9" fill="#B0AFA5">{snaps[0].date}</text>
+          {n > 1 && (
+            <text x={x(n - 1).toFixed(1)} y={H - 8} textAnchor="end" fontSize="9" fill="#B0AFA5">{snaps[n - 1].date}</text>
+          )}
+        </>
+      )}
+    </svg>
+  );
+}
+
+export default function Profile({ bands, statuses, snaps = [], onSnapshot }) {
   const radar = categoryRadar(PRACTICES, statuses);
   const adopt = adoptionStats(PRACTICES, statuses);
   const [copied, setCopied] = useState(false);
@@ -94,6 +126,10 @@ export default function Profile({ bands, statuses }) {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  const last = snaps[snaps.length - 1];
+  const prev = snaps[snaps.length - 2];
+  const delta = last && prev ? last.percent - prev.percent : null;
 
   return (
     <div className="dx-profile">
@@ -135,6 +171,37 @@ export default function Profile({ bands, statuses }) {
           <button className="dx-copy" onClick={copyReport}>{copied ? '✓ 已复制' : '复制报告'}</button>
           <button className="dx-copy" onClick={downloadReport}>下载 .md</button>
         </div>
+      </section>
+
+      <section className="dx-pf-trend">
+        <div className="dx-pf-trend-h">
+          <div>
+            <h2 className="dx-pf-h" style={{ marginBottom: 4 }}>进度趋势</h2>
+            <p className="dx-pf-sub" style={{ margin: 0 }}>
+              定期保存快照，看落地率与 DORA 评分随时间的变化——让持续改进看得见。
+            </p>
+          </div>
+          <button className="dx-copy" onClick={onSnapshot}>保存今日快照</button>
+        </div>
+
+        {snaps.length >= 2 ? (
+          <>
+            <div className="dx-pf-trend-legend">
+              <span><i className="sw" style={{ background: '#CC785C' }} />落地率</span>
+              <span><i className="sw" style={{ borderTop: '2px dashed #6E9079', background: 'none', height: 0 }} />DORA 评分</span>
+              {delta != null && (
+                <span className="delta" style={{ color: delta >= 0 ? 'var(--ok)' : 'var(--danger)' }}>
+                  较上次落地率 {delta >= 0 ? '+' : ''}{delta}%
+                </span>
+              )}
+            </div>
+            <Trend snaps={snaps} />
+          </>
+        ) : (
+          <div className="dx-pf-sub" style={{ marginTop: 4 }}>
+            已保存 {snaps.length} 个快照——再存至少 {2 - snaps.length} 个（如每周一次）即可看到趋势线。
+          </div>
+        )}
       </section>
     </div>
   );

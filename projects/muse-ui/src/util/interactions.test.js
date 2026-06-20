@@ -14,8 +14,26 @@ import {
   marqueeOffset,
   revealCount,
   scrambleText,
+  typewriterState,
 } from './interactions.js';
 import { easings } from './anim.js';
+
+test('typewriterState：打字/停留/删除/间隔，循环取模', () => {
+  const opts = { cps: 1, delCps: 2, hold: 1, gap: 1, loop: true }; // 'ab': type2 hold1 del1 gap1, total5
+  assert.deepEqual(typewriterState(['ab'], 0, opts), { text: '', index: 0, phase: 'typing' });
+  assert.deepEqual(typewriterState(['ab'], 1, opts), { text: 'a', index: 0, phase: 'typing' });
+  assert.equal(typewriterState(['ab'], 2.5, opts).phase, 'hold');
+  assert.equal(typewriterState(['ab'], 2.5, opts).text, 'ab');
+  assert.equal(typewriterState(['ab'], 3.5, opts).phase, 'deleting');
+  assert.equal(typewriterState(['ab'], 4.5, opts).phase, 'gap');
+  assert.deepEqual(typewriterState(['ab'], 5, opts), typewriterState(['ab'], 0, opts)); // 循环
+});
+
+test('typewriterState：非循环单句打完停在 done/hold、空兜底', () => {
+  const r = typewriterState('hi', 999, { cps: 10, loop: false });
+  assert.equal(r.text, 'hi');
+  assert.equal(typewriterState([], 1).text, '');
+});
 
 test('marqueeOffset：在 [-width,0] 间循环', () => {
   assert.equal(marqueeOffset(1, 50, 200), -50);
