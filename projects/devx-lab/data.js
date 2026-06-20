@@ -856,3 +856,88 @@ export const DORA_LEVELS = [
   { name: 'Medium', cn: '中等', color: '#BE9356', desc: '有明显改进空间，可挑一两个瓶颈先动。' },
   { name: 'Low', cn: '偏低', color: '#BC6055', desc: '建议从 CI/CD 与小批量交付等基础能力补起。' },
 ];
+
+// ── 反模式库（效能杀手 + 解药） ─────────────────────────────────────
+// antidotes 引用 PRACTICES 的 id，作为「该用哪些范式来治」的链接。
+export const ANTIPATTERNS = [
+  {
+    id: 'hero-culture',
+    name: '英雄主义 / 救火文化',
+    symptom: '系统稳定高度依赖某几位「救火队员」，半夜全靠他们手动恢复，知识只在脑子里。',
+    why: '不可持续、单点风险高、掩盖了系统性问题；助长加班崇拜而非根因治理。',
+    antidotes: ['blameless', 'observability', 'slo', 'team-cognitive'],
+    source: { label: 'DORA · Westrum 文化', url: 'https://dora.dev/capabilities/generative-organizational-culture/' },
+  },
+  {
+    id: 'long-branches',
+    name: '长期特性分支',
+    symptom: '分支存活数周、改动巨大，合并时冲突成山、回归频发，谁都不敢先合。',
+    why: '集成被推迟到最后，放大风险与返工，直接拉长前置时间、抬高变更失败率。',
+    antidotes: ['tbd', 'small-pr', 'flags'],
+    source: { label: 'Trunk-Based Development', url: 'https://trunkbaseddevelopment.com/' },
+  },
+  {
+    id: 'manual-release',
+    name: '手工 / 大爆炸发布',
+    symptom: '发布是一份长长的手工清单，攒一大批改动择日上线，出错就通宵回滚。',
+    why: '不可重复、易出错、恢复慢；批量越大故障定位越难，是低部署频率的根源。',
+    antidotes: ['cicd', 'flags', 'iac', 'db-migration'],
+    source: { label: 'DORA · 部署自动化', url: 'https://dora.dev/capabilities/deployment-automation/' },
+  },
+  {
+    id: 'meeting-overload',
+    name: '会议过载 / 持续打断',
+    symptom: '日历被会议和临时同步塞满，工程师一天找不出两小时完整专注时间。',
+    why: '心流被反复打断，认知负荷高、产出与满意度双降。',
+    antidotes: ['docs-async', 'flow-protect', 'wip-limit'],
+    source: { label: 'DevEx · 心流 (ACM Queue)', url: 'https://queue.acm.org/detail.cfm?id=3595878' },
+  },
+  {
+    id: 'single-metric',
+    name: '单指标考核 / 指标即目标',
+    symptom: '用「代码行数 / 提交数 / 速度点」考核个人，大家开始刷指标。',
+    why: 'Goodhart 定律：指标一旦成为目标就失效；激励出局部最优与博弈行为，损害协作与质量。',
+    antidotes: ['space-mix', 'four-keys', 'blameless'],
+    source: { label: 'SPACE (ACM Queue)', url: 'https://queue.acm.org/detail.cfm?id=3454124' },
+  },
+  {
+    id: 'snowflake',
+    name: '雪花服务器 / 环境漂移',
+    symptom: '线上机器靠手工调出来、无人敢动，「在我机器上是好的」频繁出现。',
+    why: '环境不可复制、排障靠玄学，升级与扩容风险高，事故难复现。',
+    antidotes: ['iac', 'twelve-factor', 'golden-path'],
+    source: { label: 'DORA · 基础设施即代码', url: 'https://dora.dev/capabilities/infrastructure-as-code/' },
+  },
+  {
+    id: 'giant-pr',
+    name: '巨型 PR / 大批量提交',
+    symptom: '一个 PR 改几千行、跨多个关注点，评审者望而却步、草草放行。',
+    why: '评审质量下降、缺陷漏网、冲突与回滚成本高，反馈回路被拉长。',
+    antidotes: ['small-pr', 'tbd', 'review-sla'],
+    source: { label: 'Google Eng Practices', url: 'https://google.github.io/eng-practices/review/' },
+  },
+  {
+    id: 'flaky-tests',
+    name: '不可信 / 不稳定测试',
+    symptom: '测试时红时绿，大家习惯「重跑一下」，渐渐没人信测试结果。',
+    why: '测试失去守护价值，缺陷溜进生产；也让人不敢频繁改动，抑制交付速度。',
+    antidotes: ['test-pyramid', 'contract-testing', 'shift-left'],
+    source: { label: 'DevEx · 反馈回路 (ACM Queue)', url: 'https://queue.acm.org/detail.cfm?id=3595878' },
+  },
+  {
+    id: 'review-bottleneck',
+    name: '评审瓶颈 / PR 堆积',
+    symptom: 'PR 提了没人看，挂好几天；少数人成为所有评审的必经关卡。',
+    why: '在途工作积压、上下文流失，前置时间被隐性等待吃掉。',
+    antidotes: ['review-sla', 'small-pr', 'ai-review'],
+    source: { label: 'Google Eng Practices · 评审速度', url: 'https://google.github.io/eng-practices/review/reviewer/speed.html' },
+  },
+  {
+    id: 'toil',
+    name: '重复手工劳动 / 无自助',
+    symptom: '建环境、配流水线、申请资源都要开工单等人处理，重复且漫长。',
+    why: '可自动化的杂务（toil）吞噬工程时间、抬高认知负荷，规模化后愈发拖慢交付。',
+    antidotes: ['golden-path', 'idp-portal', 'ai-pairing'],
+    source: { label: 'Google SRE · Toil', url: 'https://sre.google/sre-book/eliminating-toil/' },
+  },
+];

@@ -12,9 +12,11 @@ import Frameworks from './Frameworks.jsx';
 import Assessment from './Assessment.jsx';
 import Roadmap from './Roadmap.jsx';
 import Profile from './Profile.jsx';
+import AntiPatterns from './AntiPatterns.jsx';
 
 const TABS = [
   { id: 'practices', name: '提效范式库' },
+  { id: 'antipatterns', name: '反模式' },
   { id: 'frameworks', name: '业界框架' },
   { id: 'assess', name: 'DORA 自评' },
   { id: 'roadmap', name: '落地路线' },
@@ -149,6 +151,7 @@ export default function DevxLab() {
           focus={focus}
         />
       )}
+      {tab === 'antipatterns' && <AntiPatterns onGoto={gotoPractice} />}
       {tab === 'frameworks' && <Frameworks statuses={statuses} />}
       {tab === 'assess' && <Assessment bands={bands} onSet={setBand} />}
       {tab === 'roadmap' && (

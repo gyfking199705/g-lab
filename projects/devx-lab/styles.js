@@ -156,6 +156,23 @@ export const CSS = `
   color:var(--accent-2);background:var(--surface);border:1px solid var(--bd);border-radius:8px;padding:7px 13px;transition:all .15s;}
 .dx-copy:hover{border-color:var(--accent);background:var(--accent-soft);}
 
+/* anti-patterns */
+.dx-ap-intro{font-size:13.5px;color:var(--t2);max-width:680px;margin-bottom:18px;}
+.dx-ap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;}
+.dx-ap-card{background:var(--surface);border:1px solid var(--bd);border-radius:14px;padding:18px;
+  border-left:3px solid var(--danger);}
+.dx-ap-name{font-family:var(--serif);font-weight:600;font-size:16.5px;margin:0 0 10px;}
+.dx-ap-block{margin-bottom:9px;}
+.dx-ap-block .lab,.dx-ap-anti .lab{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);
+  font-weight:600;display:block;margin-bottom:3px;}
+.dx-ap-block p{font-size:13px;color:var(--t2);margin:0;}
+.dx-ap-anti{margin-top:12px;border-top:1px solid var(--bd-2);padding-top:10px;}
+.dx-ap-anti .chips{display:flex;flex-wrap:wrap;gap:6px;}
+.dx-ap-chip{appearance:none;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--ok);
+  background:var(--surface-2);border:1px solid var(--bd);border-radius:7px;padding:4px 9px;transition:all .15s;}
+.dx-ap-chip:hover{border-color:var(--ok);background:#EEF3EF;}
+.dx-ap-src{margin-top:11px;font-size:12px;}
+
 /* profile (team radar + report) */
 .dx-pf-card{display:flex;gap:24px;flex-wrap:wrap;align-items:center;background:var(--surface);
   border:1px solid var(--bd);border-radius:14px;padding:22px;}

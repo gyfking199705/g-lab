@@ -21,7 +21,7 @@ import {
   categoryRadar,
   teamReportMarkdown,
 } from './calc.js';
-import { PRACTICES, CATEGORIES, FRAMEWORKS } from './data.js';
+import { PRACTICES, CATEGORIES, FRAMEWORKS, ANTIPATTERNS } from './data.js';
 
 test('数据自洽：每条范式的类别都在 CATEGORIES 内，评分在 1..5', () => {
   const catIds = new Set(CATEGORIES.map((c) => c.id));
@@ -36,6 +36,18 @@ test('数据自洽：每条范式的类别都在 CATEGORIES 内，评分在 1..5
   }
   // id 唯一
   assert.equal(new Set(PRACTICES.map((p) => p.id)).size, PRACTICES.length);
+});
+
+test('ANTIPATTERNS 自洽：id 唯一、解药 id 均为合法范式、字段齐全', () => {
+  const pIds = new Set(PRACTICES.map((p) => p.id));
+  assert.ok(ANTIPATTERNS.length >= 6, '反模式应足够丰富');
+  assert.equal(new Set(ANTIPATTERNS.map((a) => a.id)).size, ANTIPATTERNS.length);
+  for (const a of ANTIPATTERNS) {
+    assert.ok(a.id && a.name && a.symptom && a.why, `${a.id} 字段缺失`);
+    assert.ok(Array.isArray(a.antidotes) && a.antidotes.length > 0, `${a.id} 缺解药`);
+    for (const id of a.antidotes) assert.ok(pIds.has(id), `${a.id} 的解药 ${id} 不是合法范式`);
+    assert.ok(a.source && a.source.url, `${a.id} 缺出处`);
+  }
 });
 
 test('filterPractices: 关键词 / 类别 / 框架', () => {
