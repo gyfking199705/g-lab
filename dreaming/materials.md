@@ -217,3 +217,10 @@
 - 子项目: swarm
 - 重点: orchestrator decompose 按 kind 分派不同拓扑：build=单线程深链/research=3路并行/decide=决策框架/write=精简管线/general=默认；新增 topologyLabel；收紧 isSimpleIntent；App 显示拓扑名；41 单测全绿
 - 解决的问题: 原 decompose 各类型只改措辞、结构相同；兑现调研最核心结论『按任务类型选拓扑』
+
+## M-28 · 2026-06-20 · swarm 结论可导出（落地 P-10）
+- 作者: claude
+- 提交: 9c83a72
+- 子项目: swarm
+- 重点: core/export.js jobToMarkdown(纯函数：标题/元信息/结论/逐角色过程/署名，结论自带标题则不重复外套)+exportFilename；App 结论区加 复制结论/复制Markdown/下载.md（剪贴板+Blob，含降级）；新增 export.test.js，46 单测全绿；重打包
+- 解决的问题: 结论只能看不能带走——补上一键复制/下载 Markdown

@@ -105,3 +105,13 @@
   3. DevxLab 加「团队画像」标签页，传 bands/statuses
   4. 补 categoryRadar/teamReportMarkdown 单测并重打包、SSR 验证
 - 验收: 雷达按 8 类别画出团队画像；一键可复制/下载含五节的 Markdown 报告；node --test 全绿
+
+## P-10 · swarm 结论可导出：复制/下载 Markdown
+- 状态: done
+- 作者: claude
+- 可行性: 『最后给用户一个结论』就该能带走；目前结论只能看不能导出，做完即流失
+- 步骤:
+  1. core/export.js：jobToMarkdown(job) 纯函数——标题/元信息(路由·拓扑·预估)/结论/逐角色过程/署名
+  2. App 结论区加『复制结论』『导出 Markdown』(剪贴板 + Blob 下载 .md)
+  3. 补 jobToMarkdown 单测（含需求/结论/角色名/状态）；重打包
+- 验收: node --test 全绿；离线跑完一单可复制结论、下载完整 Markdown

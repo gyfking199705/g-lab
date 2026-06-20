@@ -5,6 +5,7 @@ import { getRole, roleList } from '../core/roles.js';
 import { classify, buildPlan, planToSpecs, topologyLabel } from '../core/orchestrator.js';
 import { PROVIDERS, defaultAIConfig, isConfigured } from '../core/ai.js';
 import { estimateJobCost, formatUSD, formatTokens } from '../core/cost.js';
+import { jobToMarkdown, exportFilename } from '../core/export.js';
 import { mdToHtml } from './markdown.js';
 
 const LS_AI = 'swarm.ai.v1';
@@ -205,6 +206,36 @@ function Workspace({ job }) {
   const layers = topoLayers(job.tasks || []);
   const tasksById = Object.fromEntries((job.tasks || []).map((t) => [t.id, t]));
   const p = progress(job.tasks || []);
+  const [copied, setCopied] = useState('');
+
+  const flash = (label) => {
+    setCopied(label);
+    setTimeout(() => setCopied(''), 1600);
+  };
+  const copyText = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch { /* 忽略 */ }
+      ta.remove();
+    }
+    flash(label);
+  };
+  const downloadMd = () => {
+    const blob = new Blob([jobToMarkdown(job)], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = exportFilename(job);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
   return (
     <div className="sw-ws">
       <div className="sw-ws-head">
@@ -252,7 +283,15 @@ function Workspace({ job }) {
 
       {job.conclusion && (
         <div className="sw-conclusion">
-          <div className="sw-conclusion-h">📝 最终结论</div>
+          <div className="sw-conclusion-h">
+            <span>📝 最终结论</span>
+            <span className="sw-export">
+              <button className="sw-ghost sw-mini" onClick={() => copyText(job.conclusion, '结论')}>复制结论</button>
+              <button className="sw-ghost sw-mini" onClick={() => copyText(jobToMarkdown(job), '全文')}>复制 Markdown</button>
+              <button className="sw-ghost sw-mini" onClick={downloadMd}>下载 .md</button>
+              {copied && <span className="sw-copied">已复制{copied}✓</span>}
+            </span>
+          </div>
           <div className="sw-md" dangerouslySetInnerHTML={{ __html: mdToHtml(job.conclusion) }} />
         </div>
       )}
@@ -472,7 +511,10 @@ function Style() {
 @keyframes sw-blink{0%,50%{opacity:1;}50.01%,100%{opacity:0;}}
 .sw-task-fail{margin-top:8px;font-size:11.5px;color:var(--danger);}
 .sw-conclusion{margin-top:26px;background:var(--surface);border:1px solid var(--bd);border-radius:16px;padding:24px;border-top:3px solid var(--accent);}
-.sw-conclusion-h{font-family:var(--serif);font-size:16px;font-weight:600;margin-bottom:12px;}
+.sw-conclusion-h{font-family:var(--serif);font-size:16px;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.sw-export{display:inline-flex;align-items:center;gap:6px;}
+.sw-mini{padding:4px 9px;font-size:11.5px;font-family:var(--sans);font-weight:400;}
+.sw-copied{font-size:11.5px;color:var(--ok);}
 .sw-md h2{font-family:var(--serif);font-size:18px;margin:0 0 10px;}
 .sw-md h3{font-family:var(--serif);font-size:14px;color:var(--t2);margin:16px 0 6px;}
 .sw-md p{margin:0 0 10px;color:var(--t1);}
