@@ -728,10 +728,10 @@ function Empty({ icon, text }) {
 
 /* ============================ 样式 ============================ */
 const CSS = `
-.pp-root{--accent:#CC785C;--accent-2:#B5654A;--accent-soft:#F3E7E0;--g:#5C8A6B;--g-soft:#E7EFE8;
-  --bad:#C0584A;--bad-soft:#F7E7E3;--bg:#F4F2EC;--surface:#FBFAF6;--surface-2:#F1EFE8;
-  --t1:#33312C;--t2:#6B675E;--t3:#9B978C;--bd:#E5E1D8;--bd-2:#D6D1C6;
-  --serif:Georgia,'Songti SC',serif;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;
+.pp-root{--accent:#CC785C;--accent-2:#B5654A;--accent-soft:#F5ECE5;--g:#6E9079;--g-soft:#E7EFE8;
+  --bad:#BC6055;--bad-soft:#F7E7E3;--bg:#F6F5F0;--surface:#FFFFFF;--surface-2:#F1EFE8;
+  --t1:#26241F;--t2:#83827A;--t3:#B0AFA5;--bd:#ECEAE2;--bd-2:#E3E0D7;
+  --serif:'Tiempos Text',Georgia,'Songti SC','STSong',serif;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;
   font-family:var(--sans);color:var(--t1);max-width:1120px;margin:0 auto;}
 .pp-root *{box-sizing:border-box;}
 .pp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
