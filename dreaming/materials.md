@@ -217,3 +217,10 @@
 - 子项目: swarm
 - 重点: orchestrator decompose 按 kind 分派不同拓扑：build=单线程深链/research=3路并行/decide=决策框架/write=精简管线/general=默认；新增 topologyLabel；收紧 isSimpleIntent；App 显示拓扑名；41 单测全绿
 - 解决的问题: 原 decompose 各类型只改措辞、结构相同；兑现调研最核心结论『按任务类型选拓扑』
+
+## M-28 · 2026-06-20 · agent-cli 调研扩到八家 + 两家并排对比
+- 作者: claude
+- 提交: 9c83a72
+- 子项目: agent-cli
+- 重点: 新增 Cursor/Devin 对比卡+矩阵列（分 CLI 系/IDE 云端系）；UI 加任选两家并排对比（≠ 标差异）
+- 解决的问题: 对照覆盖 IDE/云端自治形态并支持任意两家精确对比（D-2 收尾）
