@@ -23,7 +23,7 @@ g-lab/
     ├── swarm/              # 🐝 多智能体协作工作区原型 + 业界调研
     ├── agent-cli/          # 🖥️ Agent CLI 交互研究（复刻 + 对比业界命令行 agent）
     ├── ai-coding-lab/      # 🤖 AI Coding 研究室：收集与展示 AI 编程范式与提效方式
-    └── skill-lab/          # 🧩 Skill 研究室：收录与展示标准化 Agent Skills
+    ├── skill-lab/          # 🧩 Skill 研究室：收录与展示标准化 Agent Skills
     └── devx-lab/           # 🔬 研发提效研究室（提效范式库 + 业界框架 + DORA 自评）
 ```
 
