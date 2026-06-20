@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { readModule, saveState } from '../core/store.js';
 import { SHARED_CSS, Progress, Empty, LineChart, MiniBars, Ring } from '../core/ui.jsx';
-import { buildAnalytics, BOARD_ORDER } from './analytics.js';
+import { buildAnalytics, BOARD_ORDER, todayDigest } from './analytics.js';
 import MarketCards, { MARKET_CSS } from './MarketCards.jsx';
 import { todayStr, fmtDate } from '../core/date.js';
 import { todayView } from '../schedule/calc.js';
@@ -118,6 +118,28 @@ export default function Dashboard({ onNavigate, onOpenBoard, onChange, onSeed })
         </div>
       ) : (
         <>
+          {/* 今日聚合：跨模块「今天该做的事」一处看全 */}
+          {(() => {
+            const digest = todayDigest(readModule, today);
+            if (!digest.due) return null;
+            return (
+              <div className="gx-card" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
+                <div style={{ minWidth: 150, flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 6 }}>
+                    今日聚合 · 已完成 <strong style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--accent-2)' }}>{digest.done}/{digest.due}</strong>
+                    {digest.remaining ? ` · 还有 ${digest.remaining} 项` : ' · 全部完成 🎉'}
+                  </div>
+                  <Progress pct={digest.pct} good={digest.remaining === 0} />
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {digest.rows.map((r) => (
+                    <span key={r.id} className="gx-tag">{r.icon} {r.label} {r.done}/{r.total}{r.overdue ? ` ⚠${r.overdue}` : ''}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* 今日行动 */}
           {(hBoard.total > 0 || scheduleTotal > 0 || sView.overdue.length > 0) && (
             <>
