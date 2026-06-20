@@ -44,7 +44,7 @@ export default function CountUp({
   }, [value, from, duration, reduced]);
 
   return (
-    <span className={`popcorn-countup ${className}`.trim()} style={style} {...rest}>
+    <span className={`muse-countup ${className}`.trim()} style={style} {...rest}>
       {prefix}
       {formatNumber(display, decimals)}
       {suffix}

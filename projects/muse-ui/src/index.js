@@ -1,5 +1,5 @@
 /**
- * popcorn-ui 🍿 — 零依赖的 React 创意交互组件
+ * muse-ui ✨ — 零依赖的 React 创意交互组件
  * 入口：导出全部组件 + 可复用的纯函数/hooks。
  */
 export { default as TiltCard } from './TiltCard.jsx';

@@ -7,12 +7,12 @@ import { tiltTransform } from './util/interactions.js';
 import { useInjectedStyle, usePrefersReducedMotion } from './util/hooks.js';
 
 const CSS = `
-.popcorn-tilt{position:relative;border-radius:16px;transition:transform .18s ease-out;transform-style:preserve-3d;will-change:transform;}
-.popcorn-tilt-glare{position:absolute;inset:0;border-radius:inherit;pointer-events:none;transition:opacity .25s ease-out;mix-blend-mode:soft-light;}
+.muse-tilt{position:relative;border-radius:16px;transition:transform .18s ease-out;transform-style:preserve-3d;will-change:transform;}
+.muse-tilt-glare{position:absolute;inset:0;border-radius:inherit;pointer-events:none;transition:opacity .25s ease-out;mix-blend-mode:soft-light;}
 `;
 
 export default function TiltCard({ maxDeg = 12, glare = true, scale = 1.03, className = '', style, children, ...rest }) {
-  useInjectedStyle('popcorn-tiltcard', CSS);
+  useInjectedStyle('muse-tiltcard', CSS);
   const ref = useRef(null);
   const reduced = usePrefersReducedMotion();
   const [t, setT] = useState(null);
@@ -32,7 +32,7 @@ export default function TiltCard({ maxDeg = 12, glare = true, scale = 1.03, clas
   return (
     <div
       ref={ref}
-      className={`popcorn-tilt ${className}`.trim()}
+      className={`muse-tilt ${className}`.trim()}
       style={{ ...style, transform }}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
@@ -41,7 +41,7 @@ export default function TiltCard({ maxDeg = 12, glare = true, scale = 1.03, clas
       {children}
       {glare && !reduced && (
         <div
-          className="popcorn-tilt-glare"
+          className="muse-tilt-glare"
           style={{
             opacity: t ? 1 : 0,
             background: t

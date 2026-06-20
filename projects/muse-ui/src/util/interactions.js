@@ -1,5 +1,5 @@
 /**
- * popcorn-ui · 交互/特效的纯计算（不依赖 React 与 DOM，可单测）
+ * muse-ui · 交互/特效的纯计算（不依赖 React 与 DOM，可单测）
  * 组件(.jsx) 只负责把鼠标事件与 ref 接到这些纯函数上，几何/数学都在这里。
  */
 import { clamp, mapRange, roundTo, easings } from './anim.js';

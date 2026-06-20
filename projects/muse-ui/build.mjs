@@ -1,6 +1,6 @@
 /**
- * popcorn-ui 打包脚本。
- *   cd projects/popcorn-ui && npm install --no-save esbuild react react-dom && node build.mjs
+ * muse-ui 打包脚本。
+ *   cd projects/muse-ui && npm install --no-save esbuild react react-dom && node build.mjs
  * 产物：
  *   dist/index.js   —— 库 ESM（发 npm；不入库，react 外置）
  *   dist/index.cjs  —— 库 CommonJS（发 npm；不入库）
@@ -47,4 +47,4 @@ if (existsSync('index.html') && existsSync('demo.js')) {
   if (next !== html) writeFileSync('index.html', next);
 }
 
-console.log('✅ popcorn-ui 已打包：dist/index.js+cjs（库）+ demo.js（演示页）');
+console.log('✅ muse-ui 已打包：dist/index.js+cjs（库）+ demo.js（演示页）');

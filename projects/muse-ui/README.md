@@ -1,10 +1,10 @@
-# popcorn-ui 🍿
+# muse-ui ✨
 
-零依赖的 **React 创意交互组件**库——3D 倾斜、光斑、磁吸、涟漪、动态网格渐变、数字滚动。
-**复制即用、自带样式（无需引 CSS）、尊重 `prefers-reduced-motion`**。是 g-lab 里的一个可独立发 npm 的子项目。
+**UI 组件的「脑爆 + research」实验室**——创意交互组件在这里孵化、打磨、研究：3D 倾斜、光斑、磁吸、涟漪、动态网格渐变、数字滚动。
+零依赖、**复制即用、自带样式（无需引 CSS）、尊重 `prefers-reduced-motion`**。现为独立子项目，组件可被 g-lab 的 **planner 复用**，也可独立发 npm。
 
 ```
-popcorn-ui/
+muse-ui/
 ├── src/
 │   ├── index.js            # 入口：导出全部组件 + 纯工具/hooks
 │   ├── TiltCard.jsx        # 3D 倾斜卡片（+高光）
@@ -35,12 +35,12 @@ popcorn-ui/
 
 ## 安装与使用
 ```bash
-npm i popcorn-ui   # 需自带 react>=18 / react-dom>=18
+npm i muse-ui   # 需自带 react>=18 / react-dom>=18
 ```
 ```jsx
-import { TiltCard, MagneticButton, CountUp } from 'popcorn-ui';
+import { TiltCard, MagneticButton, CountUp } from 'muse-ui';
 
-<TiltCard maxDeg={14}><h3>Hello 🍿</h3></TiltCard>
+<TiltCard maxDeg={14}><h3>Hello ✨</h3></TiltCard>
 <MagneticButton strength={0.5} radius={100}>点我</MagneticButton>
 <CountUp value={1280000} prefix="¥" duration={2} />
 ```
@@ -54,13 +54,13 @@ import { TiltCard, MagneticButton, CountUp } from 'popcorn-ui';
 | `<MeshGradient>` | `colors[]` `speed=0.05` |
 | `<CountUp>` | `value` `from=0` `duration=1.4` `decimals=0` `prefix` `suffix` `ease` |
 
-也可单独引用纯函数：`import { tiltTransform, meshGradient, easings, cx } from 'popcorn-ui'`。
+也可单独引用纯函数：`import { tiltTransform, meshGradient, easings, cx } from 'muse-ui'`。
 
 ## 开发
 ```bash
-cd projects/popcorn-ui
+cd projects/muse-ui
 node --test                                          # 跑纯函数单测（11 例）
 npm i --no-save esbuild react@18.3.1 react-dom@18.3.1
 node build.mjs   # 库 dist/index.js(ESM)+index.cjs(CJS) + 画廊 demo.js（并给 index.html 打 ?v= 戳）
 ```
-画廊在线预览：部署后访问 `/projects/popcorn-ui/`（本地 `python3 -m http.server 8000` 后开 `http://localhost:8000/projects/popcorn-ui/`）。
+画廊在线预览：部署后访问 `/projects/muse-ui/`（本地 `python3 -m http.server 8000` 后开 `http://localhost:8000/projects/muse-ui/`）。

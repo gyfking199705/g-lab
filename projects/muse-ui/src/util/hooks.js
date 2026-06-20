@@ -1,5 +1,5 @@
 /**
- * popcorn-ui · React hooks（涉及 DOM/RAF，浏览器侧使用；都带 SSR 守卫）
+ * muse-ui · React hooks（涉及 DOM/RAF，浏览器侧使用；都带 SSR 守卫）
  */
 import { useEffect, useRef, useState } from 'react';
 

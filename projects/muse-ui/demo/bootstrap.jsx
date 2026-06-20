@@ -1,5 +1,5 @@
 /**
- * popcorn-ui 画廊独立页入口（供打包器使用）。
+ * muse-ui 画廊独立页入口（供打包器使用）。
  * esbuild 以本文件为入口打成自托管 bundle（dist/ui.js，含 React）。
  */
 import React from 'react';

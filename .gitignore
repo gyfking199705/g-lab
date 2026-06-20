@@ -2,8 +2,8 @@
 node_modules/
 package-lock.json
 
-# popcorn-ui 库发布产物（npm publish 前用 `cd projects/popcorn-ui && node build.mjs` 生成，不入库）
-projects/popcorn-ui/dist/
+# muse-ui 库发布产物（npm publish 前用 `cd projects/muse-ui && node build.mjs` 生成，不入库）
+projects/muse-ui/dist/
 
 # 编辑器/系统
 .DS_Store
