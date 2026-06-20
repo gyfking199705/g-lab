@@ -1,6 +1,9 @@
 /**
  * AI Coding 研究室 · 知识库（纯数据，无依赖，可被 Node 单测引用）。
  *
+ * ⚠️ AI agent 注意：新增/修改条目前请先读同级 ../AGENTS.md（含字段口径、模板与提交前自检）。
+ *    每条改动后须：node --test 全绿 → node build.mjs 重建 dist 与 index.html 的 ?v= → 一起提交。
+ *
  * 收录「业界正在用的 AI Coding 范式 / 工作流 / 提效技巧 / 工具生态 / 质量护栏」。
  * 每条目尽量给出：为什么有效（why）、怎么落地（how）、何时用（whenToUse）、
  * 常见坑（pitfalls）、成熟度（maturity）、提效幅度（impact）、落地成本（effort）、权威出处（refs）。
