@@ -71,3 +71,10 @@
 - 子项目: mock-lab
 - 重点: 建 projects/mock-lab：28 条 mock 系统/提效方式知识库（卡片+四象限），配置工坊把路由定义一键生成 g-mock/responses/respx/WireMock/OpenAPI，含零依赖适配器 adapters/g_mock.py 支持本地/远端配置
 - 解决的问题: mock 工具与玩法碎片、上手成本高；缺一个可快速接入、可植入（尤其 Python）、本地或远端灵活切换的统一出口
+
+## M-10 · 2026-06-20 · dream 钩子置为可执行
+- 作者: claude
+- 提交: 1d7eb87
+- 子项目: root
+- 重点: 把 scripts/hooks/{pre,post}-commit 标记为可执行（mode 755）
+- 解决的问题: 钩子非可执行时 enable-hooks 链接后可能不被触发，dreaming 闭环失效
