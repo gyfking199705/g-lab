@@ -1,0 +1,12 @@
+{
+  "name": "devx-lab",
+  "version": "0.1.0",
+  "description": "🔬 研发提效研究室：收集业界都在用、被验证有效的研发提效范式，对齐 DORA / SPACE / DevEx 等公认框架，可检索、可对标、可自评。",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "build": "node build.mjs"
+  },
+  "license": "MIT"
+}
