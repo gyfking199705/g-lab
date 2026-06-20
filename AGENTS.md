@@ -6,7 +6,7 @@
 ## 这是什么
 `g-lab` 是**伞形 monorepo**：根目录是一个静态门户首页，每个独立小项目放在 `projects/<name>/` 下。
 - `projects/planner/` — 个人成长规划系统（多模块单页应用）
-- `projects/muse-ui/` — 零依赖 React 创意交互组件库
+- `projects/muse-ui/` — 零依赖 React 创意交互组件库（**组件范式 / 加组件 / 复用指南见 `projects/muse-ui/AGENTS.md`**）
 - `projects/swarm/` — 多智能体协作工作区原型（需求队列→多角色分工→结论）+ 业界调研
 - `projects/agent-cli/` — Agent CLI 交互研究（复刻 + 对比业界命令行 agent；自包含、独立 `node build.mjs`）
 - `projects/skill-lab/` — Skill 研究室：收录与展示标准化 Agent Skills（`skills/<name>/SKILL.md` + 画廊）
