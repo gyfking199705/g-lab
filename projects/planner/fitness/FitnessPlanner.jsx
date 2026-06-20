@@ -11,6 +11,7 @@
  * 自带样式（类名前缀 fp-），不依赖外部 CSS / 图表库。props 约定同 LearningPlanner。
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import GradientText from '../../muse-ui/src/GradientText.jsx';
 import {
   todayStr,
   addDays,
@@ -167,7 +168,7 @@ export default function FitnessPlanner({ initialState, onChange, storageKey = 'f
 
       <header className="fp-header">
         <div className="fp-brand">
-          <h1>💪 训练规划</h1>
+          <h1>💪 <GradientText colors={['#CC785C', '#B5654A', '#C9A14A']}>训练规划</GradientText></h1>
           <p>定计划 · 记录每组 · 看见力量与容量的增长</p>
         </div>
         <div className="fp-headact">

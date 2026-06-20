@@ -335,3 +335,10 @@
 - 子项目: mock-lab
 - 重点: codegen 加 parseGmockConfig/parseOpenApi/importConfig + 工坊导入面板；g_mock.py 加 bind_requests_mock 与标准库 serve()+CLI(python -m g_mock serve/load)；知识库扩到 33 条(Microcks/云端 mock/gRPC/GraphQL/异步消息)；36 单测全绿，serve 实测通过
 - 解决的问题: 工坊只能单向输出、g_mock 只能在测试内绑定、知识库仅覆盖 REST——补上反向导入闭环、可运行的本地/远端 mock 服务、以及 gRPC/GraphQL/事件多协议覆盖
+
+## M-43 · 2026-06-20 · planner 标题复用 muse-ui GradientText（learning/fitness）
+- 作者: claude
+- 提交: 5034b6e
+- 子项目: planner
+- 重点: 学习站、训练规划标题套 GradientText，相对引入打进各自 bundle，只提交受影响 bundle。
+- 解决的问题: 扩大 muse-ui→planner 复用覆盖面，验证多模块复用同组件链路。

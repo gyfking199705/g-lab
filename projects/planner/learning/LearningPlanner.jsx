@@ -15,6 +15,7 @@
  *           填入自己的 API Key 后解锁「AI 生成计划 / AI 讲解知识点」。Key 仅存本地浏览器。
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import GradientText from '../../muse-ui/src/GradientText.jsx';
 import {
   todayStr,
   relDay,
@@ -195,7 +196,7 @@ export default function LearningPlanner({ initialState, onChange, storageKey = '
       {/* ===== 顶部：品牌 + 标签 + AI 状态 ===== */}
       <header className="lp-header">
         <div className="lp-brand">
-          <h1>📚 AI 学习计划站</h1>
+          <h1>📚 <GradientText colors={['#CC785C', '#B5654A', '#C9A14A']}>AI 学习计划站</GradientText></h1>
           <p>制定计划 · 每天学一点 · 间隔复习不遗忘</p>
         </div>
         <div className="lp-headact">
