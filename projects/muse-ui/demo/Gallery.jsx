@@ -3,7 +3,7 @@
  * 仅用于演示，不打进库；库入口是 ../src/index.js。
  */
 import React, { useState, useEffect } from 'react';
-import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp, GradientText, Typewriter, CommandPalette, ScrambleText, Marquee, ConfettiButton, StickyCanvas } from '../src/index.js';
+import { TiltCard, SpotlightCard, MagneticButton, RippleButton, MeshGradient, CountUp, GradientText, Typewriter, CommandPalette, ScrambleText, Marquee, ConfettiButton, StickyCanvas, Sketchy, Sparkles } from '../src/index.js';
 
 const CSS = `
 .gx{--accent:#CC785C;--ink:#33312C;--t2:#6B675E;--t3:#9B978C;--bd:#E5E1D8;--surface:#FBFAF6;
@@ -82,7 +82,7 @@ export default function Gallery() {
         <p>UI 组件脑爆 + research 实验室 · 零依赖、复制即用、自带样式、支持「减少动效」</p>
         <div className="gx-stats">
           <div className="gx-stat">
-            <b><CountUp value={13} duration={1.2} /></b>
+            <b><CountUp value={15} duration={1.2} /></b>
             <span>组件</span>
           </div>
           <div className="gx-stat">
@@ -208,9 +208,24 @@ export default function Gallery() {
         />
       </Section>
 
+      <Section title="手绘风边框" tag="<Sketchy>" desc="把内容裹进抖动的「手绘」矩形，同 seed 形状稳定、不闪烁。换 seed 换笔触。">
+        <Sketchy color="#CC785C" seed={3} style={{ fontSize: 15 }}>手写感卡片</Sketchy>
+        <Sketchy color="#5C8A6B" seed={11} roughness={3} style={{ fontSize: 15 }}>换个笔触</Sketchy>
+        <Sketchy color="#6E83C4" seed={42} style={{ fontSize: 15 }}>seed=42</Sketchy>
+      </Section>
+
+      <Section title="星点闪烁" tag="<Sparkles>" desc="在内容四周持续闪烁的星点；位置由 seed 决定，尊重「减少动效」。">
+        <Sparkles>
+          <span style={{ fontSize: 26, fontWeight: 800, padding: '6px 14px', display: 'inline-block' }}>会发光的标题 ✦</span>
+        </Sparkles>
+        <Sparkles color="#CC785C" count={18} seed={21}>
+          <span style={{ fontSize: 15, color: 'var(--t2)', padding: '10px 16px', display: 'inline-block' }}>悬停也好看</span>
+        </Sparkles>
+      </Section>
+
       <div className="gx-foot">
         <code>npm i muse-ui</code> · <code>import {'{ TiltCard }'} from 'muse-ui'</code>
-        <br />13 个组件 · 零运行时依赖 · 自带样式无需引 CSS · 尊重 prefers-reduced-motion
+        <br />15 个组件 · 零运行时依赖 · 自带样式无需引 CSS · 尊重 prefers-reduced-motion
       </div>
     </div>
   );
